@@ -8,10 +8,10 @@ setuptools.setup(
     version="0.0.1",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
-    description="A package to evaluate synthetic datasets against real datasets.",
+    description="A package to evaluate how close a synthetic data set is to real data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://github.com/Baukebrenninkmeijer/Table-Evaluator",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
