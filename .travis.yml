@@ -1,4 +1,4 @@
-#language: python
+language: python
 #python:
 #  - "3.6"      # current detault Python on Travis CI
 #  - "3.7"
@@ -8,6 +8,8 @@
 ## command to run tests
 #script:
 #  - pytest
+script:
+- echo "skipping tests"
 
 deploy:
   provider: pypi
