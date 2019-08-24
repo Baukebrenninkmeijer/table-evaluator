@@ -1,4 +1,4 @@
-language: python
+#language: python
 #python:
 #  - "3.6"      # current detault Python on Travis CI
 #  - "3.7"
