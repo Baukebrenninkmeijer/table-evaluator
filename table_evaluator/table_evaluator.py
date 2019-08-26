@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import stats
+from typing import Tuple
 from scipy.spatial.distance import cdist
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -263,13 +264,15 @@ class TableEvaluator:
 
     def statistical_evaluation(self) -> float:
         """
-        Calculate the correlation coefficient between the basic properties of self.real and self.fake
+        Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's Rho. Spearman's is used because these
+        values can differ a lot in magnitude, and Spearman's is more resilient to outliers.
         :return: correlation coefficient
         """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
             metrics = {}
+            # TODO: add discrete columns as factors
             num_ds = ds[self.numerical_columns]
 
             for idx, value in num_ds.mean().items():
@@ -292,8 +295,8 @@ class TableEvaluator:
 
     def correlation_correlation(self) -> float:
         """
-        Calculate the correlation coefficient between the association matrices of self.real and self.fake
-        :return:
+        Calculate the correlation coefficient between the association matrices of self.real and self.fake using self.comparison_metric
+        :return: correlation coefficient
         """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
@@ -310,7 +313,12 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-    def convert_numerical(self):
+    def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+        discrete columns with many values or very unbalanced values
+        :return: Real and fake dataframe with discrete columns one-hot encoded and binary columns factorized.
+        """
         real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
 
         columns = sorted(real.columns.tolist())
@@ -322,7 +330,16 @@ class TableEvaluator:
         fake = fake[columns]
         return real, fake
 
-    def estimator_evaluation(self, target_col, target_type='class'):
+    def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
+        """
+        Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
+        created of each of the estimators S_r and S_f, for the real and fake data respectively. S_f is trained on self.real and S_r on self.fake. Then both
+        are evaluated on their own and the others test set. If target_type is `regr` we do a regression on the RMSE scores with Pearson's. If target_type is
+        `class`, we calculate F1 scores and do return 1 - MAPE(F1_r, F1_f).
+        :param target_col: which column should be considered the target both both the regression and classification task.
+        :param target_type: what kind of task this is. Can be either `class` or `regr`.
+        :return:
+        """
         self.target_col = target_col
         self.target_type = target_type
 
@@ -350,7 +367,6 @@ class TableEvaluator:
         else:
             raise Exception(f'Target Type must be regr or class')
 
-        # split real and fake into train and test sets
         self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y, test_size=0.2)
         self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y, test_size=0.2)
 
@@ -363,7 +379,6 @@ class TableEvaluator:
             ]
         elif target_type == 'class':
             self.estimators = [
-                # SGDClassifier(max_iter=100, tol=1e-3),
                 LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=500),
                 RandomForestClassifier(n_estimators=10),
                 DecisionTreeClassifier(),
@@ -417,14 +432,16 @@ class TableEvaluator:
         min_std = np.std(min_distances)
         return min_mean, min_std
 
-    def evaluate(self, target_col, target_type='class', metric=None, verbose=None):
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None):
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
         :param target_col: column to use for predictions with estimators
+        :param target_type: what kind of task to perform on the target_col. Can be either `class` for classification or `regr` for regression.
         :param n_samples: the number of samples to use for the estimators. Training time scales mostly linear
-        :param metric: scoring metric for the attributes. By default Kendall Tau ranking is used. Alternatives
-            include Spearman rho (scipy.stats.spearmanr) ranking.
+        :param metric: overwrites self.metric. Scoring metric for the attributes. By default Pearson's r is used. Alternatives
+            include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
+        :param verbose: whether to print verbose logging.
         """
         if verbose is not None:
             self.verbose = verbose
