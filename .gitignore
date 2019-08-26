@@ -6,3 +6,5 @@ dist/
 build/
 
 TableEvaluator.egg-info/
+
+table_evaluator/__pycache__/

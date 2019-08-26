@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import stats
 from scipy.spatial.distance import cdist
-from dython.nominal import *
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
@@ -16,20 +15,34 @@ from sklearn.metrics import f1_score, mean_squared_error
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
-from helpers import *
+from .helpers import *
 
 
 class TableEvaluator:
-    def __init__(self, real, fake, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None):
-        if isinstance(real, np.ndarray):
-            real = pd.DataFrame(real)
-            fake = pd.DataFrame(fake)
-        assert isinstance(real, pd.DataFrame), f'Make sure you either pass a Pandas DataFrame or Numpy Array'
+    """
+    The class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
+    Additional evaluations can be done with the subcalls of evaluate and the visual evaluation method.
+    """
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, discrete_columns=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None):
+        """
+        :param real: Real dataset (pd.DataFrame)
+        :param fake: Synthetic dataset (pd.DataFrame)
+        :param unique_thresh: Threshold for automatic evaluation if column is numeric
+        :param discrete_columns: The columns that are to be evaluated as discrete. If passed, unique_thresh is ignored.
+        :param metric: the metric to use for evaluation linear relations. Pearson's r by default, but supports all models in scipy.stats
+        :param verbose: Whether to print verbose output
+        :param n_samples: Number of samples to evaluate. If none, it will take the minimal length of both datasets and cut the larger one off to make sure they
+            are the same length.
+        """
 
         self.unique_thresh = unique_thresh
-        self.numerical_columns = [column for column in real._get_numeric_data().columns if
-                                  len(real[column].unique()) > unique_thresh]
-        self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
+        if discrete_columns is None:
+            self.numerical_columns = [column for column in real._get_numeric_data().columns if
+                                      len(real[column].unique()) > unique_thresh]
+            self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
+        else:
+            self.categorical_columns = discrete_columns
+            self.numerical_columns = [column for column in real.columns if column not in discrete_columns]
         self.real = real
         self.fake = fake
         self.comparison_metric = getattr(stats, metric)
@@ -46,11 +59,17 @@ class TableEvaluator:
         assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
 
     def plot_mean_std(self):
+        """
+        Class wrapper function for plotting the mean and std.
+        """
         plot_mean_std(self.real, self.fake)
 
-    def plot_cumsums(self):
+    def plot_cumsums(self, nr_cols=4):
+        """
+        Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
+        values of a real columns and the corresponding fake column.
+        """
         nr_charts = len(self.real.columns)
-        nr_cols = 4
         nr_rows = max(1, nr_charts // nr_cols)
         nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
 
@@ -73,16 +92,21 @@ class TableEvaluator:
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
         plt.show()
 
-    def plot_correlation_difference(self, plot_diff=True, *args, **kwargs):
-        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff, *args,
+    def plot_correlation_difference(self, plot_diff=True, **kwargs):
+        """
+        Plot the assocation matrices for each table and, if chosen, the difference between them.
+        :param plot_diff: whether to plot the difference
+        :param kwargs: kwargs for sns.heatmap
+        """
+        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff,
                                     **kwargs)
 
     def correlation_distance(self, how='euclidean'):
         """
         Calculate distance between correlation matrices with certain metric.
         Metric options are: euclidean, mae (mean absolute error)
-        :param how: metric to measure distance
-        :return: distance
+        :param how: metric to measure distance. Choose from [euclidean, mae, rmse].
+        :return: distance between the association matrices in the chosen evaluation metric.
         """
         distance_func = None
         if how == 'euclidean':
@@ -102,9 +126,9 @@ class TableEvaluator:
             fake_corr.values
         )
 
-    def plot_2d(self):
+    def plot_pca(self):
         """
-        Plot the first two components of a PCA of the numeric columns of real and fake.
+        Plot the first two components of a PCA of real and fake data.
         """
         real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
         fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
@@ -127,9 +151,6 @@ class TableEvaluator:
         Check whether any real values occur in the fake data
         :return: Dataframe containing the duplicates
         """
-        # df = pd.concat([self.real, self.fake])
-        # duplicates = df[df.duplicated(keep=False)]
-        # return duplicates
         real_hashes = self.real.apply(lambda x: hash(tuple(x)), axis=1)
         fake_hashes = self.fake.apply(lambda x: hash(tuple(x)), axis=1)
         dup_idxs = fake_hashes.isin(real_hashes.values)
@@ -140,23 +161,27 @@ class TableEvaluator:
         return self.fake.loc[dup_idxs, :]
 
     def get_duplicates(self, return_values=False):
+        """
+        Return duplicates within each dataset.
+        :param return_values: whether to return the duplicate values in the datasets. If false, the lengths are returned.
+        :return: dataframe with duplicates or the length of those dataframes if return_values=False.
+        """
         real_duplicates = self.real[self.real.duplicated(keep=False)]
         fake_duplicates = self.fake[self.fake.duplicated(keep=False)]
         if return_values:
             return real_duplicates, fake_duplicates
         return len(real_duplicates), len(fake_duplicates)
 
-    def get_duplicates2(self, return_values=False):
-        df = pd.concat([self.real, self.fake])
-        duplicates = df[df.duplicated(keep=False)]
-        return duplicates
-
-    def pca_correlation(self):
+    def pca_correlation(self, lingress=False):
+        """
+        Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent implementation the MAPE(log) is used instead of
+        regressions like Pearson's r.
+        :param lingress: whether to use a linear regression, in this case Pearson's.
+        :return: the correlation coefficient if lingress=True, otherwise 1 - MAPE(log(real), log(fake))
+        """
         self.pca_r = PCA(n_components=5)
         self.pca_f = PCA(n_components=5)
 
-        # real = self.real.drop(self.categorical_columns, axis=1)
-        # fake = self.fake.drop(self.categorical_columns, axis=1)
         real = self.real
         fake = self.fake
 
@@ -169,9 +194,13 @@ class TableEvaluator:
             results = pd.DataFrame({'real': self.pca_r.explained_variance_, 'fake': self.pca_f.explained_variance_})
             print(f'\nTop 5 PCA components:')
             print(results.to_string())
-        # slope, intersect, corr, p, _ = stats.linregress(pca_r.explained_variance_, pca_f.explained_variance_)
-        pca_error = mean_absolute_percentage_error(self.pca_r.explained_variance_, self.pca_f.explained_variance_)
-        return 1 - pca_error
+
+        if lingress:
+            corr, p, _ = self.comparison_metric(self.pca_r.explained_variance_, self.pca_f.explained_variance_)
+            return corr
+        else:
+            pca_error = mean_absolute_percentage_error(self.pca_r.explained_variance_, self.pca_f.explained_variance_)
+            return 1 - pca_error
 
     def fit_estimators(self):
         """
@@ -194,10 +223,8 @@ class TableEvaluator:
     def score_estimators(self):
         """
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
-        :return:
+        :return: dataframe with the results for each estimator on each data test set.
         """
-        from sklearn.metrics import mean_squared_error
-
         if self.target_type == 'class':
             r2r = [f1_score(self.real_y_test, clf.predict(self.real_x_test), average='micro') for clf in self.r_estimators]
             f2f = [f1_score(self.fake_y_test, clf.predict(self.fake_x_test), average='micro') for clf in self.f_estimators]
@@ -223,21 +250,28 @@ class TableEvaluator:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
         return results
 
-    def visual_evaluation(self, plot=True, **kwargs):
-        if plot:
-            self.plot_mean_std()
-            self.plot_cumsums()
-            self.plot_correlation_difference(**kwargs)
-            self.plot_2d()
+    def visual_evaluation(self, **kwargs):
+        """
+        Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the 2D PCA transform.
+        :param kwargs:
+        :return:
+        """
+        self.plot_mean_std()
+        self.plot_cumsums()
+        self.plot_correlation_difference(**kwargs)
+        self.plot_pca()
 
-    def statistical_evaluation(self):
+    def statistical_evaluation(self) -> float:
+        """
+        Calculate the correlation coefficient between the basic properties of self.real and self.fake
+        :return: correlation coefficient
+        """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
             metrics = {}
             num_ds = ds[self.numerical_columns]
 
-            # Basic statistical properties
             for idx, value in num_ds.mean().items():
                 metrics[f'mean_{idx}'] = value
             for idx, value in num_ds.median().items():
@@ -256,7 +290,11 @@ class TableEvaluator:
         corr, p = stats.spearmanr(total_metrics['real'], total_metrics['fake'])
         return corr
 
-    def correlation_correlation(self):
+    def correlation_correlation(self) -> float:
+        """
+        Calculate the correlation coefficient between the association matrices of self.real and self.fake
+        :return:
+        """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
