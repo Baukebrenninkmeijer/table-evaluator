@@ -5,6 +5,7 @@ python:
 script:
 - cd tests
 - pytest helpers_test.py
+- cd ..
 
 deploy:
   provider: pypi
