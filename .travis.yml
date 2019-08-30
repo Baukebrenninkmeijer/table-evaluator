@@ -1,9 +1,10 @@
 language: python
 python:
-  - "3.6"
-#  - "3.7"
+#  - "3.6"
+  - "3.7"
 script:
-- echo "skipping tests"
+- cd tests
+- pytest helpers_test.py
 
 deploy:
   provider: pypi
