@@ -16,15 +16,17 @@ from sklearn.metrics import f1_score, mean_squared_error
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
-from .helpers import *
+from table_evaluator.helpers import *
 
 
 class TableEvaluator:
     """
-    The class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
-    Additional evaluations can be done with the subcalls of evaluate and the visual evaluation method.
+    Class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
+    Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
-    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, discrete_columns=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None):
+
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, discrete_columns=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None,
+                 name: str = None):
         """
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
@@ -34,9 +36,15 @@ class TableEvaluator:
         :param verbose: Whether to print verbose output
         :param n_samples: Number of samples to evaluate. If none, it will take the minimal length of both datasets and cut the larger one off to make sure they
             are the same length.
+        :param name: Name of the TableEvaluator. Used in plotting functions to indicate your model.
         """
-
+        self.name = name
         self.unique_thresh = unique_thresh
+        self.real = real
+        self.fake = fake
+        self.comparison_metric = getattr(stats, metric)
+        self.verbose = verbose
+
         if discrete_columns is None:
             self.numerical_columns = [column for column in real._get_numeric_data().columns if
                                       len(real[column].unique()) > unique_thresh]
@@ -44,10 +52,6 @@ class TableEvaluator:
         else:
             self.categorical_columns = discrete_columns
             self.numerical_columns = [column for column in real.columns if column not in discrete_columns]
-        self.real = real
-        self.fake = fake
-        self.comparison_metric = getattr(stats, metric)
-        self.verbose = verbose
 
         if n_samples is None:
             self.n_samples = min(len(self.real), len(self.fake))
