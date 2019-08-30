@@ -10,3 +10,4 @@ TableEvaluator.egg-info/
 table_evaluator/__pycache__/
 
 tests/.ipynb_checkpoints/
+__pycache__
