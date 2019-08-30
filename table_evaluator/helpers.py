@@ -1,29 +1,78 @@
 from dython.nominal import *
+from typing import Union, List
 from sklearn.metrics import mean_squared_error
 
 
-def plot_var_cor(x, ax=None, ret=False, *args, **kwargs):
+def load_data(path_real, path_fake, real_sep=',', fake_sep=',', drop_columns=None):
+    real = pd.read_csv(path_real, sep=real_sep, low_memory=False)
+    fake = pd.read_csv(path_fake, sep=fake_sep, low_memory=False)
+    if set(fake.columns.tolist()).issubset(set(real.columns.tolist())):
+        real = real[fake.columns]
+    elif drop_columns is not None:
+        real = real.drop(drop_columns, axis=1)
+        try:
+            fake = fake.drop(drop_columns, axis=1)
+        except:
+            print(f'Some of {drop_columns} were not found on fake.index.')
+        assert len(fake.columns.tolist()) == len(real.columns.tolist()), \
+            f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
+        fake.columns = real.columns
+    else:
+        fake.columns = real.columns
+
+    for col in fake.columns:
+        fake[col] = fake[col].astype(real[col].dtype)
+    return real, fake
+
+
+def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs):
+    """
+    Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the top half of the correlation matrix,
+    since this holds the same values.
+    :param x: Dataframe to plot data from
+    :param ax: Axis on which to plot the correlations
+    :param return_values: return correlation matrix after plotting
+    :param kwargs: Keyword arguments that are passed to `sns.heatmap`.
+    :return: If return_values=True, returns correlation matrix of `x` as np.ndarray
+    """
     if isinstance(x, pd.DataFrame):
         corr = x.corr().values
     elif isinstance(x, np.ndarray):
         corr = np.corrcoef(x, rowvar=False)
     else:
         raise Exception('Unknown datatype given. Make sure a Pandas DataFrame or Numpy Array is passed.')
+
     sns.set(style="white")
     mask = np.zeros_like(corr, dtype=np.bool)
     mask[np.triu_indices_from(mask)] = True
-    if type(ax) is None:
+    if ax is None:
         f, ax = plt.subplots(figsize=(11, 9))
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
 
     # Draw the heatmap with the mask and correct aspect ratio
     sns.heatmap(corr, ax=ax, mask=mask, cmap=cmap, vmax=1, center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5}, *args, **kwargs)
-    if ret:
+                square=True, linewidths=.5, cbar_kws={"shrink": .5}, **kwargs)
+    if return_values:
         return corr
 
 
-def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff=True, cat_cols=None, **kwargs):
+def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff=True, cat_cols: list = None, **kwargs):
+    """
+    Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has support for continuous and Categorical
+    (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
+    Continuous - Continuous: Uses Pearson's correlation coefficient
+    Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - Categorical and
+        Categorical - continuous.
+    Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
+    :param real: DataFrame with real data
+    :param fake: DataFrame with synthetic data
+    :param plot_diff: Plot difference if True, else not
+    :param cat_cols: List of Categorical columns
+    :param kwargs: keyword arguments that are passed to `sns.heatmap`.
+    """
+    assert isinstance(real, pd.DataFrame), f'`real` parameters must be a Pandas DataFrame'
+    assert isinstance(fake, pd.DataFrame), f'`fake` parameters must be a Pandas DataFrame'
+
     if cat_cols is None:
         cat_cols = real.select_dtypes(['object', 'category'])
     if plot_diff:
@@ -51,7 +100,12 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     plt.show()
 
 
-def plot_correlation_comparison(evaluators, **kwargs):
+def plot_correlation_comparison(evaluators: List, **kwargs):
+    """
+    Plot the correlation differences of multiple TableEvaluator objects.
+    :param evaluators: list of TableEvaluator objects
+    :param kwargs: keyword arguments that are passed to `sns.heatmap`.
+    """
     nr_plots = len(evaluators) + 1
     fig, ax = plt.subplots(2, nr_plots, figsize=(4 * nr_plots, 7))
     flat_ax = ax.flatten()
@@ -76,8 +130,7 @@ def plot_correlation_comparison(evaluators, **kwargs):
         if i % (nr_plots - 1) == 0:
             cbar = az.collections[0].colorbar
             cbar.ax.tick_params(labelsize=20)
-
-    titles = ['Real', 'TGAN', 'TGAN-WGAN-GP', 'TGAN-skip', 'MedGAN', 'TableGAN']
+    titles = [e.name if e is not None else idx for idx, e in enumerate(evaluators)]
     for i, label in enumerate(titles):
         flat_ax[i].set_yticklabels([])
         flat_ax[i].set_xticklabels([])
@@ -88,22 +141,14 @@ def plot_correlation_comparison(evaluators, **kwargs):
     plt.tight_layout()
 
 
-def matrix_distance_abs(ma, mb):
-    return np.sum(np.abs(np.subtract(ma, mb)))
-
-
-def matrix_distance_euclidian(ma, mb):
-    return np.sqrt(np.sum(np.power(np.subtract(ma, mb), 2)))
-
-
-def cdf(data_r, data_f, xlabel, ylabel, ax=None):
+def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', ax=None):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
     :param data_r: Series with real data
     :param data_f: Series with fake data
-    :param xlabel: x-axis label
-    :param ylabel: y-axis label
-    :param ax: axis to plot on
+    :param xlabel: Label to put on the x-axis
+    :param ylabel: Label to put on the y-axis
+    :param ax: The axis to plot on. If ax=None, a new figure is created.
     """
     x1 = np.sort(data_r)
     x2 = np.sort(data_f)
@@ -121,8 +166,8 @@ def cdf(data_r, data_f, xlabel, ylabel, ax=None):
     ax.tick_params(axis='both', which='major', labelsize=8)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3)
 
-    # ax.set_xticks(ind)
-    if data_r.dtypes == 'object':
+    # If labels are strings, rotate them vertical
+    if isinstance(data_r, pd.Series) and data_r.dtypes == 'object':
         ax.set_xticklabels(data_r.value_counts().sort_index().index, rotation='vertical')
 
     if ax is None:
@@ -137,7 +182,6 @@ def categorical_distribution(real, fake, xlabel, ylabel, col=None, ax=None):
     y_r = real.value_counts().sort_index() / len(real)
     y_f = fake.value_counts().sort_index() / len(fake)
 
-    # width = 0.35  # the width of the bars
     ind = np.arange(len(y_r.index))
 
     ax.grid()
@@ -180,11 +224,19 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true))
 
 
-def rmse(y, y_hat):
-    return np.sqrt(mean_squared_error(y, y_hat))
+def rmse(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
+    """
+    Columnwise correlation calculation between `dataset_a` and `dataset_b`.
+    :param dataset_a: DataFrame a
+    :param dataset_b: Second DataFrame
+    :param categorical_columns: The columns containing categorical values
+    :param theil_u: Whether to use Theil's U. If False, use Cramer's V.
+    :return: Mean correlation between all columns.
+    """
     if categorical_columns is None:
         categorical_columns = list()
     elif categorical_columns == 'all':
@@ -205,7 +257,7 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
     return correlation
 
 
-def associations(dataset, nominal_columns=None, mark_columns=False, theil_u=False, plot=True,
+def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot=True,
                  return_results=False, **kwargs):
     """
     Adapted from: https://github.com/shakedzy/dython
@@ -217,7 +269,7 @@ def associations(dataset, nominal_columns=None, mark_columns=False, theil_u=Fals
      - Cramer's V or Theil's U for categorical-categorical cases
     :param dataset: NumPy ndarray / Pandas DataFrame
         The data-set for which the features' correlation is computed
-    :param nominal_columns: string / list / NumPy ndarray
+    :param cat_cols: string / list / NumPy ndarray
         Names of columns of the data-set which hold categorical values. Can also be the string 'all' to state that all
         columns are categorical, or None (default) to state none are categorical
     :param mark_columns: Boolean (default: False)
@@ -234,21 +286,23 @@ def associations(dataset, nominal_columns=None, mark_columns=False, theil_u=Fals
     :return: Pandas DataFrame
         A DataFrame of the correlation/strength-of-association between all features
     """
+    if plot is False:
+        assert kwargs == {}, f'You have some kwargs that are not needed'
 
     dataset = convert(dataset, 'dataframe')
     columns = dataset.columns
-    if nominal_columns is None:
-        nominal_columns = list()
-    elif nominal_columns == 'all':
-        nominal_columns = columns
+    if cat_cols is None:
+        cat_cols = list()
+    elif cat_cols == 'all':
+        cat_cols = columns
     corr = pd.DataFrame(index=columns, columns=columns)
     for i in range(0, len(columns)):
         for j in range(i, len(columns)):
             if i == j:
                 corr[columns[i]][columns[j]] = 1.0
             else:
-                if columns[i] in nominal_columns:
-                    if columns[j] in nominal_columns:
+                if columns[i] in cat_cols:
+                    if columns[j] in cat_cols:
                         if theil_u:
                             corr[columns[j]][columns[i]] = theils_u(dataset[columns[i]], dataset[columns[j]])
                             corr[columns[i]][columns[j]] = theils_u(dataset[columns[j]], dataset[columns[i]])
@@ -261,7 +315,7 @@ def associations(dataset, nominal_columns=None, mark_columns=False, theil_u=Fals
                         corr[columns[i]][columns[j]] = cell
                         corr[columns[j]][columns[i]] = cell
                 else:
-                    if columns[j] in nominal_columns:
+                    if columns[j] in cat_cols:
                         cell = correlation_ratio(dataset[columns[j]], dataset[columns[i]])
                         corr[columns[i]][columns[j]] = cell
                         corr[columns[j]][columns[i]] = cell
@@ -271,7 +325,7 @@ def associations(dataset, nominal_columns=None, mark_columns=False, theil_u=Fals
                         corr[columns[j]][columns[i]] = cell
     corr.fillna(value=np.nan, inplace=True)
     if mark_columns:
-        marked_columns = ['{} (nom)'.format(col) if col in nominal_columns else '{} (con)'.format(col) for col in
+        marked_columns = ['{} (nom)'.format(col) if col in cat_cols else '{} (con)'.format(col) for col in
                           columns]
         corr.columns = marked_columns
         corr.index = marked_columns
@@ -340,14 +394,11 @@ def numerical_encoding(dataset, nominal_columns='all', drop_single_label=False, 
         return converted_dataset, binary_columns_dict
 
 
-def skip_diag_strided(A):
-    m = A.shape[0]
-    strided = np.lib.stride_tricks.as_strided
-    s0, s1 = A.strides
-    return strided(A.ravel()[1:], shape=(m - 1, m), strides=(s0 + s1, s1)).reshape(m, -1)
-
-
-def plot_mean_std_comparison(evaluators):
+def plot_mean_std_comparison(evaluators: List):
+    """
+    Plot comparison between the means and standard deviations from each evaluator in evaluators.
+    :param evaluators:
+    """
     nr_plots = len(evaluators)
     fig, ax = plt.subplots(2, nr_plots, figsize=(4 * nr_plots, 7))
     flat_ax = ax.flatten()
@@ -362,6 +413,12 @@ def plot_mean_std_comparison(evaluators):
 
 
 def plot_mean_std(real, fake, ax=None):
+    """
+    Plot the means and standard deviations of each dataset.
+    :param real: DataFrame containing the real data
+    :param fake: DataFrame containing the fake data
+    :param ax: Axis to plot on. If none, a new figure is made.
+    """
     if ax is None:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
         fig.suptitle('Absolute Log Mean and STDs of numeric data\n', fontsize=16)
