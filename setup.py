@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="table_evaluator",
-    version="0.0.3",
+    version="1.0.0",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
     description="A package to evaluate how close a synthetic data set is to real data.",
