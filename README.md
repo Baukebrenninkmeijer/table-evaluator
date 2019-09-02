@@ -1,5 +1,3 @@
-@import "style.css"
-
 # TableEvaluator
 **Production branch reflects the pypi package**
 
