@@ -30,161 +30,28 @@ which gives us two dataframes and specifies which columns should be treated as c
 real.head()
 ```
 
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>trans_id</th>
-      <th>account_id</th>
-      <th>trans_amount</th>
-      <th>balance_after_trans</th>
-      <th>trans_type</th>
-      <th>trans_operation</th>
-      <th>trans_k_symbol</th>
-      <th>trans_date</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>951892</td>
-      <td>3245</td>
-      <td>3878.0</td>
-      <td>13680.0</td>
-      <td>WITHDRAWAL</td>
-      <td>REMITTANCE_TO_OTHER_BANK</td>
-      <td>HOUSEHOLD</td>
-      <td>2165</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>3547680</td>
-      <td>515</td>
-      <td>65.9</td>
-      <td>14898.6</td>
-      <td>CREDIT</td>
-      <td>UNKNOWN</td>
-      <td>INTEREST_CREDITED</td>
-      <td>2006</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>1187131</td>
-      <td>4066</td>
-      <td>32245.0</td>
-      <td>57995.5</td>
-      <td>CREDIT</td>
-      <td>COLLECTION_FROM_OTHER_BANK</td>
-      <td>UNKNOWN</td>
-      <td>2139</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>531421</td>
-      <td>1811</td>
-      <td>3990.8</td>
-      <td>23324.9</td>
-      <td>WITHDRAWAL</td>
-      <td>REMITTANCE_TO_OTHER_BANK</td>
-      <td>LOAN_PAYMENT</td>
-      <td>892</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>37081</td>
-      <td>119</td>
-      <td>12100.0</td>
-      <td>36580.0</td>
-      <td>WITHDRAWAL</td>
-      <td>WITHDRAWAL_IN_CASH</td>
-      <td>UNKNOWN</td>
-      <td>654</td>
-    </tr>
-  </tbody>
-</table>
-</div>
 
-
+| trans_id | account_id | trans_amount | balance_after_trans | trans_type | trans_operation            | trans_k_symbol    | trans_date |
+|----------|------------|--------------|---------------------|------------|----------------------------|-------------------|------------|
+| 951892   | 3245       | 3878.0       | 13680.0             | WITHDRAWAL | REMITTANCE_TO_OTHER_BANK   | HOUSEHOLD         | 2165       |
+| 3547680  | 515        | 65.9         | 14898.6             | CREDIT     | UNKNOWN                    | INTEREST_CREDITED | 2006       |
+| 1187131  | 4066       | 32245.0      | 57995.5             | CREDIT     | COLLECTION_FROM_OTHER_BANK | UNKNOWN           | 2139       |
+| 531421   | 1811       | 3990.8       | 23324.9             | WITHDRAWAL | REMITTANCE_TO_OTHER_BANK   | LOAN_PAYMENT      | 892        |
+| 37081    | 119        | 12100.0      | 36580.0             | WITHDRAWAL | WITHDRAWAL_IN_CASH         | UNKNOWN           | 654        |
 
 
 ```python
 fake.head()
 ```
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>trans_id</th>
-      <th>account_id</th>
-      <th>trans_amount</th>
-      <th>balance_after_trans</th>
-      <th>trans_type</th>
-      <th>trans_operation</th>
-      <th>trans_k_symbol</th>
-      <th>trans_date</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>911598</td>
-      <td>3001</td>
-      <td>13619.0</td>
-      <td>92079.0</td>
-      <td>CREDIT</td>
-      <td>COLLECTION_FROM_OTHER_BANK</td>
-      <td>UNKNOWN</td>
-      <td>1885</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>377371</td>
-      <td>1042</td>
-      <td>4174.0</td>
-      <td>32470.0</td>
-      <td>WITHDRAWAL</td>
-      <td>REMITTANCE_TO_OTHER_BANK</td>
-      <td>HOUSEHOLD</td>
-      <td>1483</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>970113</td>
-      <td>3225</td>
-      <td>274.0</td>
-      <td>57608.0</td>
-      <td>WITHDRAWAL</td>
-      <td>WITHDRAWAL_IN_CASH</td>
-      <td>UNKNOWN</td>
-      <td>1855</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>450090</td>
-      <td>1489</td>
-      <td>301.0</td>
-      <td>36258.0</td>
-      <td>CREDIT</td>
-      <td>CREDIT_IN_CASH</td>
-      <td>UNKNOWN</td>
-      <td>885</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1120409</td>
-      <td>3634</td>
-      <td>6303.0</td>
-      <td>50975.0</td>
-      <td>WITHDRAWAL</td>
-      <td>REMITTANCE_TO_OTHER_BANK</td>
-      <td>HOUSEHOLD</td>
-      <td>1211</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+
+| trans_id | account_id | trans_amount | balance_after_trans | trans_type | trans_operation            | trans_k_symbol | trans_date |
+|----------|------------|--------------|---------------------|------------|----------------------------|----------------|------------|
+| 911598   | 3001       | 13619.0      | 92079.0             | CREDIT     | COLLECTION_FROM_OTHER_BANK | UNKNOWN        | 1885       |
+| 377371   | 1042       | 4174.0       | 32470.0             | WITHDRAWAL | REMITTANCE_TO_OTHER_BANK   | HOUSEHOLD      | 1483       |
+| 970113   | 3225       | 274.0        | 57608.0             | WITHDRAWAL | WITHDRAWAL_IN_CASH         | UNKNOWN        | 1855       |
+| 450090   | 1489       | 301.0        | 36258.0             | CREDIT     | CREDIT_IN_CASH             | UNKNOWN        | 885        |
+| 1120409  | 3634       | 6303.0       | 50975.0             | WITHDRAWAL | REMITTANCE_TO_OTHER_BANK   | HOUSEHOLD      | 1211       |
+
 
 ```Python
 cat_cols = ['trans_type', 'trans_operation', 'trans_k_symbol']
