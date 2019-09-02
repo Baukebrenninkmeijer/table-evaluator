@@ -25,18 +25,18 @@ class TableEvaluator:
     Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
 
-    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, discrete_columns=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None,
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None,
                  name: str = None):
         """
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
         :param unique_thresh: Threshold for automatic evaluation if column is numeric
-        :param discrete_columns: The columns that are to be evaluated as discrete. If passed, unique_thresh is ignored.
+        :param cat_cols: The columns that are to be evaluated as discrete. If passed, unique_thresh is ignored.
         :param metric: the metric to use for evaluation linear relations. Pearson's r by default, but supports all models in scipy.stats
         :param verbose: Whether to print verbose output
         :param n_samples: Number of samples to evaluate. If none, it will take the minimal length of both datasets and cut the larger one off to make sure they
             are the same length.
-        :param name: Name of the TableEvaluator. Used in plotting functions to indicate your model.
+        :param name: Name of the TableEvaluator. Used in some plotting functions like `helpers.plot_correlation_comparison` to indicate your model.
         """
         self.name = name
         self.unique_thresh = unique_thresh
@@ -45,13 +45,13 @@ class TableEvaluator:
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
 
-        if discrete_columns is None:
+        if cat_cols is None:
             self.numerical_columns = [column for column in real._get_numeric_data().columns if
                                       len(real[column].unique()) > unique_thresh]
             self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
         else:
-            self.categorical_columns = discrete_columns
-            self.numerical_columns = [column for column in real.columns if column not in discrete_columns]
+            self.categorical_columns = cat_cols
+            self.numerical_columns = [column for column in real.columns if column not in cat_cols]
 
         if n_samples is None:
             self.n_samples = min(len(self.real), len(self.fake))
@@ -65,7 +65,7 @@ class TableEvaluator:
 
     def plot_mean_std(self):
         """
-        Class wrapper function for plotting the mean and std.
+        Class wrapper function for plotting the mean and std using `plot_mean_std` from helpers.
         """
         plot_mean_std(self.real, self.fake)
 
@@ -123,8 +123,8 @@ class TableEvaluator:
 
         assert distance_func is not None, f'Distance measure was None. Please select a measure from [euclidean, mae]'
 
-        real_corr = associations(self.real, nominal_columns=self.categorical_columns, return_results=True, theil_u=True, plot=False)
-        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, return_results=True, theil_u=True, plot=False)
+        real_corr = associations(self.real, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
+        fake_corr = associations(self.fake, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
 
         return distance_func(
             real_corr.values,
@@ -135,8 +135,8 @@ class TableEvaluator:
         """
         Plot the first two components of a PCA of real and fake data.
         """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
+        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
         pca_r = PCA(n_components=2)
         pca_f = PCA(n_components=2)
 
@@ -151,21 +151,28 @@ class TableEvaluator:
         ax[1].set_title('Fake data')
         plt.show()
 
-    def get_copies(self):
+    def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
         """
         Check whether any real values occur in the fake data
-        :return: Dataframe containing the duplicates
+        :param return_len: whether to return the length of the copied rows or not.
+        :return: Dataframe containing the duplicates if return_len=False, else integer indicating the number of copied rows.
         """
         real_hashes = self.real.apply(lambda x: hash(tuple(x)), axis=1)
         fake_hashes = self.fake.apply(lambda x: hash(tuple(x)), axis=1)
+
         dup_idxs = fake_hashes.isin(real_hashes.values)
         dup_idxs = dup_idxs[dup_idxs == True].sort_index().index.tolist()
-        len(dup_idxs)
-        print(f'Nr copied columns: {len(dup_idxs)}')
 
-        return self.fake.loc[dup_idxs, :]
+        if self.verbose:
+            print(f'Nr copied columns: {len(dup_idxs)}')
+        copies = self.fake.loc[dup_idxs, :]
 
-    def get_duplicates(self, return_values=False):
+        if return_len:
+            return len(copies)
+        else:
+            return copies
+
+    def get_duplicates(self, return_values: bool = False) -> Tuple[Union[pd.DataFrame, int], Union[pd.DataFrame, int]]:
         """
         Return duplicates within each dataset.
         :param return_values: whether to return the duplicate values in the datasets. If false, the lengths are returned.
@@ -175,7 +182,8 @@ class TableEvaluator:
         fake_duplicates = self.fake[self.fake.duplicated(keep=False)]
         if return_values:
             return real_duplicates, fake_duplicates
-        return len(real_duplicates), len(fake_duplicates)
+        else:
+            return len(real_duplicates), len(fake_duplicates)
 
     def pca_correlation(self, lingress=False):
         """
@@ -190,8 +198,8 @@ class TableEvaluator:
         real = self.real
         fake = self.fake
 
-        real = numerical_encoding(real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(fake, nominal_columns=self.categorical_columns)
+        real = numerical_encoding(real, cat_cols=self.categorical_columns)
+        fake = numerical_encoding(fake, cat_cols=self.categorical_columns)
 
         self.pca_r.fit(real)
         self.pca_f.fit(fake)
@@ -305,7 +313,7 @@ class TableEvaluator:
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
-            corr_df = associations(ds, nominal_columns=self.categorical_columns, return_results=True, theil_u=True, plot=False)
+            corr_df = associations(ds, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
             values = corr_df.values
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
@@ -320,14 +328,14 @@ class TableEvaluator:
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
-        discrete columns with many values or very unbalanced values
-        :return: Real and fake dataframe with discrete columns one-hot encoded and binary columns factorized.
+        categorical columns with many values or very unbalanced values
+        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
         """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
         for col in columns:
             if col not in fake.columns.tolist():
                 fake[col] = 0
@@ -348,11 +356,11 @@ class TableEvaluator:
         self.target_type = target_type
 
         # Convert both datasets to numerical representations and split x and  y
-        real_x = numerical_encoding(self.real.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
+        real_x = numerical_encoding(self.real.drop([target_col], axis=1), cat_cols=self.categorical_columns)
 
         columns = sorted(real_x.columns.tolist())
         real_x = real_x[columns]
-        fake_x = numerical_encoding(self.fake.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
+        fake_x = numerical_encoding(self.fake.drop([target_col], axis=1), cat_cols=self.categorical_columns)
         for col in columns:
             if col not in fake_x.columns.tolist():
                 fake_x[col] = 0
@@ -376,17 +384,17 @@ class TableEvaluator:
 
         if target_type == 'regr':
             self.estimators = [
-                RandomForestRegressor(n_estimators=20, max_depth=5),
-                Lasso(),
-                Ridge(alpha=1.0),
-                ElasticNet(),
+                RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42),
+                Lasso(random_state=42),
+                Ridge(alpha=1.0, random_state=42),
+                ElasticNet(random_state=42),
             ]
         elif target_type == 'class':
             self.estimators = [
-                LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=500),
-                RandomForestClassifier(n_estimators=10),
-                DecisionTreeClassifier(),
-                MLPClassifier([50, 50], solver='adam', activation='relu', learning_rate='adaptive'),
+                LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=500, random_state=42),
+                RandomForestClassifier(n_estimators=10, random_state=42),
+                DecisionTreeClassifier(random_state=42),
+                MLPClassifier([50, 50], solver='adam', activation='relu', learning_rate='adaptive', random_state=42),
             ]
         else:
             raise Exception(f'target_type must be \'regr\' or \'class\'')
@@ -413,8 +421,8 @@ class TableEvaluator:
     def row_distance(self, n=None):
         if n is None:
             n = len(self.real)
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
+        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
@@ -435,6 +443,9 @@ class TableEvaluator:
         min_mean = np.mean(min_distances)
         min_std = np.std(min_distances)
         return min_mean, min_std
+
+    def column_correlations(self):
+        return column_correlations(self.real, self.fake, self.categorical_columns)
 
     def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None):
         """
@@ -457,18 +468,18 @@ class TableEvaluator:
 
         print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
 
-        basic_statistical = self.statistical_evaluation()  # 2 columns -> Corr -> correlation coefficient
-        correlation_correlation = self.correlation_correlation()  # 2 columns -> Kendall Tau -> Correlation coefficient
-        column_correlation = column_correlations(self.real, self.fake, self.categorical_columns)  # 1 column -> Mean
-        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)  # 1 2 columns -> Kendall Tau -> Correlation coefficient
-        pca_variance = self.pca_correlation()  # 1 number
+        basic_statistical = self.statistical_evaluation()
+        correlation_correlation = self.correlation_correlation()
+        column_correlation = self.column_correlations()
+        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
+        pca_variance = self.pca_correlation()
         nearest_neighbor = self.row_distance(n=20000)
 
         miscellaneous = {}
         miscellaneous['Column Correlation Distance RMSE'] = self.correlation_distance(how='rmse')
         miscellaneous['Column Correlation distance MAE'] = self.correlation_distance(how='mae')
 
-        miscellaneous['Duplicate rows between sets'] = len(self.get_duplicates())
+        miscellaneous['Duplicate rows between sets (real/fake)'] = self.get_duplicates()
         miscellaneous['nearest neighbor mean'] = nearest_neighbor[0]
         miscellaneous['nearest neighbor std'] = nearest_neighbor[1]
         miscellaneous_df = pd.DataFrame({'Result': list(miscellaneous.values())}, index=list(miscellaneous.keys()))
@@ -483,8 +494,8 @@ class TableEvaluator:
             '1 - MAPE 5 PCA components': pca_variance,
         }
         total_result = np.mean(list(all_results.values()))
-        all_results['Total Result'] = total_result
+        all_results['Similarity Score'] = total_result
         all_results_df = pd.DataFrame({'Result': list(all_results.values())}, index=list(all_results.keys()))
 
-        print(f'\nResults:\nNumber of duplicate rows is ignored for total score.')
+        print(f'\nResults:')
         print(all_results_df.to_string())

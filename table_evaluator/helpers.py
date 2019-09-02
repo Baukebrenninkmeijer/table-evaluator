@@ -80,9 +80,9 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     else:
         fig, ax = plt.subplots(1, 2, figsize=(20, 8))
 
-    real_corr = associations(real, nominal_columns=cat_cols, return_results=True, plot=True, theil_u=True,
+    real_corr = associations(real, cat_cols=cat_cols, return_results=True, plot=True, theil_u=True,
                              mark_columns=True, ax=ax[0], **kwargs)
-    fake_corr = associations(fake, nominal_columns=cat_cols, return_results=True, plot=True, theil_u=True,
+    fake_corr = associations(fake, cat_cols=cat_cols, return_results=True, plot=True, theil_u=True,
                              mark_columns=True, ax=ax[1], **kwargs)
 
     if plot_diff:
@@ -110,11 +110,11 @@ def plot_correlation_comparison(evaluators: List, **kwargs):
     fig, ax = plt.subplots(2, nr_plots, figsize=(4 * nr_plots, 7))
     flat_ax = ax.flatten()
     fake_corr = []
-    real_corr = associations(evaluators[0].real, nominal_columns=evaluators[0].categorical_columns, return_results=True, plot=True, theil_u=True,
+    real_corr = associations(evaluators[0].real, cat_cols=evaluators[0].categorical_columns, return_results=True, plot=True, theil_u=True,
                              mark_columns=True, ax=flat_ax[0], cbar=False, linewidths=0, **kwargs)
     for i in range(1, nr_plots):
         cbar = True if i % (nr_plots - 1) == 0 else False
-        fake_corr.append(associations(evaluators[i - 1].fake, nominal_columns=evaluators[0].categorical_columns, return_results=True, plot=True, theil_u=True,
+        fake_corr.append(associations(evaluators[i - 1].fake, cat_cols=evaluators[0].categorical_columns, return_results=True, plot=True, theil_u=True,
                                       mark_columns=True, ax=flat_ax[i], cbar=cbar, linewidths=0, **kwargs))
         if i % (nr_plots - 1) == 0:
             cbar = flat_ax[i].collections[0].colorbar
@@ -257,8 +257,7 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
     return correlation
 
 
-def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot=True,
-                 return_results=False, **kwargs):
+def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False, **kwargs):
     """
     Adapted from: https://github.com/shakedzy/dython
 
@@ -274,7 +273,7 @@ def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot
         columns are categorical, or None (default) to state none are categorical
     :param mark_columns: Boolean (default: False)
         if True, output's columns' names will have a suffix of '(nom)' or '(con)' based on there type (eda_tools or
-        continuous), as provided by nominal_columns
+        continuous), as provided by cat_cols
     :param theil_u: Boolean (default: False)
         In the case of categorical-categorical feaures, use Theil's U instead of Cramer's V
     :param plot: Boolean (default: True)
@@ -287,7 +286,7 @@ def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot
         A DataFrame of the correlation/strength-of-association between all features
     """
     if plot is False:
-        assert kwargs == {}, f'You have some kwargs that are not needed'
+        assert kwargs == {}, f'You have some kwargs that are not needed.\nkwargs: {kwargs}'
 
     dataset = convert(dataset, 'dataframe')
     columns = dataset.columns
@@ -342,7 +341,7 @@ def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot
         return corr
 
 
-def numerical_encoding(dataset, nominal_columns='all', drop_single_label=False, drop_fact_dict=True):
+def numerical_encoding(dataset, cat_cols='all', drop_single_label=False, drop_fact_dict=True):
     """
     Adapted from: https://github.com/shakedzy/dython
 
@@ -360,7 +359,7 @@ def numerical_encoding(dataset, nominal_columns='all', drop_single_label=False, 
     ----------
     dataset : NumPy ndarray / Pandas DataFrame
         The data-set to encode
-    nominal_columns : sequence / string
+    cat_cols : sequence / string
         A sequence of the nominal (categorical) columns in the dataset. If string, must be 'all' to state that
         all columns are nominal. If None, nothing happens. Default: 'all'
     drop_single_label : Boolean, default = False
@@ -370,14 +369,14 @@ def numerical_encoding(dataset, nominal_columns='all', drop_single_label=False, 
         the DataFrame and the dictionary of the binary factorization (originating from pd.factorize)
     """
     dataset = convert(dataset, 'dataframe')
-    if nominal_columns is None:
+    if cat_cols is None:
         return dataset
-    elif nominal_columns == 'all':
-        nominal_columns = dataset.columns
+    elif cat_cols == 'all':
+        cat_cols = dataset.columns
     converted_dataset = pd.DataFrame()
     binary_columns_dict = dict()
     for col in dataset.columns:
-        if col not in nominal_columns:
+        if col not in cat_cols:
             converted_dataset.loc[:, col] = dataset[col]
         else:
             unique_values = pd.unique(dataset[col])
@@ -405,7 +404,7 @@ def plot_mean_std_comparison(evaluators: List):
     for i in range(nr_plots):
         plot_mean_std(evaluators[i].real, evaluators[i].fake, ax=ax[:, i])
 
-    titles = ['TGAN', 'TGAN-WGAN-GP', 'TGAN-skip', 'MedGAN', 'TableGAN']
+    titles = [e.name if e is not None else idx for idx, e in enumerate(evaluators)]
     for i, label in enumerate(titles):
         title_font = {'size': '24'}
         flat_ax[i].set_title(label, **title_font)
