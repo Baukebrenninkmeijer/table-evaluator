@@ -106,3 +106,17 @@ def test_associations():
     assert_array_almost_equal(associations(real, cat_cols, return_results=True, theil_u=True, plot=False).values, associations_real_theil)
     assert_array_almost_equal(associations(fake, cat_cols, return_results=True, plot=False).values, associations_fake)
     assert_array_almost_equal(associations(fake, cat_cols, return_results=True, theil_u=True, plot=False).values, associations_fake_theil)
+
+
+def test_numerical_encoding():
+    num_encoding = numerical_encoding(real, cat_cols=cat_cols)
+    uint_cols = num_encoding.select_dtypes(include=['uint8']).columns.tolist()
+    num_encoding[uint_cols] = num_encoding[uint_cols].astype('int64')
+    stored_encoding = pd.read_csv('../data/real_test_sample_numerical_encoded.csv')
+    pd.testing.assert_frame_equal(num_encoding, stored_encoding)
+
+    num_encoding = numerical_encoding(fake, cat_cols=cat_cols)
+    uint_cols = num_encoding.select_dtypes(include=['uint8']).columns.tolist()
+    num_encoding[uint_cols] = num_encoding[uint_cols].astype('int64')
+    stored_encoding = pd.read_csv('../data/fake_test_sample_numerical_encoded.csv')
+    pd.testing.assert_frame_equal(num_encoding, stored_encoding)
