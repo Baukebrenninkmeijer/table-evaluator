@@ -1,10 +1,12 @@
+@import "style.css"
+
 # TableEvaluator
 **Production branch reflects the pypi package**
 
 TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does **not** have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.
 
 ## Installation
-The package can be installed with 
+The package can be installed with
 ```
 pip install table_evaluator
 ```
@@ -17,33 +19,20 @@ from table_evaluator import *
 
 The package is used by having two DataFrames; one with the real data and one with the synthetic data. These are passed to the TableEvaluator on init.
 The `helpers.load_data` is nice to retrieve these dataframes from disk since it converts them to the same dtypes and columns after loading. However, any dataframe will do as long as they have the same columns and data types.
- 
- Using the test data available in the `data` directory, we do: 
+
+ Using the test data available in the `data` directory, we do:
 
 ```python
 real, fake = load_data('data/real_test_sample.csv', 'data/fake_test_sample.csv')
 
 ```
-which gives us two dataframes and specifies which columns should be treated as categorical columns. 
+which gives us two dataframes and specifies which columns should be treated as categorical columns.
 
 ```python
 real.head()
 ```
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -124,21 +113,7 @@ real.head()
 ```python
 fake.head()
 ```
-
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -224,7 +199,7 @@ Then we create the TableEvaluator object:
 table_evaluator = TableEvaluator(real, fake, cat_cols=cat_cols)
 ```
 
-It's nice to start with some plots to get a feel for the data and how they correlate. The test samples contain only 1000 samples, which is why the cumulative sum plots are not very smooth. 
+It's nice to start with some plots to get a feel for the data and how they correlate. The test samples contain only 1000 samples, which is why the cumulative sum plots are not very smooth.
 
 ```python
 table_evaluator.visual_evaluation()
@@ -252,9 +227,9 @@ The `evaluate` method gives us the most complete idea of how close the data sets
 table_evaluator.evaluate(target_col='trans_type')
 ```
 
-    
+
     Correlation metric: pearsonr
-    
+
     Classifier F1-scores:
                                           real   fake
     real_data_LogisticRegression_F1     0.8200 0.8150
@@ -265,7 +240,7 @@ table_evaluator.evaluate(target_col='trans_type')
     fake_data_RandomForestClassifier_F1 0.9300 0.9300
     fake_data_DecisionTreeClassifier_F1 0.9300 0.9400
     fake_data_MLPClassifier_F1          0.3600 0.6200
-    
+
     Miscellaneous results:
                                       Result
     Column Correlation Distance RMSE          0.0399
@@ -273,7 +248,7 @@ table_evaluator.evaluate(target_col='trans_type')
     Duplicate rows between sets (real/fake)   (0, 0)
     nearest neighbor mean                     0.5655
     nearest neighbor std                      0.3726
-    
+
     Results:
                                                     Result
     basic statistics                                0.9940
@@ -282,9 +257,9 @@ table_evaluator.evaluate(target_col='trans_type')
     1 - MAPE Estimator results                      0.7843
     1 - MAPE 5 PCA components                       0.9138
     Similarity Score                                0.9278
-    
- The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations. 
- 
+
+ The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations.
+
 
 Other relevant methods are:
 ```python
