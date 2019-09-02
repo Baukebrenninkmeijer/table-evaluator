@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="table_evaluator",
+    name="table-evaluator",
     version="1.0.2",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
