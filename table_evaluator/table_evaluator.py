@@ -59,8 +59,9 @@ class TableEvaluator:
             self.n_samples = n_samples
         else:
             raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
-        self.real = self.real[:self.n_samples]
-        self.fake = self.fake[:self.n_samples]
+        
+        self.real = self.real.sample(self.n_samples)
+        self.fake = self.fake.sample(self.n_samples)
         assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
 
     def plot_mean_std(self):
