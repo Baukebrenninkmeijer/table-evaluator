@@ -11,8 +11,8 @@ script:
 - cd ..
 - travis-sphinx build
 
-after_succes:
-  - travis-sphinx deploy --branches production
+after_success:
+  - travis-sphinx deploy --branches=production,master
 
 deploy:
   - provider: pypi
