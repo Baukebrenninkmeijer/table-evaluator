@@ -74,8 +74,7 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
 
     - Continuous - Continuous: Uses Pearson's correlation coefficient
-    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - Categorical and
-        Categorical - continuous.
+    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - categorical and categorical - continuous.
     - Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
 
     :param real: DataFrame with real data
