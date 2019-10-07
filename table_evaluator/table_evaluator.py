@@ -356,8 +356,8 @@ class TableEvaluator:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
         created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``.
-         Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with Pearson's.
-         If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
+        Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with Pearson's.
+        If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
 
         :param target_col: which column should be considered the target both both the regression and classification task.
         :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.

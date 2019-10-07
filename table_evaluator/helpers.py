@@ -374,9 +374,9 @@ def numerical_encoding(dataset, cat_cols: str = 'all', drop_single_label: bool =
         If True, the return value will be the encoded DataFrame alone. If False, it will be a tuple of
         the DataFrame and the dictionary of the binary factorization (originating from pd.factorize)
     :return: DataFrame or (DataFrame, dict). If `drop_fact_dict` is True, returns the encoded DataFrame.
-    else, returns a tuple of the encoded DataFrame and dictionary, where each key is a two-value column, and the
-    value is the original labels, as supplied by Pandas `factorize`. Will be empty if no two-value columns are
-    present in the data-set
+        else, returns a tuple of the encoded DataFrame and dictionary, where each key is a two-value column, and the
+        value is the original labels, as supplied by Pandas `factorize`. Will be empty if no two-value columns are
+        present in the data-set
     """
     dataset = convert(dataset, 'dataframe')
     if cat_cols is None:
