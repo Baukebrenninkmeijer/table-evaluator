@@ -1,9 +1,20 @@
 from dython.nominal import *
-from typing import Union, List
+from typing import Union, List, Tuple, Optional
 from sklearn.metrics import mean_squared_error
 
 
-def load_data(path_real, path_fake, real_sep=',', fake_sep=',', drop_columns=None):
+def load_data(path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: List = None) \
+        -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns with the same data types.
+
+    :param path_real: string path to csv with real data
+    :param path_fake: string path to csv with real data
+    :param real_sep: separator of the real csv
+    :param fake_sep: separator of the fake csv
+    :param drop_columns: names of columns to drop.
+    :return: Tuple with DataFrame containing the real data and DataFrame containing the synthetic data.
+    """
     real = pd.read_csv(path_real, sep=real_sep, low_memory=False)
     fake = pd.read_csv(path_fake, sep=fake_sep, low_memory=False)
     if set(fake.columns.tolist()).issubset(set(real.columns.tolist())):
@@ -25,10 +36,11 @@ def load_data(path_real, path_fake, real_sep=',', fake_sep=',', drop_columns=Non
     return real, fake
 
 
-def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs):
+def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs) -> Optional[np.ndarray]:
     """
     Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the top half of the correlation matrix,
     since this holds the same values.
+
     :param x: Dataframe to plot data from
     :param ax: Axis on which to plot the correlations
     :param return_values: return correlation matrix after plotting
@@ -40,7 +52,7 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
     elif isinstance(x, np.ndarray):
         corr = np.corrcoef(x, rowvar=False)
     else:
-        raise Exception('Unknown datatype given. Make sure a Pandas DataFrame or Numpy Array is passed.')
+        raise ValueError('Unknown datatype given. Make sure a Pandas DataFrame or Numpy Array is passed for x.')
 
     sns.set(style="white")
     mask = np.zeros_like(corr, dtype=np.bool)
@@ -56,19 +68,21 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
         return corr
 
 
-def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff=True, cat_cols: list = None, **kwargs):
+def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff: bool = True, cat_cols: list = None, **kwargs):
     """
     Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has support for continuous and Categorical
     (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
-    Continuous - Continuous: Uses Pearson's correlation coefficient
-    Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - Categorical and
+
+    - Continuous - Continuous: Uses Pearson's correlation coefficient
+    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - Categorical and
         Categorical - continuous.
-    Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
+    - Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
+
     :param real: DataFrame with real data
     :param fake: DataFrame with synthetic data
     :param plot_diff: Plot difference if True, else not
     :param cat_cols: List of Categorical columns
-    :param kwargs: keyword arguments that are passed to `sns.heatmap`.
+    :param kwargs: keyword arguments that are passed to ``sns.heatmap``.
     """
     assert isinstance(real, pd.DataFrame), f'`real` parameters must be a Pandas DataFrame'
     assert isinstance(fake, pd.DataFrame), f'`fake` parameters must be a Pandas DataFrame'
@@ -103,8 +117,9 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
 def plot_correlation_comparison(evaluators: List, **kwargs):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
+
     :param evaluators: list of TableEvaluator objects
-    :param kwargs: keyword arguments that are passed to `sns.heatmap`.
+    :param kwargs: keyword arguments that are passed to ``sns.heatmap``.
     """
     nr_plots = len(evaluators) + 1
     fig, ax = plt.subplots(2, nr_plots, figsize=(4 * nr_plots, 7))
@@ -144,6 +159,7 @@ def plot_correlation_comparison(evaluators: List, **kwargs):
 def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', ax=None):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
+
     :param data_r: Series with real data
     :param data_f: Series with fake data
     :param xlabel: Label to put on the x-axis
@@ -174,64 +190,56 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
         plt.show()
 
 
-def categorical_distribution(real, fake, xlabel, ylabel, col=None, ax=None):
-    ax = ax if ax else plt.subplots()[1]
-    if col is not None:
-        real = real[col]
-        fake = fake[col]
-    y_r = real.value_counts().sort_index() / len(real)
-    y_f = fake.value_counts().sort_index() / len(fake)
+def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray):
+    """
+    Returns the mean absolute error between y_true and y_pred.
 
-    ind = np.arange(len(y_r.index))
-
-    ax.grid()
-    yr_cumsum = y_r.cumsum()
-    yf_cumsum = y_f.cumsum()
-    values = yr_cumsum.values.tolist() + yf_cumsum.values.tolist()
-    real = [1 for _ in range(len(yr_cumsum))] + [0 for _ in range(len(yf_cumsum))]
-    classes = yr_cumsum.index.tolist() + yf_cumsum.index.tolist()
-    data = pd.DataFrame({'values': values,
-                         'real': real,
-                         'class': classes})
-    paper_rc = {'lines.linewidth': 8}
-    sns.set_context("paper", rc=paper_rc)
-    #     ax.plot(x=yr_cumsum.index.tolist(), y=yr_cumsum.values.tolist(), ms=8)
-    sns.lineplot(y='values', x='class', data=data, ax=ax, hue='real')
-    #     ax.bar(ind - width / 2, y_r.values, width, label='Real')
-    #     ax.bar(ind + width / 2, y_f.values, width, label='Fake')
-
-    ax.set_ylabel('Distributions per variable')
-
-    axis_font = {'size': '18'}
-    ax.set_xlabel(xlabel, **axis_font)
-    ax.set_ylabel(ylabel, **axis_font)
-
-    ax.set_xticks(ind)
-    ax.set_xticklabels(y_r.index, rotation='vertical')
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3)
-
-
-def mean_absolute_error(y_true, y_pred):
+    :param y_true: NumPy.ndarray with the ground truth values.
+    :param y_pred: NumPy.ndarray with the ground predicted values.
+    :return: Mean absolute error (float).
+    """
     return np.mean(np.abs(np.subtract(y_true, y_pred)))
 
 
-def euclidean_distance(y_true, y_pred):
+def euclidean_distance(y_true: np.ndarray, y_pred: np.ndarray):
+    """
+    Returns the euclidean distance between y_true and y_pred.
+
+    :param y_true: NumPy.ndarray with the ground truth values.
+    :param y_pred: NumPy.ndarray with the ground predicted values.
+    :returns: Mean absolute error (float).
+    """
     return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
 
 
-def mean_absolute_percentage_error(y_true, y_pred):
+def mean_absolute_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
+    """
+    Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero values.
+
+    :param y_true: NumPy.ndarray with the ground truth values.
+    :param y_pred: NumPy.ndarray with the ground predicted values.
+    :return: Mean absolute percentage error (float).
+    """
     y_true, y_pred = np.array(y_true), np.array(y_pred)
     return np.mean(np.abs((y_true - y_pred) / y_true))
 
 
-def rmse(y_true, y_pred):
+def rmse(y_true: np.ndarray, y_pred: np.ndarray):
+    """
+    Returns the root mean squared error between y_true and y_pred.
+
+    :param y_true: NumPy.ndarray with the ground truth values.
+    :param y_pred: NumPy.ndarray with the ground predicted values.
+    :return: root mean squared error (float).
+    """
     return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
     """
-    Columnwise correlation calculation between `dataset_a` and `dataset_b`.
-    :param dataset_a: DataFrame a
+    Columnwise correlation calculation between ``dataset_a`` and ``dataset_b``.
+
+    :param dataset_a: First DataFrame
     :param dataset_b: Second DataFrame
     :param categorical_columns: The columns containing categorical values
     :param theil_u: Whether to use Theil's U. If False, use Cramer's V.
@@ -257,15 +265,17 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
     return correlation
 
 
-def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False, **kwargs):
+def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False, **kwargs):
     """
     Adapted from: https://github.com/shakedzy/dython
 
     Calculate the correlation/strength-of-association of features in data-set with both categorical (eda_tools) and
     continuous features using:
+
      - Pearson's R for continuous-continuous cases
      - Correlation Ratio for categorical-continuous cases
      - Cramer's V or Theil's U for categorical-categorical cases
+
     :param dataset: NumPy ndarray / Pandas DataFrame
         The data-set for which the features' correlation is computed
     :param cat_cols: string / list / NumPy ndarray
@@ -341,32 +351,32 @@ def associations(dataset, cat_cols=None, mark_columns=False, theil_u=False, plot
         return corr
 
 
-def numerical_encoding(dataset, cat_cols='all', drop_single_label=False, drop_fact_dict=True):
+def numerical_encoding(dataset, cat_cols: str = 'all', drop_single_label: bool = False, drop_fact_dict: bool = True):
     """
     Adapted from: https://github.com/shakedzy/dython
 
     Encoding a data-set with mixed data (numerical and categorical) to a numerical-only data-set,
     using the following logic:
-    * categorical with only a single value will be marked as zero (or dropped, if requested)
-    * categorical with two values will be replaced with the result of Pandas `factorize`
-    * categorical with more than two values will be replaced with the result of Pandas `get_dummies`
-    * numerical columns will not be modified
-    **Returns:** DataFrame or (DataFrame, dict). If `drop_fact_dict` is True, returns the encoded DataFrame.
+
+    - categorical with only a single value will be marked as zero (or dropped, if requested)
+    - categorical with two values will be replaced with the result of Pandas `factorize`
+    - categorical with more than two values will be replaced with the result of Pandas `get_dummies`
+    - numerical columns will not be modified
+
+    :param dataset: NumPy ndarray / Pandas DataFrame
+        The data-set to encode
+    :param cat_cols: sequence / string
+        A sequence of the nominal (categorical) columns in the dataset. If string, must be 'all' to state that
+        all columns are nominal. If None, nothing happens. Default: 'all'
+    :param drop_single_label: Boolean, default = False
+        If True, nominal columns with a only a single value will be dropped.
+    :param drop_fact_dict: Boolean, default = True
+        If True, the return value will be the encoded DataFrame alone. If False, it will be a tuple of
+        the DataFrame and the dictionary of the binary factorization (originating from pd.factorize)
+    :return: DataFrame or (DataFrame, dict). If `drop_fact_dict` is True, returns the encoded DataFrame.
     else, returns a tuple of the encoded DataFrame and dictionary, where each key is a two-value column, and the
     value is the original labels, as supplied by Pandas `factorize`. Will be empty if no two-value columns are
     present in the data-set
-    Parameters
-    ----------
-    dataset : NumPy ndarray / Pandas DataFrame
-        The data-set to encode
-    cat_cols : sequence / string
-        A sequence of the nominal (categorical) columns in the dataset. If string, must be 'all' to state that
-        all columns are nominal. If None, nothing happens. Default: 'all'
-    drop_single_label : Boolean, default = False
-        If True, nominal columns with a only a single value will be dropped.
-    drop_fact_dict : Boolean, default = True
-        If True, the return value will be the encoded DataFrame alone. If False, it will be a tuple of
-        the DataFrame and the dictionary of the binary factorization (originating from pd.factorize)
     """
     dataset = convert(dataset, 'dataframe')
     if cat_cols is None:
@@ -396,7 +406,8 @@ def numerical_encoding(dataset, cat_cols='all', drop_single_label=False, drop_fa
 def plot_mean_std_comparison(evaluators: List):
     """
     Plot comparison between the means and standard deviations from each evaluator in evaluators.
-    :param evaluators:
+
+    :param evaluators: list of TableEvaluator objects that are to be evaluated.
     """
     nr_plots = len(evaluators)
     fig, ax = plt.subplots(2, nr_plots, figsize=(4 * nr_plots, 7))
@@ -411,9 +422,10 @@ def plot_mean_std_comparison(evaluators: List):
     plt.tight_layout()
 
 
-def plot_mean_std(real, fake, ax=None):
+def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None):
     """
     Plot the means and standard deviations of each dataset.
+
     :param real: DataFrame containing the real data
     :param fake: DataFrame containing the fake data
     :param ax: Axis to plot on. If none, a new figure is made.
@@ -453,4 +465,3 @@ def plot_mean_std(real, fake, ax=None):
     ax[1].grid(True)
     if ax is None:
         plt.show()
-

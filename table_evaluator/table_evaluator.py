@@ -28,6 +28,7 @@ class TableEvaluator:
     def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=55, metric='pearsonr', verbose=False, n_samples=None,
                  name: str = None):
         """
+
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
         :param unique_thresh: Threshold for automatic evaluation if column is numeric
@@ -101,18 +102,19 @@ class TableEvaluator:
     def plot_correlation_difference(self, plot_diff=True, **kwargs):
         """
         Plot the assocation matrices for each table and, if chosen, the difference between them.
+
         :param plot_diff: whether to plot the difference
         :param kwargs: kwargs for sns.heatmap
         """
         plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff,
                                     **kwargs)
 
-    def correlation_distance(self, how='euclidean'):
+    def correlation_distance(self, how: str = 'euclidean') -> float:
         """
         Calculate distance between correlation matrices with certain metric.
-        Metric options are: euclidean, mae (mean absolute error)
-        :param how: metric to measure distance. Choose from [euclidean, mae, rmse].
-        :return: distance between the association matrices in the chosen evaluation metric.
+
+        :param how: metric to measure distance. Choose from [``euclidean``, ``mae``, ``rmse``].
+        :return: distance between the association matrices in the chosen evaluation metric. Default: Euclidean
         """
         distance_func = None
         if how == 'euclidean':
@@ -154,7 +156,8 @@ class TableEvaluator:
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
         """
-        Check whether any real values occur in the fake data
+        Check whether any real values occur in the fake data.
+
         :param return_len: whether to return the length of the copied rows or not.
         :return: Dataframe containing the duplicates if return_len=False, else integer indicating the number of copied rows.
         """
@@ -176,6 +179,7 @@ class TableEvaluator:
     def get_duplicates(self, return_values: bool = False) -> Tuple[Union[pd.DataFrame, int], Union[pd.DataFrame, int]]:
         """
         Return duplicates within each dataset.
+
         :param return_values: whether to return the duplicate values in the datasets. If false, the lengths are returned.
         :return: dataframe with duplicates or the length of those dataframes if return_values=False.
         """
@@ -190,6 +194,7 @@ class TableEvaluator:
         """
         Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent implementation the MAPE(log) is used instead of
         regressions like Pearson's r.
+
         :param lingress: whether to use a linear regression, in this case Pearson's.
         :return: the correlation coefficient if lingress=True, otherwise 1 - MAPE(log(real), log(fake))
         """
@@ -237,6 +242,7 @@ class TableEvaluator:
     def score_estimators(self):
         """
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
+
         :return: dataframe with the results for each estimator on each data test set.
         """
         if self.target_type == 'class':
@@ -266,9 +272,9 @@ class TableEvaluator:
 
     def visual_evaluation(self, **kwargs):
         """
-        Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the 2D PCA transform.
-        :param kwargs:
-        :return:
+        Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the PCA transform.
+
+        :param kwargs: any kwargs for matplotlib.
         """
         self.plot_mean_std()
         self.plot_cumsums()
@@ -279,6 +285,7 @@ class TableEvaluator:
         """
         Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's Rho. Spearman's is used because these
         values can differ a lot in magnitude, and Spearman's is more resilient to outliers.
+
         :return: correlation coefficient
         """
         total_metrics = pd.DataFrame()
@@ -309,7 +316,8 @@ class TableEvaluator:
     def correlation_correlation(self) -> float:
         """
         Calculate the correlation coefficient between the association matrices of self.real and self.fake using self.comparison_metric
-        :return: correlation coefficient
+
+        :return: The correlation coefficient
         """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
@@ -330,6 +338,7 @@ class TableEvaluator:
         """
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
         categorical columns with many values or very unbalanced values
+
         :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
         """
         real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
@@ -346,12 +355,13 @@ class TableEvaluator:
     def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
-        created of each of the estimators S_r and S_f, for the real and fake data respectively. S_f is trained on self.real and S_r on self.fake. Then both
-        are evaluated on their own and the others test set. If target_type is `regr` we do a regression on the RMSE scores with Pearson's. If target_type is
-        `class`, we calculate F1 scores and do return 1 - MAPE(F1_r, F1_f).
+        created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``.
+         Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with Pearson's.
+         If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
+
         :param target_col: which column should be considered the target both both the regression and classification task.
-        :param target_type: what kind of task this is. Can be either `class` or `regr`.
-        :return:
+        :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.
+        :return: Correlation value or 1 - MAPE
         """
         self.target_col = target_col
         self.target_type = target_type
@@ -398,7 +408,7 @@ class TableEvaluator:
                 MLPClassifier([50, 50], solver='adam', activation='relu', learning_rate='adaptive', random_state=42),
             ]
         else:
-            raise Exception(f'target_type must be \'regr\' or \'class\'')
+            raise ValueError(f'target_type must be \'regr\' or \'class\'')
 
         self.r_estimators = copy.deepcopy(self.estimators)
         self.f_estimators = copy.deepcopy(self.estimators)
@@ -419,9 +429,15 @@ class TableEvaluator:
             mean = mean_absolute_percentage_error(self.estimators_scores['real'], self.estimators_scores['fake'])
             return 1 - mean
 
-    def row_distance(self, n=None):
-        if n is None:
-            n = len(self.real)
+    def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
+        """
+        Calculate mean and standard deviation distances between `self.fake` and `self.real`.
+
+        :param n_samples: Number of samples to take for evaluation. Compute time increases exponentially.
+        :return: `(mean, std)` of these distances.
+        """
+        if n_samples is None:
+            n_samples = len(self.real)
         real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
         fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
 
@@ -439,24 +455,30 @@ class TableEvaluator:
                 fake[column] = (fake[column] - fake[column].mean()) / fake[column].std()
         assert real.columns.tolist() == fake.columns.tolist()
 
-        distances = cdist(real[:n], fake[:n])
+        distances = cdist(real[:n_samples], fake[:n_samples])
         min_distances = np.min(distances, axis=1)
         min_mean = np.mean(min_distances)
         min_std = np.std(min_distances)
         return min_mean, min_std
 
     def column_correlations(self):
+        """
+        Wrapper function around ``helpers.column_correlation``.
+
+        :return: Column correlations between ``self.real`` and ``self.fake``.
+        """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None):
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = None):
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
+
         :param target_col: column to use for predictions with estimators
-        :param target_type: what kind of task to perform on the target_col. Can be either `class` for classification or `regr` for regression.
-        :param n_samples: the number of samples to use for the estimators. Training time scales mostly linear
-        :param metric: overwrites self.metric. Scoring metric for the attributes. By default Pearson's r is used. Alternatives
-            include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
+        :param target_type: what kind of task to perform on the target_col. Can be either ``class`` for classification or ``regr`` for regression.
+        :param metric: overwrites self.metric. Scoring metric for the attributes.
+            By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
+        :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
         :param verbose: whether to print verbose logging.
         """
         if verbose is not None:
@@ -474,7 +496,7 @@ class TableEvaluator:
         column_correlation = self.column_correlations()
         estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
         pca_variance = self.pca_correlation()
-        nearest_neighbor = self.row_distance(n=20000)
+        nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
 
         miscellaneous = {}
         miscellaneous['Column Correlation Distance RMSE'] = self.correlation_distance(how='rmse')
