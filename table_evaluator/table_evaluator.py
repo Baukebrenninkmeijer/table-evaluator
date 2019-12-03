@@ -122,22 +122,24 @@ class TableEvaluator:
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
-                sns.distplot(self.real[col], ax=axes[i])
-                sns.distplot(self.fake[col], ax=axes[i], color='darkorange')
+                sns.distplot(self.real[col], ax=axes[i], label='Real')
+                sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake')
+                axes[i].legend()
             else:
                 real = self.real.copy()
                 fake = self.fake.copy()
                 real['kind'] = 'Real'
                 fake['kind'] = 'Fake'
-                concat = pd.concat([real, fake])
-
-                x, y, hue = "trans_operation", "proportion", "kind"
+                concat = pd.concat([fake, real])
+                palette = sns.color_palette(
+                    [(0.8666666666666667, 0.5176470588235295, 0.3215686274509804), (0.2980392156862745, 0.4470588235294118, 0.6901960784313725)])
+                x, y, hue = col, "proportion", "kind"
                 ax = (concat[x]
                       .groupby(concat[hue])
                       .value_counts(normalize=True)
                       .rename(y)
                       .reset_index()
-                      .pipe((sns.barplot, "data"), x=x, y=y, hue=hue, ax=axes[i], saturation=0.7))
+                      .pipe((sns.barplot, "data"), x=x, y=y, hue=hue, ax=axes[i], saturation=0.8, palette=palette))
                 ax.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
         plt.show()
