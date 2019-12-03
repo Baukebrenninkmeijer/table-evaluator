@@ -74,8 +74,7 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
 
     - Continuous - Continuous: Uses Pearson's correlation coefficient
-    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - Categorical and
-        Categorical - continuous.
+    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - categorical and categorical - continuous.
     - Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
 
     :param real: DataFrame with real data
@@ -265,7 +264,8 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
     return correlation
 
 
-def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False, **kwargs):
+def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False,
+                 ax=None, nan_strategy=REPLACE, nan_replace_value=DEFAULT_REPLACE_VALUE, **kwargs):
     """
     Adapted from: https://github.com/shakedzy/dython
 
@@ -285,7 +285,7 @@ def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_c
         if True, output's columns' names will have a suffix of '(nom)' or '(con)' based on there type (eda_tools or
         continuous), as provided by cat_cols
     :param theil_u: Boolean (default: False)
-        In the case of categorical-categorical feaures, use Theil's U instead of Cramer's V
+        In the case of categorical-categorical features, use Theil's U instead of Cramer's V
     :param plot: Boolean (default: True)
         If True, plot a heat-map of the correlation matrix
     :param return_results: Boolean (default: False)
@@ -313,19 +313,19 @@ def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_c
                 if columns[i] in cat_cols:
                     if columns[j] in cat_cols:
                         if theil_u:
-                            corr[columns[j]][columns[i]] = theils_u(dataset[columns[i]], dataset[columns[j]])
-                            corr[columns[i]][columns[j]] = theils_u(dataset[columns[j]], dataset[columns[i]])
+                            corr[columns[j]][columns[i]] = theils_u(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
+                            corr[columns[i]][columns[j]] = theils_u(dataset[columns[j]], dataset[columns[i]], nan_strategy=SKIP)
                         else:
-                            cell = cramers_v(dataset[columns[i]], dataset[columns[j]])
+                            cell = cramers_v(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
                             corr[columns[i]][columns[j]] = cell
                             corr[columns[j]][columns[i]] = cell
                     else:
-                        cell = correlation_ratio(dataset[columns[i]], dataset[columns[j]])
+                        cell = correlation_ratio(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
                         corr[columns[i]][columns[j]] = cell
                         corr[columns[j]][columns[i]] = cell
                 else:
                     if columns[j] in cat_cols:
-                        cell = correlation_ratio(dataset[columns[j]], dataset[columns[i]])
+                        cell = correlation_ratio(dataset[columns[j]], dataset[columns[i]], nan_strategy=SKIP)
                         corr[columns[i]][columns[j]] = cell
                         corr[columns[j]][columns[i]] = cell
                     else:
@@ -339,13 +339,13 @@ def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_c
         corr.columns = marked_columns
         corr.index = marked_columns
     if plot:
-        if kwargs.get('ax') is None:
+        if ax is None:
             plt.figure(figsize=kwargs.get('figsize', None))
         cmap = sns.diverging_palette(220, 10, as_cmap=True)
         sns.set(style="white")
         sns.heatmap(corr, annot=kwargs.get('annot', True), fmt=kwargs.get('fmt', '.2f'), cmap=cmap, vmax=1, center=0,
-                    square=True, linewidths=kwargs.get('linewidths', 0.5), cbar_kws={"shrink": .8}, cbar=kwargs.get('cbar', True), ax=kwargs.get('ax', None))
-        if kwargs.get('ax') is None:
+                    square=True, linewidths=kwargs.get('linewidths', 0.5), cbar_kws={"shrink": .8}, cbar=kwargs.get('cbar', True), ax=ax)
+        if ax is None:
             plt.show()
     if return_results:
         return corr
