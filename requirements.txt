@@ -5,4 +5,4 @@ pandas
 numpy
 matplotlib
 tqdm
-scikit_learn==0.21.3
+scikit_learn
