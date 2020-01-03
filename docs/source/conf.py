@@ -50,6 +50,8 @@ extensions = [
     'm2r',
 ]
 
+suppress_warnings = ['image.not_readable']
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
