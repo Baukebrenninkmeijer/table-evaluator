@@ -7,3 +7,4 @@ matplotlib
 tqdm
 scikit_learn
 sphinx-rtd-theme
+m2r
