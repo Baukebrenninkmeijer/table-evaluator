@@ -125,13 +125,8 @@ table_evaluator.evaluate(target_col='trans_type')
 
  The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations.
 
+Please see the full documentation on [https://baukebrenninkmeijer.github.io/Table_Evaluator](https://baukebrenninkmeijer.github.io/Table_Evaluator).
 
-Other relevant methods are:
-```python
-table_evaluator.statistical_evaluation()
-table_evaluator.correlation_correlation()
-table_evaluator.pca_correlation()
-table_evaluator.estimator_evaluation()
-table_evaluator.row_distance()
-table_evaluator.get_duplicates()
-```
+If you have any tips or suggestions, please contact send me an email.
+
+To see the motivation for my decisions, please have a look at my master thesis, found at [https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
