@@ -6,5 +6,5 @@ numpy
 matplotlib
 tqdm
 scikit_learn
-sphinx-rtd-theme
 m2r
+sphinx-rtd-theme
