@@ -12,12 +12,10 @@ Welcome to TableEvaluator's documentation!
 
    table_evaluator
    helper_functions
-   source/README.md
 
 Welcome to the documentation for TableEvaluator! Please see the contents/sidebar for a high level overview. The library consists of two main parts. First, the TableEvaluator class, which does most of the heavy lifting and then Helper Functions that provide extra functionality and reusable parts for TableEvaluator.
 
-.. mdinclude:: 
-    ../../README.md
+.. mdinclude:: ../../README.md
 
 Module Index
 ==================
