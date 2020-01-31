@@ -9,7 +9,6 @@ script:
 - cd tests
 - pytest helpers_test.py
 - cd ../docs
-# - ln -s ../README.md
 - travis-sphinx build
 
 after_success:
