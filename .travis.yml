@@ -8,11 +8,11 @@ python:
 script:
 - cd tests
 - pytest helpers_test.py
-# - cd ../docs
+- cd ..
 # - ln -s ../README.md
 # - travis-sphinx build
 
-after_success:
+# after_success:
   # - travis-sphinx deploy --branches=production,master
 
 deploy:
