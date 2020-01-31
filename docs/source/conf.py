@@ -48,6 +48,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'm2r',
+    'recommonmark ',
 ]
 
 suppress_warnings = ['image.not_readable']
