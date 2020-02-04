@@ -48,7 +48,10 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'm2r',
+    'recommonmark ',
 ]
+
+suppress_warnings = ['image.not_readable']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
