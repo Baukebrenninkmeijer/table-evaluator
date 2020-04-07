@@ -13,6 +13,17 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Baukebrenninkmeijer/Table-Evaluator",
     packages=setuptools.find_packages(),
+    install_requires=[
+        'pandas',
+        'numpy',
+        'tqdm',
+        'psutil',
+        'dython',
+        'seaborn',
+        'matplotlib',
+        'scikit-learn',
+        'scipy'
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
