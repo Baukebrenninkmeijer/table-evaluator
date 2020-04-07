@@ -5,6 +5,6 @@ pandas
 numpy
 matplotlib
 tqdm
-scikit_learn
+scikit-learn
 m2r
 sphinx-rtd-theme
