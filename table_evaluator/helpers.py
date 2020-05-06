@@ -2,6 +2,7 @@ from dython.nominal import *
 from typing import Union, List, Tuple, Optional
 from sklearn.metrics import mean_squared_error
 import pandas as pd
+import numpy as np
 
 
 def load_data(path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: List = None) \

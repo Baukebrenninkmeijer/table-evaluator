@@ -41,8 +41,8 @@ class TableEvaluator:
         """
         self.name = name
         self.unique_thresh = unique_thresh
-        self.real = real
-        self.fake = fake
+        self.real = real.copy()
+        self.fake = fake.copy()
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
 
@@ -385,6 +385,7 @@ class TableEvaluator:
             print('\nColumn correlation between datasets:')
             print(total_metrics.to_string())
         return corr
+
 
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
