@@ -1,4 +1,4 @@
-from dython.nominal import *
+from dython.nominal import compute_associations, associations, theils_u, cramers_v
 from typing import Union, List, Tuple, Optional
 from sklearn.metrics import mean_squared_error
 import pandas as pd
@@ -89,7 +89,7 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     :param fake: DataFrame with synthetic data
     :param plot_diff: Plot difference if True, else not
     :param cat_cols: List of Categorical columns
-    :param kwargs: keyword arguments that are passed to ``sns.heatmap``.
+    :param boolean annot: Whether to annotate the plot with numbers indicating the associations.
     """
     assert isinstance(real, pd.DataFrame), f'`real` parameters must be a Pandas DataFrame'
     assert isinstance(fake, pd.DataFrame), f'`fake` parameters must be a Pandas DataFrame'
@@ -103,9 +103,9 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
         fig, ax = plt.subplots(1, 2, figsize=(20, 8))
 
     real_corr = associations(real, nominal_columns=cat_cols, plot=False, theil_u=True,
-                             mark_columns=True, ax=ax[0], cmap=cmap)['corr']
+                             mark_columns=True, annot=annot, ax=ax[0], cmap=cmap)['corr']
     fake_corr = associations(fake, nominal_columns=cat_cols, plot=False, theil_u=True,
-                             mark_columns=True, ax=ax[1], cmap=cmap)['corr']
+                             mark_columns=True, annot=annot, ax=ax[1], cmap=cmap)['corr']
 
     if plot_diff:
         diff = abs(real_corr - fake_corr)
@@ -126,7 +126,7 @@ def plot_correlation_comparison(evaluators: List, annot=False):
     Plot the correlation differences of multiple TableEvaluator objects.
 
     :param evaluators: list of TableEvaluator objects
-    :param kwargs: keyword arguments that are passed to ``sns.heatmap``.
+    :param boolean annot: Whether to annotate the plots with numbers.
     """
     nr_plots = len(evaluators) + 1
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
@@ -135,28 +135,26 @@ def plot_correlation_comparison(evaluators: List, annot=False):
     flat_ax[nr_plots + 1].clear()
     fake_corr = []
     real_corr = associations(evaluators[0].real, nominal_columns=evaluators[0].categorical_columns, plot=False, theil_u=True,
-                             mark_columns=True, annot=False, cmap=cmap, ax=flat_ax[0])['corr']
+                             mark_columns=True, annot=False, cmap=cmap, cbar=False, ax=flat_ax[0])['corr']
     for i in range(1, nr_plots):
-        # Comments in this section are because the cbar parameter is not available anymore in the associations function. If it is
-        # in the future you can enable it again.
         cbar = True if i % (nr_plots - 1) == 0 else False
         fake_corr.append(
             associations(evaluators[i - 1].fake, nominal_columns=evaluators[0].categorical_columns, plot=False, theil_u=True,
-                                      mark_columns=True, annot=False, cmap=cmap, ax=flat_ax[i])['corr']
+                         mark_columns=True, annot=False, cmap=cmap, cbar=cbar, ax=flat_ax[i])['corr']
         )
-        # if i % (nr_plots - 1) == 0:
-        #     cbar = flat_ax[i].collections[0].colorbar
-        #     cbar.ax.tick_params(labelsize=20)
+        if i % (nr_plots - 1) == 0:
+            cbar = flat_ax[i].collections[0].colorbar
+            cbar.ax.tick_params(labelsize=20)
 
     for i in range(1, nr_plots):
         cbar = True if i % (nr_plots - 1) == 0 else False
         diff = abs(real_corr - fake_corr[i - 1])
         sns.set(style="white")
         az = sns.heatmap(diff, ax=flat_ax[i + nr_plots], cmap=cmap, vmax=.3, square=True, annot=annot, center=0,
-                         linewidths=0, cbar_kws={"shrink": .8}, cbar=cbar, fmt='.2f')
-        # if i % (nr_plots - 1) == 0:
-        #     cbar = az.collections[0].colorbar
-        #     cbar.ax.tick_params(labelsize=20)
+                         linewidths=0, cbar=cbar, fmt='.2f')
+        if i % (nr_plots - 1) == 0:
+            cbar = az.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=20)
     titles = ['Real'] + [e.name if e.name is not None else idx for idx, e in enumerate(evaluators)]
     for i, label in enumerate(titles):
         flat_ax[i].set_yticklabels([])
@@ -249,12 +247,12 @@ def rmse(y_true: np.ndarray, y_pred: np.ndarray):
 
 def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray):
     y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
-    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2)))
+    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true ** 2)) * np.sqrt(np.sum(y_pred ** 2)))
 
 
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
     """
-    Columnwise correlation calculation between ``dataset_a`` and ``dataset_b``.
+    Column-wise correlation calculation between ``dataset_a`` and ``dataset_b``.
 
     :param dataset_a: First DataFrame
     :param dataset_b: Second DataFrame

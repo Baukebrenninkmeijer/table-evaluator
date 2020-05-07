@@ -2,10 +2,8 @@ import pytest
 import pandas as pd
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
-# import sys
-# sys.path.append('../table_evaluator')
 from table_evaluator.helpers import *
-from dython.nominal import compute_associations
+from dython.nominal import compute_associations, numerical_encoding
 from pathlib import Path
 
 data_folder = Path('data')
