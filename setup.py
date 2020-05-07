@@ -18,7 +18,7 @@ setuptools.setup(
         'numpy',
         'tqdm',
         'psutil',
-        'dython==0.5.0',
+        'dython==0.5.1',
         'seaborn',
         'matplotlib',
         'scikit-learn',

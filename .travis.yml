@@ -6,9 +6,9 @@ before_install:
 python:
   - "3.7"
 script:
-- cd tests
-- pytest helpers_test.py
-- cd ..
+- pip install .
+- pytest tests
+#- cd ..
 # - ln -s ../README.md
 # - travis-sphinx build
 
