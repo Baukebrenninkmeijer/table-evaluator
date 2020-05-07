@@ -1,4 +1,4 @@
-from dython.nominal import compute_associations, associations
+from dython.nominal import compute_associations, associations, theils_u, cramers_v
 from typing import Union, List, Tuple, Optional
 from sklearn.metrics import mean_squared_error
 import pandas as pd
@@ -252,7 +252,7 @@ def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray):
 
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
     """
-    Columnwise correlation calculation between ``dataset_a`` and ``dataset_b``.
+    Column-wise correlation calculation between ``dataset_a`` and ``dataset_b``.
 
     :param dataset_a: First DataFrame
     :param dataset_b: Second DataFrame
