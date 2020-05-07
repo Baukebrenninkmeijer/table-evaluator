@@ -9,6 +9,13 @@ The package can be installed with
 pip install table_evaluator
 ```
 
+## Tests
+The test can be run by:
+```
+pip install .
+pytest tests
+```
+
 ## Usage
 Start by importing the class
 ```Python
