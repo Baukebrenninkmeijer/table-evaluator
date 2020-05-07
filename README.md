@@ -19,7 +19,7 @@ pytest tests
 ## Usage
 Start by importing the class
 ```Python
-from table_evaluator import *
+from table_evaluator import load_data, TableEvaluator
 ```
 
 The package is used by having two DataFrames; one with the real data and one with the synthetic data. These are passed to the TableEvaluator on init.
@@ -132,8 +132,11 @@ table_evaluator.evaluate(target_col='trans_type')
 
  The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations.
 
+
+## Full Documentation
 Please see the full documentation on [https://baukebrenninkmeijer.github.io/Table_Evaluator](https://baukebrenninkmeijer.github.io/Table_Evaluator).
 
-If you have any tips or suggestions, please contact send me an email.
-
+## Motivation
 To see the motivation for my decisions, please have a look at my master thesis, found at [https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
+
+If you have any tips or suggestions, please contact send me on email.
