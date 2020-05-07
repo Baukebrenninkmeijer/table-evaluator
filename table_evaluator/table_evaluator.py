@@ -17,7 +17,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from table_evaluator.helpers import *
-from dython.nominal import associations
+from dython.nominal import compute_associations, numerical_encoding
 
 
 class TableEvaluator:
@@ -167,6 +167,7 @@ class TableEvaluator:
         :param how: metric to measure distance. Choose from [``euclidean``, ``mae``, ``rmse``].
         :return: distance between the association matrices in the chosen evaluation metric. Default: Euclidean
         """
+        from scipy.spatial.distance import cosine
         if how == 'euclidean':
             distance_func = euclidean_distance
         elif how == 'mae':
@@ -174,14 +175,13 @@ class TableEvaluator:
         elif how == 'rmse':
             distance_func = rmse
         elif how == 'cosine':
-            distance_func = cosine_similarity
+            def custom_cosine(a, b): return cosine(a.reshape(-1), b.reshape(-1))
+            distance_func = custom_cosine
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
 
-        fig, ax = plt.subplots()
-        real_corr = associations(self.real, nominal_columns=self.categorical_columns, theil_u=True, plot=False, ax=ax)['corr']
-        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, theil_u=True, plot=False, ax=ax)['corr']
-        plt.close(fig)
+        real_corr = compute_associations(self.real, nominal_columns=self.categorical_columns, theil_u=True)
+        fake_corr = compute_associations(self.fake, nominal_columns=self.categorical_columns, theil_u=True)
 
         return distance_func(
             real_corr.values,
@@ -377,8 +377,7 @@ class TableEvaluator:
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
-            corr_df = associations(ds, nominal_columns=self.categorical_columns, theil_u=True, plot=False)['corr']
-            plt.close()
+            corr_df = compute_associations(ds, nominal_columns=self.categorical_columns, theil_u=True)
             values = corr_df.values
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
