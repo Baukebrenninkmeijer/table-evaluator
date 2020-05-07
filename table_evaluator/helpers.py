@@ -11,7 +11,8 @@ import scipy.stats as ss
 def load_data(path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: List = None) \
         -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns with the same data types.
+    Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
+    with the same data types.
 
     :param path_real: string path to csv with real data
     :param path_fake: string path to csv with real data
@@ -45,6 +46,8 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
     """
     Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the top half of the correlation matrix,
     since this holds the same values.
+
+    Decomissioned for use of the dython associations function.
 
     :param x: Dataframe to plot data from
     :param ax: Axis on which to plot the correlations
@@ -244,6 +247,11 @@ def rmse(y_true: np.ndarray, y_pred: np.ndarray):
     return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
+def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray):
+    y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
+    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2)))
+
+
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
     """
     Columnwise correlation calculation between ``dataset_a`` and ``dataset_b``.
@@ -272,145 +280,6 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
     corr.fillna(value=np.nan, inplace=True)
     correlation = np.mean(corr.values.flatten())
     return correlation
-
-
-# def associations(dataset: Union[pd.DataFrame, np.ndarray], cat_cols=None, mark_columns=False, theil_u=False, plot=True, return_results=False,
-#                  ax=None, nan_strategy=REPLACE, nan_replace_value=DEFAULT_REPLACE_VALUE, **kwargs):
-#     """
-#     Adapted from: https://github.com/shakedzy/dython
-#
-#     Calculate the correlation/strength-of-association of features in data-set with both categorical (eda_tools) and
-#     continuous features using:
-#
-#      - Pearson's R for continuous-continuous cases
-#      - Correlation Ratio for categorical-continuous cases
-#      - Cramer's V or Theil's U for categorical-categorical cases
-#
-#     :param dataset: NumPy ndarray / Pandas DataFrame
-#         The data-set for which the features' correlation is computed
-#     :param cat_cols: string / list / NumPy ndarray
-#         Names of columns of the data-set which hold categorical values. Can also be the string 'all' to state that all
-#         columns are categorical, or None (default) to state none are categorical
-#     :param mark_columns: Boolean (default: False)
-#         if True, output's columns' names will have a suffix of '(nom)' or '(con)' based on there type (eda_tools or
-#         continuous), as provided by cat_cols
-#     :param theil_u: Boolean (default: False)
-#         In the case of categorical-categorical features, use Theil's U instead of Cramer's V
-#     :param plot: Boolean (default: True)
-#         If True, plot a heat-map of the correlation matrix
-#     :param return_results: Boolean (default: False)
-#         If True, the function will return a Pandas DataFrame of the computed associations
-#     :param kwargs:
-#         Arguments to be passed to used function and methods
-#     :return: Pandas DataFrame
-#         A DataFrame of the correlation/strength-of-association between all features
-#     """
-#     if plot is False:
-#         assert kwargs == {}, f'You have some kwargs that are not needed.\nkwargs: {kwargs}'
-#
-#     dataset = convert(dataset, 'dataframe')
-#     columns = dataset.columns
-#     if cat_cols is None:
-#         cat_cols = list()
-#     elif cat_cols == 'all':
-#         cat_cols = columns
-#     corr = pd.DataFrame(index=columns, columns=columns)
-#     for i in range(0, len(columns)):
-#         for j in range(i, len(columns)):
-#             if i == j:
-#                 corr[columns[i]][columns[j]] = 1.0
-#             else:
-#                 if columns[i] in cat_cols:
-#                     if columns[j] in cat_cols:
-#                         if theil_u:
-#                             corr[columns[j]][columns[i]] = theils_u(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
-#                             corr[columns[i]][columns[j]] = theils_u(dataset[columns[j]], dataset[columns[i]], nan_strategy=SKIP)
-#                         else:
-#                             cell = cramers_v(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
-#                             corr[columns[i]][columns[j]] = cell
-#                             corr[columns[j]][columns[i]] = cell
-#                     else:
-#                         cell = correlation_ratio(dataset[columns[i]], dataset[columns[j]], nan_strategy=SKIP)
-#                         corr[columns[i]][columns[j]] = cell
-#                         corr[columns[j]][columns[i]] = cell
-#                 else:
-#                     if columns[j] in cat_cols:
-#                         cell = correlation_ratio(dataset[columns[j]], dataset[columns[i]], nan_strategy=SKIP)
-#                         corr[columns[i]][columns[j]] = cell
-#                         corr[columns[j]][columns[i]] = cell
-#                     else:
-#                         cell, _ = ss.pearsonr(dataset[columns[i]], dataset[columns[j]])
-#                         corr[columns[i]][columns[j]] = cell
-#                         corr[columns[j]][columns[i]] = cell
-#     corr.fillna(value=np.nan, inplace=True)
-#     if mark_columns:
-#         marked_columns = ['{} (nom)'.format(col) if col in cat_cols else '{} (con)'.format(col) for col in
-#                           columns]
-#         corr.columns = marked_columns
-#         corr.index = marked_columns
-#     if plot:
-#         if ax is None:
-#             plt.figure(figsize=kwargs.get('figsize', None))
-#         cmap = sns.diverging_palette(220, 10, as_cmap=True)
-#         sns.set(style="white")
-#         sns.heatmap(corr, annot=kwargs.get('annot', True), fmt=kwargs.get('fmt', '.2f'), cmap=cmap, vmax=1, center=0,
-#                     square=True, linewidths=kwargs.get('linewidths', 0.5), cbar_kws={"shrink": .8}, cbar=kwargs.get('cbar', True), ax=ax)
-#         if ax is None:
-#             plt.show()
-#     if return_results:
-#         return corr
-
-
-# def numerical_encoding(dataset, cat_cols: str = 'all', drop_single_label: bool = False, drop_fact_dict: bool = True):
-#     """
-#     Adapted from: https://github.com/shakedzy/dython
-#
-#     Encoding a data-set with mixed data (numerical and categorical) to a numerical-only data-set,
-#     using the following logic:
-#
-#     - categorical with only a single value will be marked as zero (or dropped, if requested)
-#     - categorical with two values will be replaced with the result of Pandas `factorize`
-#     - categorical with more than two values will be replaced with the result of Pandas `get_dummies`
-#     - numerical columns will not be modified
-#
-#     :param dataset: NumPy ndarray / Pandas DataFrame
-#         The data-set to encode
-#     :param cat_cols: sequence / string
-#         A sequence of the nominal (categorical) columns in the dataset. If string, must be 'all' to state that
-#         all columns are nominal. If None, nothing happens. Default: 'all'
-#     :param drop_single_label: Boolean, default = False
-#         If True, nominal columns with a only a single value will be dropped.
-#     :param drop_fact_dict: Boolean, default = True
-#         If True, the return value will be the encoded DataFrame alone. If False, it will be a tuple of
-#         the DataFrame and the dictionary of the binary factorization (originating from pd.factorize)
-#     :return: DataFrame or (DataFrame, dict). If `drop_fact_dict` is True, returns the encoded DataFrame.
-#         else, returns a tuple of the encoded DataFrame and dictionary, where each key is a two-value column, and the
-#         value is the original labels, as supplied by Pandas `factorize`. Will be empty if no two-value columns are
-#         present in the data-set
-#     """
-#     dataset = convert(dataset, 'dataframe')
-#     if cat_cols is None:
-#         return dataset
-#     elif cat_cols == 'all':
-#         cat_cols = dataset.columns
-#     converted_dataset = pd.DataFrame()
-#     binary_columns_dict = dict()
-#     for col in dataset.columns:
-#         if col not in cat_cols:
-#             converted_dataset.loc[:, col] = dataset[col]
-#         else:
-#             unique_values = pd.unique(dataset[col])
-#             if len(unique_values) == 1 and not drop_single_label:
-#                 converted_dataset.loc[:, col] = 0
-#             elif len(unique_values) == 2:
-#                 converted_dataset.loc[:, col], binary_columns_dict[col] = pd.factorize(dataset[col])
-#             else:
-#                 dummies = pd.get_dummies(dataset[col], prefix=col)
-#                 converted_dataset = pd.concat([converted_dataset, dummies], axis=1)
-#     if drop_fact_dict:
-#         return converted_dataset
-#     else:
-#         return converted_dataset, binary_columns_dict
 
 
 def plot_mean_std_comparison(evaluators: List):

@@ -70,7 +70,6 @@ class TableEvaluator:
         self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]')
         self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean()) 
         self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean()) 
-        
 
     def plot_mean_std(self):
         """
@@ -168,7 +167,6 @@ class TableEvaluator:
         :param how: metric to measure distance. Choose from [``euclidean``, ``mae``, ``rmse``].
         :return: distance between the association matrices in the chosen evaluation metric. Default: Euclidean
         """
-        from scipy.spatial.distance import cosine
         if how == 'euclidean':
             distance_func = euclidean_distance
         elif how == 'mae':
@@ -176,7 +174,7 @@ class TableEvaluator:
         elif how == 'rmse':
             distance_func = rmse
         elif how == 'cosine':
-            distance_func = lambda a, b: cosine(a.reshape(-1), b.reshape(-1))
+            distance_func = cosine_similarity
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
 
