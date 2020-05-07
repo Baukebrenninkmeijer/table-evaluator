@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="table-evaluator",
-    version="v1.1.4post2",
+    version="v1.1.4post3",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
     description="A package to evaluate how close a synthetic data set is to real data.",
@@ -25,7 +25,7 @@ setuptools.setup(
         'scipy'
     ],
     classifiers=[
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
