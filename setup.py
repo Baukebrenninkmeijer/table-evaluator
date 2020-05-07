@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="table-evaluator",
-    version="1.1.2",
+    version="v1.1.4.",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
     description="A package to evaluate how close a synthetic data set is to real data.",
@@ -18,7 +18,7 @@ setuptools.setup(
         'numpy',
         'tqdm',
         'psutil',
-        'dython',
+        'dython==0.5.1',
         'seaborn',
         'matplotlib',
         'scikit-learn',

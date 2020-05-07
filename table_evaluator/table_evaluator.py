@@ -17,6 +17,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from table_evaluator.helpers import *
+from dython.nominal import associations
 
 
 class TableEvaluator:
@@ -41,8 +42,8 @@ class TableEvaluator:
         """
         self.name = name
         self.unique_thresh = unique_thresh
-        self.real = real
-        self.fake = fake
+        self.real = real.copy()
+        self.fake = fake.copy()
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
 
@@ -69,7 +70,6 @@ class TableEvaluator:
         self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]')
         self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean()) 
         self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean()) 
-        
 
     def plot_mean_std(self):
         """
@@ -167,18 +167,21 @@ class TableEvaluator:
         :param how: metric to measure distance. Choose from [``euclidean``, ``mae``, ``rmse``].
         :return: distance between the association matrices in the chosen evaluation metric. Default: Euclidean
         """
-        distance_func = None
         if how == 'euclidean':
             distance_func = euclidean_distance
         elif how == 'mae':
             distance_func = mean_absolute_error
         elif how == 'rmse':
             distance_func = rmse
+        elif how == 'cosine':
+            distance_func = cosine_similarity
+        else:
+            raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
 
-        assert distance_func is not None, f'Distance measure was None. Please select a measure from [euclidean, mae]'
-
-        real_corr = associations(self.real, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
-        fake_corr = associations(self.fake, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
+        fig, ax = plt.subplots()
+        real_corr = associations(self.real, nominal_columns=self.categorical_columns, theil_u=True, plot=False, ax=ax)['corr']
+        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, theil_u=True, plot=False, ax=ax)['corr']
+        plt.close(fig)
 
         return distance_func(
             real_corr.values,
@@ -189,8 +192,8 @@ class TableEvaluator:
         """
         Plot the first two components of a PCA of real and fake data.
         """
-        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
-        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
+        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
         pca_r = PCA(n_components=2)
         pca_f = PCA(n_components=2)
 
@@ -255,8 +258,8 @@ class TableEvaluator:
         real = self.real
         fake = self.fake
 
-        real = numerical_encoding(real, cat_cols=self.categorical_columns)
-        fake = numerical_encoding(fake, cat_cols=self.categorical_columns)
+        real = numerical_encoding(real, nominal_columns=self.categorical_columns)
+        fake = numerical_encoding(fake, nominal_columns=self.categorical_columns)
 
         self.pca_r.fit(real)
         self.pca_f.fit(fake)
@@ -374,7 +377,8 @@ class TableEvaluator:
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
-            corr_df = associations(ds, cat_cols=self.categorical_columns, return_results=True, theil_u=True, plot=False)
+            corr_df = associations(ds, nominal_columns=self.categorical_columns, theil_u=True, plot=False)['corr']
+            plt.close()
             values = corr_df.values
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
@@ -386,6 +390,7 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
+
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
@@ -393,11 +398,11 @@ class TableEvaluator:
 
         :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
         """
-        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
+        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
-        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
+        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
         for col in columns:
             if col not in fake.columns.tolist():
                 fake[col] = 0
@@ -419,11 +424,11 @@ class TableEvaluator:
         self.target_type = target_type
 
         # Convert both datasets to numerical representations and split x and  y
-        real_x = numerical_encoding(self.real.drop([target_col], axis=1), cat_cols=self.categorical_columns)
+        real_x = numerical_encoding(self.real.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
 
         columns = sorted(real_x.columns.tolist())
         real_x = real_x[columns]
-        fake_x = numerical_encoding(self.fake.drop([target_col], axis=1), cat_cols=self.categorical_columns)
+        fake_x = numerical_encoding(self.fake.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
         for col in columns:
             if col not in fake_x.columns.tolist():
                 fake_x[col] = 0
@@ -491,8 +496,8 @@ class TableEvaluator:
         """
         if n_samples is None:
             n_samples = len(self.real)
-        real = numerical_encoding(self.real, cat_cols=self.categorical_columns)
-        fake = numerical_encoding(self.fake, cat_cols=self.categorical_columns)
+        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
