@@ -1,5 +1,7 @@
 # TableEvaluator
 [![PyPI version](https://badge.fury.io/py/table-evaluator.svg)](https://badge.fury.io/py/table-evaluator)
+[![Supported versions](https://img.shields.io/pypi/pyversions/table_evaluator.svg)](https://pypi.python.org/pypi/table_evaluator)
+[![Build Status](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator.svg?branch=master)](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator)
 
 TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does **not** have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.
 
@@ -9,10 +11,17 @@ The package can be installed with
 pip install table_evaluator
 ```
 
+## Tests
+The test can be run by:
+```
+pip install .
+pytest tests
+```
+
 ## Usage
 Start by importing the class
 ```Python
-from table_evaluator import *
+from table_evaluator import load_data, TableEvaluator
 ```
 
 The package is used by having two DataFrames; one with the real data and one with the synthetic data. These are passed to the TableEvaluator on init.
@@ -125,8 +134,11 @@ table_evaluator.evaluate(target_col='trans_type')
 
  The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations.
 
+
+## Full Documentation
 Please see the full documentation on [https://baukebrenninkmeijer.github.io/Table_Evaluator](https://baukebrenninkmeijer.github.io/Table_Evaluator).
 
-If you have any tips or suggestions, please contact send me an email.
-
+## Motivation
 To see the motivation for my decisions, please have a look at my master thesis, found at [https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
+
+If you have any tips or suggestions, please contact send me on email.
