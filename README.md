@@ -1,4 +1,4 @@
-# TableEvaluator
+# Table Evaluator
 [![PyPI version](https://badge.fury.io/py/table-evaluator.svg)](https://badge.fury.io/py/table-evaluator)
 [![Supported versions](https://img.shields.io/pypi/pyversions/table_evaluator.svg)](https://pypi.python.org/pypi/table_evaluator)
 [![Build Status](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator.svg?branch=master)](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator)
