@@ -12,13 +12,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
-from sklearn.metrics import f1_score, mean_squared_error
+from sklearn.metrics import f1_score, mean_squared_error, jaccard_similarity_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from table_evaluator.helpers import *
 from dython.nominal import compute_associations, numerical_encoding
-
 
 class TableEvaluator:
     """
@@ -26,10 +25,8 @@ class TableEvaluator:
     Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
 
-    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None,
-                 name: str = None):
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None, name: str=None, seed=1337):
         """
-
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
         :param unique_thresh: Threshold for automatic evaluation if column is numeric
@@ -46,6 +43,7 @@ class TableEvaluator:
         self.fake = fake.copy()
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
+        self.random_seed = seed
 
         if cat_cols is None:
             self.numerical_columns = [column for column in real._get_numeric_data().columns if
@@ -260,7 +258,7 @@ class TableEvaluator:
 
         real = numerical_encoding(real, nominal_columns=self.categorical_columns)
         fake = numerical_encoding(fake, nominal_columns=self.categorical_columns)
-
+        
         self.pca_r.fit(real)
         self.pca_f.fit(fake)
         if self.verbose:
@@ -279,6 +277,7 @@ class TableEvaluator:
         """
         Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
         """
+        
         if self.verbose:
             print(f'\nFitting real')
         for i, c in enumerate(self.r_estimators):
@@ -298,7 +297,7 @@ class TableEvaluator:
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
 
         :return: dataframe with the results for each estimator on each data test set.
-        """
+        """     
         if self.target_type == 'class':
             r2r = [f1_score(self.real_y_test, clf.predict(self.real_x_test), average='micro') for clf in self.r_estimators]
             f2f = [f1_score(self.fake_y_test, clf.predict(self.fake_x_test), average='micro') for clf in self.f_estimators]
@@ -319,9 +318,26 @@ class TableEvaluator:
             f2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.f_estimators]
             index = [f'real_data_{classifier}' for classifier in self.estimator_names] + \
                     [f'fake_data_{classifier}' for classifier in self.estimator_names]
-            results = pd.DataFrame({'real': r2r + r2f, 'fake': f2r + f2f}, index=index)
+            results = pd.DataFrame({'real': r2r + r2f, 'fake': f2r + f2f}, index=index)      
         else:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
+
+        rows = []
+        jac_sim = []
+        
+        for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
+            for dataset, dataset_name in zip([self.real_x_test, self.fake_x_test], ['real', 'fake']):    
+                predictions_classifier_real = r_classifier.predict(dataset)
+                predictions_classifier_fake = f_classifier.predict(dataset)
+                f1_r = f1_score(self.real_y_test, predictions_classifier_real, average="micro")
+                f1_f = f1_score(self.fake_y_test, predictions_classifier_fake, average="micro")
+                jac_sim = jaccard_similarity_score(predictions_classifier_real, predictions_classifier_fake)
+                row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
+                rows.append(row)
+        
+        df = pd.DataFrame(rows).set_index('index') 
+        print(df)
+        
         return results
 
     def visual_evaluation(self, **kwargs):
@@ -445,7 +461,10 @@ class TableEvaluator:
             fake_y = self.fake[target_col]
         else:
             raise Exception(f'Target Type must be regr or class')
-
+        
+        # For reproducibilty:
+        np.random.seed(self.random_seed)
+        
         self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y, test_size=0.2)
         self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y, test_size=0.2)
 
