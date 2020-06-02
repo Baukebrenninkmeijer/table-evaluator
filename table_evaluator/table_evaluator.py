@@ -526,7 +526,7 @@ class TableEvaluator:
         """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = None):
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = 20000):
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
