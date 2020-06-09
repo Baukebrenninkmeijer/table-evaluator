@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
-from sklearn.metrics import f1_score, mean_squared_error, jaccard_similarity_score
+from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
@@ -331,7 +331,7 @@ class TableEvaluator:
                 predictions_classifier_fake = f_classifier.predict(dataset)
                 f1_r = f1_score(self.real_y_test, predictions_classifier_real, average="micro")
                 f1_f = f1_score(self.fake_y_test, predictions_classifier_fake, average="micro")
-                jac_sim = jaccard_similarity_score(predictions_classifier_real, predictions_classifier_fake)
+                jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake)
                 row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
                 rows.append(row)
         
