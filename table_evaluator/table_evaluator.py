@@ -335,8 +335,8 @@ class TableEvaluator:
                 row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
                 rows.append(row)
         
-        df = pd.DataFrame(rows).set_index('index') 
-        print(df)
+        scores_df = pd.DataFrame(rows).set_index('index') 
+        self.scores_df = scores_df
         
         return results
 
@@ -493,9 +493,11 @@ class TableEvaluator:
         for estimator in self.estimators:
             assert hasattr(estimator, 'fit')
             assert hasattr(estimator, 'score')
-
+        
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
+        print("F1-scores and their Jaccard similarity:")
+        print(self.scores_df)
         print('\nClassifier F1-scores:') if self.target_type == 'class' else print('\nRegressor MSE-scores:')
         print(self.estimators_scores.to_string())
         if self.target_type == 'regr':
