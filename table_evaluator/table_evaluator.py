@@ -324,12 +324,12 @@ class TableEvaluator:
         
         rows = []        
         for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
-            for dataset, dataset_name in zip([self.real_x_test, self.fake_x_test], ['real', 'fake']):    
+            for dataset, target, dataset_name in zip([self.real_x_test, self.fake_x_test], [self.real_y_test, self.fake_y_test], ['real', 'fake']):
                 predictions_classifier_real = r_classifier.predict(dataset)
                 predictions_classifier_fake = f_classifier.predict(dataset)
-                f1_r = f1_score(self.real_y_test, predictions_classifier_real, average="micro")
-                f1_f = f1_score(self.fake_y_test, predictions_classifier_fake, average="micro")
-                jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average="micro")
+                f1_r = f1_score(target, predictions_classifier_real, average="micro")
+                f1_f = f1_score(target, predictions_classifier_fake, average="micro")
+                jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average='micro')
                 row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
                 rows.append(row)
         
