@@ -312,7 +312,7 @@ class TableEvaluator:
         elif self.target_type == 'regr':
             r2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.r_estimators]
             f2f = [rmse(self.fake_y_test, clf.predict(self.fake_x_test)) for clf in self.f_estimators]
-
+            
             # Calculate test set accuracies on the other dataset
             r2f = [rmse(self.fake_y_test, clf.predict(self.fake_x_test)) for clf in self.r_estimators]
             f2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.f_estimators]
@@ -503,7 +503,7 @@ class TableEvaluator:
         elif self.target_type == 'class':
             mean = mean_absolute_percentage_error(self.estimators_scores['real'], self.estimators_scores['fake'])
             return 1 - mean
-
+    
     def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
         """
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
