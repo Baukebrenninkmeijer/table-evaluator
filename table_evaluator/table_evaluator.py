@@ -321,17 +321,15 @@ class TableEvaluator:
             results = pd.DataFrame({'real': r2r + r2f, 'fake': f2r + f2f}, index=index)      
         else:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
-
-        rows = []
-        jac_sim = []
         
+        rows = []        
         for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
             for dataset, dataset_name in zip([self.real_x_test, self.fake_x_test], ['real', 'fake']):    
                 predictions_classifier_real = r_classifier.predict(dataset)
                 predictions_classifier_fake = f_classifier.predict(dataset)
                 f1_r = f1_score(self.real_y_test, predictions_classifier_real, average="micro")
                 f1_f = f1_score(self.fake_y_test, predictions_classifier_fake, average="micro")
-                jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake)
+                jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average="micro")
                 row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
                 rows.append(row)
         
@@ -496,10 +494,9 @@ class TableEvaluator:
         
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
-        print("F1-scores and their Jaccard similarity:")
-        print(self.scores_df)
-        print('\nClassifier F1-scores:') if self.target_type == 'class' else print('\nRegressor MSE-scores:')
-        print(self.estimators_scores.to_string())
+        print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' else print('\nRegressor MSE-scores and their Jaccard similarities:')
+        print(self.scores_df.to_string())
+        
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
             return corr
@@ -566,9 +563,9 @@ class TableEvaluator:
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
-
+        
         print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
-
+        
         basic_statistical = self.statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
