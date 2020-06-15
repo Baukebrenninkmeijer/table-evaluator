@@ -19,13 +19,15 @@ from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from table_evaluator.helpers import *
 from dython.nominal import compute_associations, numerical_encoding
 
+
 class TableEvaluator:
     """
     Class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
     Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
 
-    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None, name: str=None, seed=1337):
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None,
+                 name: str = None, seed=1337):
         """
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
@@ -59,15 +61,15 @@ class TableEvaluator:
             self.n_samples = n_samples
         else:
             raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
-        
+
         self.real = self.real.sample(self.n_samples)
         self.fake = self.fake.sample(self.n_samples)
         assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
 
         self.real.loc[:, self.categorical_columns] = self.real.loc[:, self.categorical_columns].fillna('[NAN]')
         self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]')
-        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean()) 
-        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean()) 
+        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean())
+        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean())
 
     def plot_mean_std(self):
         """
@@ -173,7 +175,9 @@ class TableEvaluator:
         elif how == 'rmse':
             distance_func = rmse
         elif how == 'cosine':
-            def custom_cosine(a, b): return cosine(a.reshape(-1), b.reshape(-1))
+            def custom_cosine(a, b):
+                return cosine(a.reshape(-1), b.reshape(-1))
+
             distance_func = custom_cosine
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
@@ -258,7 +262,7 @@ class TableEvaluator:
 
         real = numerical_encoding(real, nominal_columns=self.categorical_columns)
         fake = numerical_encoding(fake, nominal_columns=self.categorical_columns)
-        
+
         self.pca_r.fit(real)
         self.pca_f.fit(fake)
         if self.verbose:
@@ -277,7 +281,7 @@ class TableEvaluator:
         """
         Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
         """
-        
+
         if self.verbose:
             print(f'\nFitting real')
         for i, c in enumerate(self.r_estimators):
@@ -297,7 +301,7 @@ class TableEvaluator:
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
 
         :return: dataframe with the results for each estimator on each data test set.
-        """     
+        """
         if self.target_type == 'class':
             rows = []
             for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
@@ -314,7 +318,7 @@ class TableEvaluator:
         elif self.target_type == 'regr':
             r2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.r_estimators]
             f2f = [rmse(self.fake_y_test, clf.predict(self.fake_x_test)) for clf in self.f_estimators]
-            
+
             # Calculate test set accuracies on the other dataset
             r2f = [rmse(self.fake_y_test, clf.predict(self.fake_x_test)) for clf in self.r_estimators]
             f2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.f_estimators]
@@ -324,7 +328,6 @@ class TableEvaluator:
         else:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
         return results
-
 
     def visual_evaluation(self, **kwargs):
         """
@@ -391,7 +394,6 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
@@ -413,9 +415,9 @@ class TableEvaluator:
     def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
-        created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``.
-        Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with Pearson's.
-        If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
+        created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on
+        ``self.fake``. Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with
+        Pearson's. If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
 
         :param target_col: which column should be considered the target both both the regression and classification task.
         :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.
@@ -447,13 +449,12 @@ class TableEvaluator:
             fake_y = self.fake[target_col]
         else:
             raise Exception(f'Target Type must be regr or class')
-        
+
         # For reproducibilty:
         np.random.seed(self.random_seed)
-        
+
         self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y, test_size=0.2)
         self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y, test_size=0.2)
-
 
         if target_type == 'regr':
             self.estimators = [
@@ -479,20 +480,20 @@ class TableEvaluator:
         for estimator in self.estimators:
             assert hasattr(estimator, 'fit')
             assert hasattr(estimator, 'score')
-        
+
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
         print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
             else print('\nRegressor MSE-scores and their Jaccard similarities:')
         print(self.estimators_scores.to_string())
-        
+
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
             return corr
         elif self.target_type == 'class':
             mean = mean_absolute_percentage_error(self.estimators_scores['real'], self.estimators_scores['fake'])
             return 1 - mean
-    
+
     def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
         """
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
@@ -552,9 +553,9 @@ class TableEvaluator:
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
-        
+
         print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
-        
+
         basic_statistical = self.statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
