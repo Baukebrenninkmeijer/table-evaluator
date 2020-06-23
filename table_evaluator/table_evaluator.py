@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
-from sklearn.metrics import f1_score, mean_squared_error
+from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
@@ -27,9 +27,8 @@ class TableEvaluator:
     """
 
     def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None,
-                 name: str = None):
+                 name: str = None, seed=1337):
         """
-
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
         :param unique_thresh: Threshold for automatic evaluation if column is numeric
@@ -46,6 +45,7 @@ class TableEvaluator:
         self.fake = fake.copy()
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
+        self.random_seed = seed
 
         if cat_cols is None:
             self.numerical_columns = [column for column in real._get_numeric_data().columns if
@@ -61,15 +61,15 @@ class TableEvaluator:
             self.n_samples = n_samples
         else:
             raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
-        
+
         self.real = self.real.sample(self.n_samples)
         self.fake = self.fake.sample(self.n_samples)
         assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
 
         self.real.loc[:, self.categorical_columns] = self.real.loc[:, self.categorical_columns].fillna('[NAN]')
         self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]')
-        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean()) 
-        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean()) 
+        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean())
+        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean())
 
     def plot_mean_std(self):
         """
@@ -175,7 +175,9 @@ class TableEvaluator:
         elif how == 'rmse':
             distance_func = rmse
         elif how == 'cosine':
-            def custom_cosine(a, b): return cosine(a.reshape(-1), b.reshape(-1))
+            def custom_cosine(a, b):
+                return cosine(a.reshape(-1), b.reshape(-1))
+
             distance_func = custom_cosine
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
@@ -279,6 +281,7 @@ class TableEvaluator:
         """
         Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
         """
+
         if self.verbose:
             print(f'\nFitting real')
         for i, c in enumerate(self.r_estimators):
@@ -300,15 +303,17 @@ class TableEvaluator:
         :return: dataframe with the results for each estimator on each data test set.
         """
         if self.target_type == 'class':
-            r2r = [f1_score(self.real_y_test, clf.predict(self.real_x_test), average='micro') for clf in self.r_estimators]
-            f2f = [f1_score(self.fake_y_test, clf.predict(self.fake_x_test), average='micro') for clf in self.f_estimators]
-
-            # Calculate test set accuracies on the other dataset
-            r2f = [f1_score(self.fake_y_test, clf.predict(self.fake_x_test), average='micro') for clf in self.r_estimators]
-            f2r = [f1_score(self.real_y_test, clf.predict(self.real_x_test), average='micro') for clf in self.f_estimators]
-            index = [f'real_data_{classifier}_F1' for classifier in self.estimator_names] + \
-                    [f'fake_data_{classifier}_F1' for classifier in self.estimator_names]
-            results = pd.DataFrame({'real': r2r + r2f, 'fake': f2r + f2f}, index=index)
+            rows = []
+            for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
+                for dataset, target, dataset_name in zip([self.real_x_test, self.fake_x_test], [self.real_y_test, self.fake_y_test], ['real', 'fake']):
+                    predictions_classifier_real = r_classifier.predict(dataset)
+                    predictions_classifier_fake = f_classifier.predict(dataset)
+                    f1_r = f1_score(target, predictions_classifier_real, average="micro")
+                    f1_f = f1_score(target, predictions_classifier_fake, average="micro")
+                    jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average='micro')
+                    row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
+                    rows.append(row)
+            results = pd.DataFrame(rows).set_index('index')
 
         elif self.target_type == 'regr':
             r2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.r_estimators]
@@ -319,7 +324,7 @@ class TableEvaluator:
             f2r = [rmse(self.real_y_test, clf.predict(self.real_x_test)) for clf in self.f_estimators]
             index = [f'real_data_{classifier}' for classifier in self.estimator_names] + \
                     [f'fake_data_{classifier}' for classifier in self.estimator_names]
-            results = pd.DataFrame({'real': r2r + r2f, 'fake': f2r + f2f}, index=index)
+            results = pd.DataFrame({'real': r2r + f2r, 'fake': r2f + f2f}, index=index)
         else:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
         return results
@@ -389,7 +394,6 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
@@ -411,9 +415,9 @@ class TableEvaluator:
     def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
-        created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``.
-        Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with Pearson's.
-        If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
+        created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on
+        ``self.fake``. Then, both are evaluated on their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with
+        Pearson's. If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
 
         :param target_col: which column should be considered the target both both the regression and classification task.
         :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.
@@ -446,9 +450,11 @@ class TableEvaluator:
         else:
             raise Exception(f'Target Type must be regr or class')
 
+        # For reproducibilty:
+        np.random.seed(self.random_seed)
+
         self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y, test_size=0.2)
         self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y, test_size=0.2)
-
 
         if target_type == 'regr':
             self.estimators = [
@@ -477,13 +483,15 @@ class TableEvaluator:
 
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
-        print('\nClassifier F1-scores:') if self.target_type == 'class' else print('\nRegressor MSE-scores:')
+        print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
+            else print('\nRegressor MSE-scores and their Jaccard similarities:')
         print(self.estimators_scores.to_string())
+
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
             return corr
         elif self.target_type == 'class':
-            mean = mean_absolute_percentage_error(self.estimators_scores['real'], self.estimators_scores['fake'])
+            mean = mean_absolute_percentage_error(self.estimators_scores['f1_real'], self.estimators_scores['f1_fake'])
             return 1 - mean
 
     def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
