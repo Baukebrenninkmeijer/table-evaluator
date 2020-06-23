@@ -491,7 +491,7 @@ class TableEvaluator:
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
             return corr
         elif self.target_type == 'class':
-            mean = mean_absolute_percentage_error(self.estimators_scores['real'], self.estimators_scores['fake'])
+            mean = mean_absolute_percentage_error(self.estimators_scores['f1_real'], self.estimators_scores['f1_fake'])
             return 1 - mean
 
     def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
