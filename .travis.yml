@@ -10,7 +10,7 @@ script:
 #  - pytest tests
   - travis-sphinx build
   - ls
-  - ls doc
+  - ls docs
 #- cd ..
 # - ln -s ../README.md
 # - travis-sphinx build
