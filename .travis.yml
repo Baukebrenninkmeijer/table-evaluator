@@ -10,10 +10,9 @@ script:
 #  - pytest tests
   - travis-sphinx build
   - ls
-  - ls docs
+  - ls doc
 #- cd ..
 # - ln -s ../README.md
-# - travis-sphinx build
 
 #after_success:
 #  - travis-sphinx deploy --branches=master
@@ -23,7 +22,7 @@ deploy:
   skip_cleanup: true
   github_token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
   keep_history: false
-  local_dir: doc/build/
+  local_dir: doc/build
   on:
     branch: master
 
