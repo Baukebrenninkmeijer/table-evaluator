@@ -8,7 +8,7 @@ python:
 script:
 #  - pip install .
 #  - pytest tests
-  - travis-sphinx build --branches=master
+  - travis-sphinx build
   - ls
   - ls doc
 #- cd ..
