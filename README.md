@@ -27,7 +27,7 @@ from table_evaluator import load_data, TableEvaluator
 ```
 
 The package is used by having two DataFrames; one with the real data and one with the synthetic data. These are passed to the TableEvaluator on init.
-The `helpers.load_data` is nice to retrieve these dataframes from disk since it converts them to the same dtypes and columns after loading. However, any dataframe will do as long as they have the same columns and data types.
+The `utils.load_data` is nice to retrieve these dataframes from disk since it converts them to the same dtypes and columns after loading. However, any dataframe will do as long as they have the same columns and data types.
 
  Using the test data available in the `data` directory, we do:
 

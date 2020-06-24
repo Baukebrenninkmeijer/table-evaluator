@@ -38,7 +38,7 @@ class TableEvaluator:
         :param verbose: Whether to print verbose output
         :param n_samples: Number of samples to evaluate. If none, it will take the minimal length of both datasets and cut the larger one off to make sure they
             are the same length.
-        :param name: Name of the TableEvaluator. Used in some plotting functions like `helpers.plot_correlation_comparison` to indicate your model.
+        :param name: Name of the TableEvaluator. Used in some plotting functions like `viz.plot_correlation_comparison` to indicate your model.
         """
         self.name = name
         self.unique_thresh = unique_thresh
@@ -74,7 +74,7 @@ class TableEvaluator:
 
     def plot_mean_std(self):
         """
-        Class wrapper function for plotting the mean and std using `plot_mean_std` from helpers.
+        Class wrapper function for plotting the mean and std using `viz.plot_mean_std`.
         """
         plot_mean_std(self.real, self.fake)
 
@@ -529,7 +529,7 @@ class TableEvaluator:
 
     def column_correlations(self):
         """
-        Wrapper function around ``helpers.column_correlation``.
+        Wrapper function around `metrics.column_correlation`.
 
         :return: Column correlations between ``self.real`` and ``self.fake``.
         """
