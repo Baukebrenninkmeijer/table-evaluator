@@ -11,6 +11,7 @@ script:
   - mkdir doc
   - mkdir doc/build
   - cp -r images doc/build/images
+  - cp -r images docs/source
   - travis-sphinx build
   - ls
   - ls doc/build
