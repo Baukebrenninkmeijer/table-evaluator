@@ -6,9 +6,11 @@ before_install:
 python:
   - "3.7"
 script:
-  - pip install .
-  - pytest tests
+#  - pip install .
+#  - pytest tests
   - travis-sphinx build --branches=master
+  - ls
+  - ls doc
 #- cd ..
 # - ln -s ../README.md
 # - travis-sphinx build
