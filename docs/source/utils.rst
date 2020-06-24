@@ -1,13 +1,9 @@
 Utils
 ===================
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   table_evaluator
-   viz
-   metrics
-   utils
 
 .. automodule:: table_evaluator.utils
    :members:
