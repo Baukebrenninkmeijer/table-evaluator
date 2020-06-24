@@ -6,7 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import stats
-from typing import Tuple
+from typing import Tuple, Dict
 from scipy.spatial.distance import cdist
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -534,7 +534,7 @@ class TableEvaluator:
         """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = 20000):
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = 20000) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -575,7 +575,7 @@ class TableEvaluator:
         print(miscellaneous_df.to_string())
 
         all_results = {
-            'basic statistics': basic_statistical,
+            'Basic statistics': basic_statistical,
             'Correlation column correlations': correlation_correlation,
             'Mean Correlation between fake and real columns': column_correlation,
             f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
@@ -587,3 +587,4 @@ class TableEvaluator:
 
         print(f'\nResults:')
         print(all_results_df.to_string())
+        return all_results
