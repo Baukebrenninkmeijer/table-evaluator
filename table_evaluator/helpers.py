@@ -311,6 +311,8 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None):
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
         fig.suptitle('Absolute Log Mean and STDs of numeric data\n', fontsize=16)
 
+    ax[0].grid(True)
+    ax[1].grid(True)
     real = real._get_numeric_data()
     fake = fake._get_numeric_data()
     real_mean = np.log(np.add(abs(real.mean()).values, 1e-5))
@@ -338,7 +340,6 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None):
     ax[1].set_title('Stds of real and fake data')
     ax[1].set_xlabel('real data std (log)')
     ax[1].set_ylabel('fake data std (log)')
-    ax[0].grid(True)
-    ax[1].grid(True)
+
     if ax is None:
         plt.show()

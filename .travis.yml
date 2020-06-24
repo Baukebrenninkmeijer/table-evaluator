@@ -12,8 +12,8 @@ script:
 # - ln -s ../README.md
 # - travis-sphinx build
 
-# after_success:
-  # - travis-sphinx deploy --branches=production,master
+after_success:
+   - travis-sphinx deploy --branches=production,master
 
 deploy:
   - provider: pypi
