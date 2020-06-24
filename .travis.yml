@@ -10,7 +10,7 @@ script:
 #  - pytest tests
   - mkdir doc
   - mkdir doc/build
-  - cp images doc/build/images
+  - cp -r images doc/build/images
   - travis-sphinx build
   - ls
   - ls doc/build
