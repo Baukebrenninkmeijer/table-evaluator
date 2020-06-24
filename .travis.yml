@@ -6,14 +6,15 @@ before_install:
 python:
   - "3.7"
 script:
-- pip install .
-- pytest tests
+  - pip install .
+  - pytest tests
+  - travis-sphinx build --branches=master
 #- cd ..
 # - ln -s ../README.md
 # - travis-sphinx build
 
 after_success:
-   - travis-sphinx deploy --branches=master
+  - travis-sphinx deploy --branches=master
 
 #deploy:
 #  - provider: pypi
