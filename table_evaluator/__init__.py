@@ -1,2 +1,2 @@
 from .table_evaluator import TableEvaluator
-from .helpers import *
+from .utils import load_data

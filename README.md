@@ -15,9 +15,8 @@ pip install table_evaluator
 ```
 
 ## Tests
-The test can be run by:
+The test can be run by cloning the repo and running:
 ```
-pip install .
 pytest tests
 ```
 

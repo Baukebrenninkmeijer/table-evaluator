@@ -2,7 +2,10 @@ import pytest
 import pandas as pd
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
-from table_evaluator.helpers import *
+import sys
+sys.path.append('..')
+from table_evaluator.metrics import *
+from table_evaluator.utils import load_data
 from dython.nominal import compute_associations, numerical_encoding
 from pathlib import Path
 
@@ -33,6 +36,9 @@ def test_column_correlation():
 
 
 def test_associations():
+    """
+    Tests that check wether the dython associations are still computed as is expected.
+    """
     # load test data
     real_assoc = pd.read_csv(test_data_folder/'real_associations.csv', index_col='Unnamed: 0')
     real_assoc_theil = pd.read_csv(test_data_folder/'real_associations_theil.csv', index_col='Unnamed: 0')
@@ -47,6 +53,9 @@ def test_associations():
 
 
 def test_numerical_encoding():
+    """
+    Tests that check wether the dython numerical_encoding are still computed as is expected.
+    """
     num_encoding = numerical_encoding(real, nominal_columns=cat_cols)
     uint_cols = num_encoding.select_dtypes(include=['uint8']).columns.tolist()
     num_encoding[uint_cols] = num_encoding[uint_cols].astype('int64')

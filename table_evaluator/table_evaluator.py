@@ -16,8 +16,9 @@ from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
-from table_evaluator.helpers import *
 from dython.nominal import compute_associations, numerical_encoding
+from .viz import *
+from .metrics import *
 
 
 class TableEvaluator:

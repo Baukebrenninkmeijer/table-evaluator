@@ -1,45 +1,9 @@
-from dython.nominal import compute_associations, associations, theils_u, cramers_v
-from typing import Union, List, Tuple, Optional
-from sklearn.metrics import mean_squared_error
+from dython.nominal import associations
+from typing import Union, List, Optional
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import scipy.stats as ss
-
-
-def load_data(path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: List = None) \
-        -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
-    with the same data types.
-
-    :param path_real: string path to csv with real data
-    :param path_fake: string path to csv with real data
-    :param real_sep: separator of the real csv
-    :param fake_sep: separator of the fake csv
-    :param drop_columns: names of columns to drop.
-    :return: Tuple with DataFrame containing the real data and DataFrame containing the synthetic data.
-    """
-    real = pd.read_csv(path_real, sep=real_sep, low_memory=False)
-    fake = pd.read_csv(path_fake, sep=fake_sep, low_memory=False)
-    if set(fake.columns.tolist()).issubset(set(real.columns.tolist())):
-        real = real[fake.columns]
-    elif drop_columns is not None:
-        real = real.drop(drop_columns, axis=1)
-        try:
-            fake = fake.drop(drop_columns, axis=1)
-        except:
-            print(f'Some of {drop_columns} were not found on fake.index.')
-        assert len(fake.columns.tolist()) == len(real.columns.tolist()), \
-            f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
-        fake.columns = real.columns
-    else:
-        fake.columns = real.columns
-
-    for col in fake.columns:
-        fake[col] = fake[col].astype(real[col].dtype)
-    return real, fake
 
 
 def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs) -> Optional[np.ndarray]:
@@ -198,86 +162,6 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
 
     if ax is None:
         plt.show()
-
-
-def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray):
-    """
-    Returns the mean absolute error between y_true and y_pred.
-
-    :param y_true: NumPy.ndarray with the ground truth values.
-    :param y_pred: NumPy.ndarray with the ground predicted values.
-    :return: Mean absolute error (float).
-    """
-    return np.mean(np.abs(np.subtract(y_true, y_pred)))
-
-
-def euclidean_distance(y_true: np.ndarray, y_pred: np.ndarray):
-    """
-    Returns the euclidean distance between y_true and y_pred.
-
-    :param y_true: NumPy.ndarray with the ground truth values.
-    :param y_pred: NumPy.ndarray with the ground predicted values.
-    :returns: Mean absolute error (float).
-    """
-    return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
-
-
-def mean_absolute_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
-    """
-    Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero values.
-
-    :param y_true: NumPy.ndarray with the ground truth values.
-    :param y_pred: NumPy.ndarray with the ground predicted values.
-    :return: Mean absolute percentage error (float).
-    """
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / y_true))
-
-
-def rmse(y_true: np.ndarray, y_pred: np.ndarray):
-    """
-    Returns the root mean squared error between y_true and y_pred.
-
-    :param y_true: NumPy.ndarray with the ground truth values.
-    :param y_pred: NumPy.ndarray with the ground predicted values.
-    :return: root mean squared error (float).
-    """
-    return np.sqrt(mean_squared_error(y_true, y_pred))
-
-
-def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray):
-    y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
-    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true ** 2)) * np.sqrt(np.sum(y_pred ** 2)))
-
-
-def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
-    """
-    Column-wise correlation calculation between ``dataset_a`` and ``dataset_b``.
-
-    :param dataset_a: First DataFrame
-    :param dataset_b: Second DataFrame
-    :param categorical_columns: The columns containing categorical values
-    :param theil_u: Whether to use Theil's U. If False, use Cramer's V.
-    :return: Mean correlation between all columns.
-    """
-    if categorical_columns is None:
-        categorical_columns = list()
-    elif categorical_columns == 'all':
-        categorical_columns = dataset_a.columns
-    assert dataset_a.columns.tolist() == dataset_b.columns.tolist()
-    corr = pd.DataFrame(columns=dataset_a.columns, index=['correlation'])
-
-    for column in dataset_a.columns.tolist():
-        if column in categorical_columns:
-            if theil_u:
-                corr[column] = theils_u(dataset_a[column].sort_values(), dataset_b[column].sort_values())
-            else:
-                corr[column] = cramers_v(dataset_a[column].sort_values(), dataset_b[column].sort_vaues())
-        else:
-            corr[column], _ = ss.pearsonr(dataset_a[column].sort_values(), dataset_b[column].sort_values())
-    corr.fillna(value=np.nan, inplace=True)
-    correlation = np.mean(corr.values.flatten())
-    return correlation
 
 
 def plot_mean_std_comparison(evaluators: List):
