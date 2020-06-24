@@ -8,10 +8,10 @@ python:
 script:
 #  - pip install .
 #  - pytest tests
-  - cp ../images images
   - travis-sphinx build
   - ls
-  - ls doc
+  - ls doc/build
+  - cp images doc/build/images
 #- cd ..
 # - ln -s ../README.md
 
