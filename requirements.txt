@@ -6,5 +6,5 @@ numpy
 matplotlib
 tqdm
 scikit-learn
-m2r
+m2r @ git+https://github.com/crossnox/m2r@dev#egg=m2r
 sphinx-rtd-theme

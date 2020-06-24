@@ -33,6 +33,7 @@ release = '15-08-2019'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'm2r'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
