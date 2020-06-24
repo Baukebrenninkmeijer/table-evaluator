@@ -13,7 +13,7 @@ script:
 # - travis-sphinx build
 
 after_success:
-   - travis-sphinx deploy --branches=production,master
+   - travis-sphinx deploy --branches=master
 
 #deploy:
 #  - provider: pypi
