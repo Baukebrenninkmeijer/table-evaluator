@@ -8,6 +8,7 @@ python:
 script:
 #  - pip install .
 #  - pytest tests
+  - mkdir doc
   - mkdir doc/build
   - cp images doc/build/images
   - travis-sphinx build
