@@ -14,17 +14,17 @@ script:
 #- cd ..
 # - ln -s ../README.md
 
-#after_success:
-#  - travis-sphinx deploy --branches=master
+after_success:
+  - travis-sphinx deploy --branches=master
 
-deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
-  keep_history: false
-  local_dir: doc/build
-  on:
-    branch: master
+#deploy:
+#  provider: pages
+#  skip_cleanup: true
+#  github_token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+#  keep_history: false
+#  local_dir: doc/build
+#  on:
+#    branch: master
 
 #deploy:
 #  - provider: pypi
