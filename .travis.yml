@@ -17,11 +17,10 @@ after_success:
   - travis-sphinx deploy --branches=master
 
 deploy:
-  - provider: pypi
-    user: bbrenninkmeijer
-    password:
-      secure: FyoqedUJBvMh+/vZj1qoPxKXeTZ8968ZVDZKvaG2YhC3Kw0hkzH/Q6MPogd/oS5pcY/p4+YXRjGN++gD8OpPf27q9R+8Eh8nYxLYp02N1CDqDk8YsQVQfYeudodBfx+U8o6JeT00Qw5Tpi/vpSV4rz2Ubwipm2ktH/8SUGahSqVSOHFthqTcEjfPc9OD8ljBmn54hImKiQw2UqgnqMrovM4cNgcmpIXFx6sA8xbXe3F7pgP6rSIQYWvCfQ7y5oDAZwdN6Z1QRelZOpEZ1Nj3UDMXuBIiW4C7FHaqtEMdtBmTc6wVaE7+FbD4p8nTql+KFe42Nw6OAWFWHr7Z8obTR7wGYLXeN2VyinF1rLiOGFrupJxagiZRKN/zEPFK3JJmbHMT9vLizfjAdhHRb63uQxNjNJGYYLyLNrbEo8Yvy9R+6QsF7eyXFRVBB9rfWvhdx2rThUx8OaQCu0tsZY1zhy4opD1pZQu1Hy/SvKvfRjXHTtncvgjg0aSsqtnFb5J3RmpAXYs3xfiq+RWbLoMxxcVeQIJz4CYyWyptu6NNmvUavLQfswQqVuLw7y7X/FUEGc98isL4VhC1J7A5PwOIBUUJ5ShiPJXclyEwJJUlZwQfMbuXHVjnXV/NEvyDQ15W3hqdbGRwfsq84BSJFyIOSrgq7hPal8pEXSQbh1dj2Wg=
-    on:
-      branch: master
-    skip_cleanup: true
+  provider: pypi
+  username: "__token__"
+  password: hEebsXpQBRI1voIZx6xKSxuPEXAteJJsAIQ6WBta09FLNoCuxExLLv03e3iAh9lr8NJJa0pCqQ/edId2KJszab4oEvBSKd0oKeK4+VZ0Z3sFO4NgyjNjXsZsizmSjRKIbjS7miybVcMWmDqeiblYLBTMDq/+34RQDS79IjFlzWsu6RPqJCC0wum+QETOR5rfzYCKTYjwOHJ+IBzqTbF4/VmQmWyMZZTX+BCi6PhmxMsBVNUS8QRS0g778GKwpYfUaNX+z/hLtH9duvRehimoth3eW3+gAQCA+1f5OAyLB8u+mFg3XfTSVtDPU5Q6sSz52zZXpCMKpsUiJdwdgJnP3kDinorUrlmFJbpjqZpnJ2csuqOywXEBMGeiJL34STRTdRbJYTFR4p4lr12VCYf/O6riRdtqAjAKzZOzwLtUN7YrFuaZSF/NgyGr0L2j+/SO+vyswAhEDqZeNbvHsPxEF6v/hnaE9ZdTMSlIm9huxi4Q5mqyoe8HbaEBNW4HvuzftxBUZHbnvPxWnI0UyHldVcazrJ104a92yaglAzbI0gMRTYojwXKCw4as36DTHL42fyk0hGZlj7DewC9sAJYV7lUSfX/LcapynDdFGsIBWpnZf9Zha2Ql/1nVAkp7GXBNX7ngIyr48qLX9XwmZpou2ZkjxrRLaZlurf1vMN+LsbA=
+  on:
+    branch: master
+  skip_cleanup: true
 
