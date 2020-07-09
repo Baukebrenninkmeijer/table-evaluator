@@ -15,3 +15,5 @@ tests/__pycache__/
 .ipynb_checkpoints/
 
 .vscode/
+
+table_evaluator.egg-info/
