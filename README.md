@@ -21,6 +21,7 @@ pytest tests
 ```
 
 ## Usage
+**Please see the example notebook for the most up-to-date examples. The README example is just that notebook, but sometimes a bit outdated.**
 Start by importing the class
 ```Python
 from table_evaluator import load_data, TableEvaluator
