@@ -139,7 +139,7 @@ table_evaluator.evaluate(target_col='trans_type')
 
 
 ## Full Documentation
-Please see the full documentation on [https://baukebrenninkmeijer.github.io/table-evaluator/](https://baukebrenninkmeijer.github.io/Table_Evaluator).
+Please see the full documentation on [https://baukebrenninkmeijer.github.io/table-evaluator/](https://baukebrenninkmeijer.github.io/table-evaluator/).
 
 ## Motivation
 To see the motivation for my decisions, please have a look at my master thesis, found at [https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
