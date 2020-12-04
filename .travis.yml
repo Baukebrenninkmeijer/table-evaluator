@@ -15,7 +15,7 @@ script:
   - travis-sphinx build
 
 after_success:
-  - travis-sphinx deploy --branches=master
+  - travis-sphinx deploy --branches=master --verbose
 
 deploy:
   provider: pypi
