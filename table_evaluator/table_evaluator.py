@@ -6,7 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import stats
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union
 from scipy.spatial.distance import cdist
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -27,7 +27,8 @@ class TableEvaluator:
     Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
 
-    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr', verbose=False, n_samples=None,
+    def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr',
+                 verbose=False, n_samples=None,
                  name: str = None, seed=1337):
         """
         :param real: Real dataset (pd.DataFrame)
@@ -48,7 +49,13 @@ class TableEvaluator:
         self.verbose = verbose
         self.random_seed = seed
 
+        # Make sure columns and their order are the same.
+        assert real.columns == fake.columns, 'Columns in real and fake dataframe as not'
+        fake = fake[real.columns.tolist()]
+
         if cat_cols is None:
+            real = real.infer_objects()
+            fake = fake.infer_objects()
             self.numerical_columns = [column for column in real._get_numeric_data().columns if
                                       len(real[column].unique()) > unique_thresh]
             self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
@@ -56,6 +63,7 @@ class TableEvaluator:
             self.categorical_columns = cat_cols
             self.numerical_columns = [column for column in real.columns if column not in cat_cols]
 
+        # Make sure the number of samples is equal in both datasets.
         if n_samples is None:
             self.n_samples = min(len(self.real), len(self.fake))
         elif len(fake) >= n_samples and len(real) >= n_samples:
@@ -67,10 +75,15 @@ class TableEvaluator:
         self.fake = self.fake.sample(self.n_samples)
         assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
 
-        self.real.loc[:, self.categorical_columns] = self.real.loc[:, self.categorical_columns].fillna('[NAN]')
-        self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]')
-        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(self.real[self.numerical_columns].mean())
-        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(self.fake[self.numerical_columns].mean())
+        self.real.loc[:, self.categorical_columns] = self.real.loc[:, self.categorical_columns].fillna('[NAN]').astype(
+            str)
+        self.fake.loc[:, self.categorical_columns] = self.fake.loc[:, self.categorical_columns].fillna('[NAN]').astype(
+            str)
+
+        self.real.loc[:, self.numerical_columns] = self.real.loc[:, self.numerical_columns].fillna(
+            self.real[self.numerical_columns].mean())
+        self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(
+            self.fake[self.numerical_columns].mean())
 
     def plot_mean_std(self):
         """
@@ -139,7 +152,8 @@ class TableEvaluator:
                 fake['kind'] = 'Fake'
                 concat = pd.concat([fake, real])
                 palette = sns.color_palette(
-                    [(0.8666666666666667, 0.5176470588235295, 0.3215686274509804), (0.2980392156862745, 0.4470588235294118, 0.6901960784313725)])
+                    [(0.8666666666666667, 0.5176470588235295, 0.3215686274509804),
+                     (0.2980392156862745, 0.4470588235294118, 0.6901960784313725)])
                 x, y, hue = col, "proportion", "kind"
                 ax = (concat[x]
                       .groupby(concat[hue])
@@ -305,14 +319,17 @@ class TableEvaluator:
         """
         if self.target_type == 'class':
             rows = []
-            for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators, self.estimator_names):
-                for dataset, target, dataset_name in zip([self.real_x_test, self.fake_x_test], [self.real_y_test, self.fake_y_test], ['real', 'fake']):
+            for r_classifier, f_classifier, estimator_name in zip(self.r_estimators, self.f_estimators,
+                                                                  self.estimator_names):
+                for dataset, target, dataset_name in zip([self.real_x_test, self.fake_x_test],
+                                                         [self.real_y_test, self.fake_y_test], ['real', 'fake']):
                     predictions_classifier_real = r_classifier.predict(dataset)
                     predictions_classifier_fake = f_classifier.predict(dataset)
                     f1_r = f1_score(target, predictions_classifier_real, average="micro")
                     f1_f = f1_score(target, predictions_classifier_fake, average="micro")
                     jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average='micro')
-                    row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f, 'jaccard_similarity': jac_sim}
+                    row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f,
+                           'jaccard_similarity': jac_sim}
                     rows.append(row)
             results = pd.DataFrame(rows).set_index('index')
 
@@ -454,8 +471,10 @@ class TableEvaluator:
         # For reproducibilty:
         np.random.seed(self.random_seed)
 
-        self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y, test_size=0.2)
-        self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y, test_size=0.2)
+        self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y,
+                                                                                                    test_size=0.2)
+        self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y,
+                                                                                                    test_size=0.2)
 
         if target_type == 'regr':
             self.estimators = [
@@ -535,7 +554,8 @@ class TableEvaluator:
         """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None, n_samples_distance: int = 20000) -> Dict:
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None,
+                 n_samples_distance: int = 20000) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
