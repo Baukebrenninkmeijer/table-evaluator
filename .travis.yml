@@ -1,6 +1,7 @@
 language: python
 
 before_install:
+  - pip install sphinx==3.1.1
   - pip install travis-sphinx
 
 python:
