@@ -50,8 +50,9 @@ class TableEvaluator:
         self.random_seed = seed
 
         # Make sure columns and their order are the same.
-        assert real.columns == fake.columns, 'Columns in real and fake dataframe as not'
-        fake = fake[real.columns.tolist()]
+        if len(real.columns) == len(fake.columns):
+            fake = fake[real.columns.tolist()]
+        assert real.columns.tolist() == fake.columns.tolist(), 'Columns in real and fake dataframe are not the same'
 
         if cat_cols is None:
             real = real.infer_objects()
@@ -142,8 +143,14 @@ class TableEvaluator:
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
-                sns.distplot(self.real[col], ax=axes[i], label='Real')
-                sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake')
+                try:
+                    sns.distplot(self.real[col], ax=axes[i], label='Real')
+                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake')
+                except RuntimeError:
+                    axes[i].clear()
+                    sns.distplot(self.real[col], ax=axes[i], label='Real', kde=False)
+                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake', kde=False)
+                axes[i].set_autoscaley_on(True)
                 axes[i].legend()
             else:
                 real = self.real.copy()
@@ -328,7 +335,7 @@ class TableEvaluator:
                     f1_r = f1_score(target, predictions_classifier_real, average="micro")
                     f1_f = f1_score(target, predictions_classifier_fake, average="micro")
                     jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average='micro')
-                    row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f,
+                    row = {'index': f'{estimator_name}_{dataset_name}_testset', 'f1_real': f1_r, 'f1_fake': f1_f,
                            'jaccard_similarity': jac_sim}
                     rows.append(row)
             results = pd.DataFrame(rows).set_index('index')
