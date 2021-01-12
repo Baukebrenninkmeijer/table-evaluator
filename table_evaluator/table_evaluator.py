@@ -645,7 +645,10 @@ class TableEvaluator:
 
         statistical_tab = [
             EvaluationResult(name='Jensen-Shannon distance', content=js_df,
-                             appendix=f'### Mean: {js_df.js_distance.mean(): .3f}')
+                             appendix=f'### Mean: {js_df.js_distance.mean(): .3f}'),
+            EvaluationResult(name='Kolmogorov-Smirnov statistic',
+                             content=kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns)
+                             )
         ]
 
         if self.notebook:
