@@ -32,19 +32,19 @@ class EvaluationResult(object):
 def visualize_notebook(table_evaluator, overview, privacy_metrics, ml_efficacy, statistical):
     dashboards = []
     for tab in [overview, privacy_metrics, ml_efficacy, statistical]:
-        plots = {}
-        for key, evaluation_report in tab.items():
+        plots = []
+        for evaluation_report in tab:
             evaluation_report.notebook = True
-            plots[key] = evaluation_report.show()
+            plots.append(evaluation_report.show())
         if plots:
-            dashboards.append(widgets.VBox(list(plots.values())))
+            dashboards.append(widgets.VBox(plots))
     display(HTML(f'<h1 style="text-align: center">Synthetic Data Report</h1>'))
     tab = widgets.Tab(dashboards)
     tab.set_title(0, 'Overview')
     tab.set_title(1, 'Privacy Metrics')
     tab.set_title(2, 'ML Efficacy')
+    tab.set_title(3, 'Statistical Metrics')
     display(tab)
-    # display(dashboard)
 
 
 def isnotebook():

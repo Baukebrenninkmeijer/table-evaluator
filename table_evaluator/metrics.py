@@ -89,7 +89,7 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
 
 
 def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> pd.DataFrame:
-    assert real.colums.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
+    assert real.columns.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
     real_iter = real[numerical_columns].iteritems()
     fake_iter = fake[numerical_columns].iteritems()
     distances = Parallel(n_jobs=-1)(

@@ -406,7 +406,6 @@ class TableEvaluator:
         :return:
         """
 
-
     def correlation_correlation(self) -> float:
         """
         Calculate the correlation coefficient between the association matrices of self.real and self.fake using self.comparison_metric
@@ -632,26 +631,22 @@ class TableEvaluator:
         )
 
         efficacy_title = 'Classifier F1-scores and their Jaccard similarities:' if self.target_type == 'class' \
-                else '\nRegressor MSE-scores'
+            else '\nRegressor MSE-scores'
 
-        overview_tab = {
-            'Similarity Score': all_results,
-        }
+        overview_tab = [all_results, ]
 
-        ml_efficacy_tab = {
-            efficacy_title: EvaluationResult(
-                name='ML Efficacy',
-                content=self.estimators_scores
-            )
-        }
+        ml_efficacy_tab = [
+            EvaluationResult(name='ML Efficacy', content=self.estimators_scores)
+        ]
 
-        privacy_tab = {
-            'Nearest Neighbour Analysis': privacy_report,
-        }
+        privacy_tab = [privacy_report]
 
-        statistical_results = {
+        js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
 
-        }
+        statistical_tab = [
+            EvaluationResult(name='Jensen-Shannon distance', content=js_df,
+                             appendix=f'### Mean: {js_df.js_distance.mean(): .3f}')
+        ]
 
         if self.notebook:
             visualize_notebook(
@@ -659,7 +654,7 @@ class TableEvaluator:
                 overview=overview_tab,
                 privacy_metrics=privacy_tab,
                 ml_efficacy=ml_efficacy_tab,
-                statistical={},
+                statistical=statistical_tab,
             )
 
         else:
@@ -667,7 +662,7 @@ class TableEvaluator:
             print(self.estimators_scores.to_string())
 
             print(f'\nPrivacy results:')
-            print(dict_to_df(privacy_metrics).to_string())
+            print(dict_to_df(privacy_report.content).to_string())
 
             print(f'\nMiscellaneous results:')
             print(miscellaneous.to_string())
