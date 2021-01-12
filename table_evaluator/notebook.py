@@ -20,7 +20,6 @@ class EvaluationResult(object):
                 if self.prefix: display(Markdown(self.prefix))
                 display(self.content)
                 if self.appendix: display(Markdown(self.appendix))
-            display(output)
             return output
 
         else:
@@ -37,8 +36,9 @@ def visualize_notebook(table_evaluator, overview, privacy_metrics, ml_efficacy, 
         for key, evaluation_report in tab.items():
             evaluation_report.notebook = True
             plots[key] = evaluation_report.show()
-        if len(plots) > 0:
+        if plots:
             dashboards.append(widgets.VBox(list(plots.values())))
+    display(HTML(f'<h1 style="text-align: center">Synthetic Data Report</h1>'))
     tab = widgets.Tab(dashboards)
     tab.set_title(0, 'Overview')
     tab.set_title(1, 'Privacy Metrics')
