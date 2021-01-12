@@ -19,6 +19,8 @@ from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from dython.nominal import compute_associations, numerical_encoding
 from .viz import *
 from .metrics import *
+from .notebook import visualize_notebook, isnotebook, EvaluationResult
+from .utils import dict_to_df
 
 
 class TableEvaluator:
@@ -28,8 +30,7 @@ class TableEvaluator:
     """
 
     def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr',
-                 verbose=False, n_samples=None,
-                 name: str = None, seed=1337):
+                 verbose=False, n_samples=None, name: str = None, seed=1337):
         """
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
@@ -48,6 +49,7 @@ class TableEvaluator:
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
         self.random_seed = seed
+        self.notebook = isnotebook()
 
         # Make sure columns and their order are the same.
         if len(real.columns) == len(fake.columns):
@@ -366,7 +368,7 @@ class TableEvaluator:
         self.plot_correlation_difference(**kwargs)
         self.plot_pca()
 
-    def statistical_evaluation(self) -> float:
+    def basic_statistical_evaluation(self) -> float:
         """
         Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's Rho. Spearman's is used because these
         values can differ a lot in magnitude, and Spearman's is more resilient to outliers.
@@ -397,6 +399,13 @@ class TableEvaluator:
             print(total_metrics.to_string())
         corr, p = stats.spearmanr(total_metrics['real'], total_metrics['fake'])
         return corr
+
+    def distribution_statistical_evaluation(self) -> pd.DataFrame:
+        """
+
+        :return:
+        """
+
 
     def correlation_correlation(self) -> float:
         """
@@ -510,9 +519,9 @@ class TableEvaluator:
 
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
-        print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
-            else print('\nRegressor MSE-scores and their Jaccard similarities:')
-        print(self.estimators_scores.to_string())
+        # print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
+        #     else print('\nRegressor MSE-scores and their Jaccard similarities:')
+        # print(self.estimators_scores.to_string())
 
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
@@ -574,45 +583,95 @@ class TableEvaluator:
         :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
         :param verbose: whether to print verbose logging.
         """
-        if verbose is not None:
-            self.verbose = verbose
-        if metric is not None:
-            self.comparison_metric = metric
+        self.verbose = verbose if verbose is not None else self.verbose
+        self.comparison_metric = metric if metric is not None else self.comparison_metric
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
 
-        print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
+        # print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
 
-        basic_statistical = self.statistical_evaluation()
+        basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
         estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
-        pca_variance = self.pca_correlation()
         nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
 
-        miscellaneous = {}
-        miscellaneous['Column Correlation Distance RMSE'] = self.correlation_distance(how='rmse')
-        miscellaneous['Column Correlation distance MAE'] = self.correlation_distance(how='mae')
+        miscellaneous_dict = {
+            'Column Correlation Distance RMSE': self.correlation_distance(how='rmse'),
+            'Column Correlation distance MAE': self.correlation_distance(how='mae'),
+        }
 
-        miscellaneous['Duplicate rows between sets (real/fake)'] = self.get_duplicates()
-        miscellaneous['nearest neighbor mean'] = nearest_neighbor[0]
-        miscellaneous['nearest neighbor std'] = nearest_neighbor[1]
-        miscellaneous_df = pd.DataFrame({'Result': list(miscellaneous.values())}, index=list(miscellaneous.keys()))
-        print(f'\nMiscellaneous results:')
-        print(miscellaneous_df.to_string())
+        miscellaneous = pd.DataFrame({'Result': list(miscellaneous_dict.values())},
+                                     index=list(miscellaneous_dict.keys()))
+        # print(f'\nMiscellaneous results:')
 
-        all_results = {
+        privacy_metrics_dict = {
+            'Duplicate rows between sets (real/fake)': self.get_duplicates(),
+            'nearest neighbor mean': nearest_neighbor[0],
+            'nearest neighbor std': nearest_neighbor[1],
+        }
+
+        privacy_report = EvaluationResult(
+            name='Privacy Results',
+            content=dict_to_df(privacy_metrics_dict),
+        )
+
+        all_results_dict = {
             'Basic statistics': basic_statistical,
             'Correlation column correlations': correlation_correlation,
             'Mean Correlation between fake and real columns': column_correlation,
             f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
-            # '1 - MAPE 5 PCA components': pca_variance,
         }
-        total_result = np.mean(list(all_results.values()))
-        all_results['Similarity Score'] = total_result
-        all_results_df = pd.DataFrame({'Result': list(all_results.values())}, index=list(all_results.keys()))
+        similarity_score = np.mean(list(all_results_dict.values()))
+        all_results_dict['Similarity Score'] = similarity_score
+        # all_results = pd.DataFrame({'Result': list(all_results_dict.values())}, index=list(all_results_dict.keys()))
+        all_results = EvaluationResult(
+            name='Overview Results',
+            content=dict_to_df(all_results_dict)
+        )
 
-        print(f'\nResults:')
-        print(all_results_df.to_string())
-        return all_results
+        efficacy_title = 'Classifier F1-scores and their Jaccard similarities:' if self.target_type == 'class' \
+                else '\nRegressor MSE-scores'
+
+        overview_tab = {
+            'Similarity Score': all_results,
+        }
+
+        ml_efficacy_tab = {
+            efficacy_title: EvaluationResult(
+                name='ML Efficacy',
+                content=self.estimators_scores
+            )
+        }
+
+        privacy_tab = {
+            'Nearest Neighbour Analysis': privacy_report,
+        }
+
+        statistical_results = {
+
+        }
+
+        if self.notebook:
+            visualize_notebook(
+                self,
+                overview=overview_tab,
+                privacy_metrics=privacy_tab,
+                ml_efficacy=ml_efficacy_tab,
+                statistical={},
+            )
+
+        else:
+            print(f'\n{efficacy_title}:')
+            print(self.estimators_scores.to_string())
+
+            print(f'\nPrivacy results:')
+            print(dict_to_df(privacy_metrics).to_string())
+
+            print(f'\nMiscellaneous results:')
+            print(miscellaneous.to_string())
+
+            print(f'\nResults:')
+            print(all_results.to_string())
+            # return all_results
