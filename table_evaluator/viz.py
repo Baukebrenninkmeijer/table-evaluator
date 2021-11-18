@@ -40,7 +40,7 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
         return corr
 
 
-def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff: bool = True, cat_cols: list = None, annot=False):
+def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff: bool = True, cat_cols: list = None, annot=False, fname=None):
     """
     Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has support for continuous and Categorical
     (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
@@ -82,6 +82,10 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
         title_font = {'size': '18'}
         ax[i].set_title(label, **title_font)
     plt.tight_layout()
+
+    if fname is not None: 
+        plt.savefig(fname)
+
     plt.show()
 
 
@@ -183,13 +187,14 @@ def plot_mean_std_comparison(evaluators: List):
     plt.tight_layout()
 
 
-def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None):
+def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None):
     """
     Plot the means and standard deviations of each dataset.
 
     :param real: DataFrame containing the real data
     :param fake: DataFrame containing the fake data
     :param ax: Axis to plot on. If none, a new figure is made.
+    :param fname: If not none, saves the plot with this file name. 
     """
     if ax is None:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -224,6 +229,9 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None):
     ax[1].set_title('Stds of real and fake data')
     ax[1].set_xlabel('real data std (log)')
     ax[1].set_ylabel('fake data std (log)')
+
+    if fname is not None:
+        plt.savefig(fname)
 
     if ax is None:
         plt.show()
