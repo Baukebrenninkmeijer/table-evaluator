@@ -385,6 +385,9 @@ class TableEvaluator:
             self.plot_correlation_difference(**kwargs)
             self.plot_pca()    
         else: 
+            if not os.path.isdir(save_dir):
+                os.makedirs(save_dir)
+
             self.plot_mean_std(fname=os.path.join(save_dir, 'mean_std.png'))
             self.plot_cumsums(fname=os.path.join(save_dir, 'cumsums.png'))
             self.plot_distributions(fname=os.path.join(save_dir, 'distributions.png'))
