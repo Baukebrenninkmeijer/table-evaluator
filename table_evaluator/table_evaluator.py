@@ -49,7 +49,6 @@ class TableEvaluator:
         self.comparison_metric = getattr(stats, metric)
         self.verbose = verbose
         self.random_seed = seed
-        self.notebook = isnotebook()
 
         # Make sure columns and their order are the same.
         if len(real.columns) == len(fake.columns):
@@ -145,15 +144,9 @@ class TableEvaluator:
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
-                try:
-                    sns.distplot(self.real[col], ax=axes[i], label='Real')
-                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake')
-                except RuntimeError:
-                    axes[i].clear()
-                    sns.distplot(self.real[col], ax=axes[i], label='Real', kde=False)
-                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake', kde=False)
+                plot_df = pd.DataFrame({col: self.real[col].append(self.fake[col]), 'kind': ['real'] * self.n_samples + ['fake'] * self.n_samples})
+                fig = sns.histplot(plot_df, x=col, hue='kind', ax=axes[i], stat='probability', legend=True)
                 axes[i].set_autoscaley_on(True)
-                axes[i].legend()
             else:
                 real = self.real.copy()
                 fake = self.fake.copy()
@@ -528,8 +521,10 @@ class TableEvaluator:
         elif self.target_type == 'class':
             mean = mean_absolute_percentage_error(self.estimators_scores['f1_real'], self.estimators_scores['f1_fake'])
             return 1 - mean
+        else:
+            raise ValueError('`self.target_type` should be `regr` or `class`.')
 
-    def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
+    def row_distance(self, n_samples: int = None) -> Tuple[np.number, np.number]:
         """
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
 
@@ -569,8 +564,8 @@ class TableEvaluator:
         """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None,
-                 n_samples_distance: int = 20000) -> Dict:
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose: bool = None,
+                 n_samples_distance: int = 20000, notebook: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -610,7 +605,6 @@ class TableEvaluator:
             'nearest neighbor mean': nearest_neighbor[0],
             'nearest neighbor std': nearest_neighbor[1],
         }
-
         privacy_report = EvaluationResult(
             name='Privacy Results',
             content=dict_to_df(privacy_metrics_dict),
@@ -651,7 +645,7 @@ class TableEvaluator:
                              )
         ]
 
-        if self.notebook:
+        if notebook:
             visualize_notebook(
                 self,
                 overview=overview_tab,
@@ -665,11 +659,11 @@ class TableEvaluator:
             print(self.estimators_scores.to_string())
 
             print(f'\nPrivacy results:')
-            print(dict_to_df(privacy_report.content).to_string())
+            print(privacy_report.content.to_string())
 
             print(f'\nMiscellaneous results:')
             print(miscellaneous.to_string())
 
             print(f'\nResults:')
-            print(all_results.to_string())
+            print(all_results.content.to_string())
             # return all_results
