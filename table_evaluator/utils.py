@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Union, Any
 import pandas as pd
 
 
@@ -39,7 +39,7 @@ def load_data(path_real: str,
     return real, fake
 
 
-def dict_to_df(data):
+def dict_to_df(data: Dict[str, Any]):
     return pd.DataFrame(
         {'result': list(data.values())},
         index=list(data.keys())
