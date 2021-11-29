@@ -27,8 +27,9 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
         raise ValueError('Unknown datatype given. Make sure a Pandas DataFrame or Numpy Array is passed for x.')
 
     sns.set(style="white")
-    mask = np.zeros_like(corr, dtype=np.bool)
+    mask = np.zeros_like(corr, dtype=bool)
     mask[np.triu_indices_from(mask)] = True
+
     if ax is None:
         f, ax = plt.subplots(figsize=(11, 9))
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
@@ -38,6 +39,8 @@ def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: boo
                 square=True, linewidths=.5, cbar_kws={"shrink": .5}, **kwargs)
     if return_values:
         return corr
+    else:
+        return None
 
 
 def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_diff: bool = True, cat_cols: list = None, annot=False):
@@ -128,6 +131,7 @@ def plot_correlation_comparison(evaluators: List, annot=False):
         title_font = {'size': '28'}
         flat_ax[i].set_title(label, **title_font)
     plt.tight_layout()
+    return None
 
 
 def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', ax=None):
