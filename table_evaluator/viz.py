@@ -155,10 +155,13 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
     ax.plot(x2, y, marker='o', linestyle='none', label='Fake', alpha=0.5)
     ax.tick_params(axis='both', which='major', labelsize=8)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3)
+    import matplotlib.ticker as mticker
 
     # If labels are strings, rotate them vertical
     if isinstance(data_r, pd.Series) and data_r.dtypes == 'object':
-        ax.set_xticklabels(data_r.value_counts().sort_index().index, rotation='vertical')
+        ticks_loc = ax.get_xticks()
+        ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+        ax.set_xticklabels(data_r.sort_values().unique(), rotation='vertical')
 
     if ax is None:
         plt.show()
