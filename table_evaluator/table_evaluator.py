@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from pathlib import Path
 from tqdm import tqdm
 from scipy import stats
 from typing import Tuple, Dict, Union
@@ -385,14 +386,14 @@ class TableEvaluator:
             self.plot_correlation_difference(**kwargs)
             self.plot_pca()    
         else: 
-            if not os.path.isdir(save_dir):
-                os.makedirs(save_dir)
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=True)
 
-            self.plot_mean_std(fname=os.path.join(save_dir, 'mean_std.png'))
-            self.plot_cumsums(fname=os.path.join(save_dir, 'cumsums.png'))
-            self.plot_distributions(fname=os.path.join(save_dir, 'distributions.png'))
-            self.plot_correlation_difference(fname=os.path.join(save_dir, 'correlation_difference.png'), **kwargs)
-            self.plot_pca(fname=os.path.join(save_dir, 'pca.png')) 
+            self.plot_mean_std(fname=save_dir/'mean_std.png')
+            self.plot_cumsums(fname=save_dir/'cumsums.png')
+            self.plot_distributions(fname=save_dir/'distributions.png')
+            self.plot_correlation_difference(fname=save_dir/'correlation_difference.png', **kwargs)
+            self.plot_pca(fname=save_dir/'pca.png') 
         
 
     def statistical_evaluation(self) -> float:
