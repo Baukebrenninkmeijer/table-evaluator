@@ -19,6 +19,8 @@ from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
 from dython.nominal import compute_associations, numerical_encoding
 from .viz import *
 from .metrics import *
+from .notebook import visualize_notebook, isnotebook, EvaluationResult
+from .utils import dict_to_df
 
 
 class TableEvaluator:
@@ -28,8 +30,7 @@ class TableEvaluator:
     """
 
     def __init__(self, real: pd.DataFrame, fake: pd.DataFrame, cat_cols=None, unique_thresh=0, metric='pearsonr',
-                 verbose=False, n_samples=None,
-                 name: str = None, seed=1337):
+                 verbose=False, n_samples=None, name: str = None, seed=1337):
         """
         :param real: Real dataset (pd.DataFrame)
         :param fake: Synthetic dataset (pd.DataFrame)
@@ -143,15 +144,9 @@ class TableEvaluator:
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
-                try:
-                    sns.distplot(self.real[col], ax=axes[i], label='Real')
-                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake')
-                except RuntimeError:
-                    axes[i].clear()
-                    sns.distplot(self.real[col], ax=axes[i], label='Real', kde=False)
-                    sns.distplot(self.fake[col], ax=axes[i], color='darkorange', label='Fake', kde=False)
+                plot_df = pd.DataFrame({col: self.real[col].append(self.fake[col]), 'kind': ['real'] * self.n_samples + ['fake'] * self.n_samples})
+                fig = sns.histplot(plot_df, x=col, hue='kind', ax=axes[i], stat='probability', legend=True)
                 axes[i].set_autoscaley_on(True)
-                axes[i].legend()
             else:
                 real = self.real.copy()
                 fake = self.fake.copy()
@@ -366,7 +361,7 @@ class TableEvaluator:
         self.plot_correlation_difference(**kwargs)
         self.plot_pca()
 
-    def statistical_evaluation(self) -> float:
+    def basic_statistical_evaluation(self) -> float:
         """
         Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's Rho. Spearman's is used because these
         values can differ a lot in magnitude, and Spearman's is more resilient to outliers.
@@ -398,6 +393,12 @@ class TableEvaluator:
         corr, p = stats.spearmanr(total_metrics['real'], total_metrics['fake'])
         return corr
 
+    def distribution_statistical_evaluation(self) -> pd.DataFrame:
+        """
+
+        :return:
+        """
+
     def correlation_correlation(self) -> float:
         """
         Calculate the correlation coefficient between the association matrices of self.real and self.fake using self.comparison_metric
@@ -419,23 +420,23 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-    def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
-        categorical columns with many values or very unbalanced values
-
-        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
-        """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-
-        columns = sorted(real.columns.tolist())
-        real = real[columns]
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
-        for col in columns:
-            if col not in fake.columns.tolist():
-                fake[col] = 0
-        fake = fake[columns]
-        return real, fake
+    # def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    #     """
+    #     Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+    #     categorical columns with many values or very unbalanced values
+    #
+    #     :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
+    #     """
+    #     real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+    #
+    #     columns = sorted(real.columns.tolist())
+    #     real = real[columns]
+    #     fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+    #     for col in columns:
+    #         if col not in fake.columns.tolist():
+    #             fake[col] = 0
+    #     fake = fake[columns]
+    #     return real, fake
 
     def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
         """
@@ -510,9 +511,9 @@ class TableEvaluator:
 
         self.fit_estimators()
         self.estimators_scores = self.score_estimators()
-        print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
-            else print('\nRegressor MSE-scores and their Jaccard similarities:')
-        print(self.estimators_scores.to_string())
+        # print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
+        #     else print('\nRegressor MSE-scores and their Jaccard similarities:')
+        # print(self.estimators_scores.to_string())
 
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
@@ -520,8 +521,10 @@ class TableEvaluator:
         elif self.target_type == 'class':
             mean = mean_absolute_percentage_error(self.estimators_scores['f1_real'], self.estimators_scores['f1_fake'])
             return 1 - mean
+        else:
+            raise ValueError('`self.target_type` should be `regr` or `class`.')
 
-    def row_distance(self, n_samples: int = None) -> Tuple[float, float]:
+    def row_distance(self, n_samples: int = None) -> Tuple[np.number, np.number]:
         """
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
 
@@ -561,8 +564,8 @@ class TableEvaluator:
         """
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
-    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None,
-                 n_samples_distance: int = 20000) -> Dict:
+    def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose: bool = None,
+                 n_samples_distance: int = 20000, notebook: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -574,45 +577,93 @@ class TableEvaluator:
         :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
         :param verbose: whether to print verbose logging.
         """
-        if verbose is not None:
-            self.verbose = verbose
-        if metric is not None:
-            self.comparison_metric = metric
+        self.verbose = verbose if verbose is not None else self.verbose
+        self.comparison_metric = metric if metric is not None else self.comparison_metric
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
 
-        print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
+        # print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
 
-        basic_statistical = self.statistical_evaluation()
+        basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
         estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
-        pca_variance = self.pca_correlation()
         nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
 
-        miscellaneous = {}
-        miscellaneous['Column Correlation Distance RMSE'] = self.correlation_distance(how='rmse')
-        miscellaneous['Column Correlation distance MAE'] = self.correlation_distance(how='mae')
+        miscellaneous_dict = {
+            'Column Correlation Distance RMSE': self.correlation_distance(how='rmse'),
+            'Column Correlation distance MAE': self.correlation_distance(how='mae'),
+        }
 
-        miscellaneous['Duplicate rows between sets (real/fake)'] = self.get_duplicates()
-        miscellaneous['nearest neighbor mean'] = nearest_neighbor[0]
-        miscellaneous['nearest neighbor std'] = nearest_neighbor[1]
-        miscellaneous_df = pd.DataFrame({'Result': list(miscellaneous.values())}, index=list(miscellaneous.keys()))
-        print(f'\nMiscellaneous results:')
-        print(miscellaneous_df.to_string())
+        miscellaneous = pd.DataFrame({'Result': list(miscellaneous_dict.values())},
+                                     index=list(miscellaneous_dict.keys()))
+        # print(f'\nMiscellaneous results:')
 
-        all_results = {
+        privacy_metrics_dict = {
+            'Duplicate rows between sets (real/fake)': self.get_duplicates(),
+            'nearest neighbor mean': nearest_neighbor[0],
+            'nearest neighbor std': nearest_neighbor[1],
+        }
+        privacy_report = EvaluationResult(
+            name='Privacy Results',
+            content=dict_to_df(privacy_metrics_dict),
+        )
+
+        all_results_dict = {
             'Basic statistics': basic_statistical,
             'Correlation column correlations': correlation_correlation,
             'Mean Correlation between fake and real columns': column_correlation,
             f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
-            # '1 - MAPE 5 PCA components': pca_variance,
         }
-        total_result = np.mean(list(all_results.values()))
-        all_results['Similarity Score'] = total_result
-        all_results_df = pd.DataFrame({'Result': list(all_results.values())}, index=list(all_results.keys()))
+        similarity_score = np.mean(list(all_results_dict.values()))
+        all_results_dict['Similarity Score'] = similarity_score
+        # all_results = pd.DataFrame({'Result': list(all_results_dict.values())}, index=list(all_results_dict.keys()))
+        all_results = EvaluationResult(
+            name='Overview Results',
+            content=dict_to_df(all_results_dict)
+        )
 
-        print(f'\nResults:')
-        print(all_results_df.to_string())
-        return all_results
+        efficacy_title = 'Classifier F1-scores and their Jaccard similarities:' if self.target_type == 'class' \
+            else '\nRegressor MSE-scores'
+
+        overview_tab = [all_results, ]
+
+        ml_efficacy_tab = [
+            EvaluationResult(name='ML Efficacy', content=self.estimators_scores)
+        ]
+
+        privacy_tab = [privacy_report]
+
+        js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
+
+        statistical_tab = [
+            EvaluationResult(name='Jensen-Shannon distance', content=js_df,
+                             appendix=f'### Mean: {js_df.js_distance.mean(): .3f}'),
+            EvaluationResult(name='Kolmogorov-Smirnov statistic',
+                             content=kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns)
+                             )
+        ]
+
+        if notebook:
+            visualize_notebook(
+                self,
+                overview=overview_tab,
+                privacy_metrics=privacy_tab,
+                ml_efficacy=ml_efficacy_tab,
+                statistical=statistical_tab,
+            )
+
+        else:
+            print(f'\n{efficacy_title}:')
+            print(self.estimators_scores.to_string())
+
+            print(f'\nPrivacy results:')
+            print(privacy_report.content.to_string())
+
+            print(f'\nMiscellaneous results:')
+            print(miscellaneous.to_string())
+
+            print(f'\nResults:')
+            print(all_results.content.to_string())
+            # return all_results
