@@ -420,23 +420,23 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-    def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
-        categorical columns with many values or very unbalanced values
-
-        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
-        """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-
-        columns = sorted(real.columns.tolist())
-        real = real[columns]
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
-        for col in columns:
-            if col not in fake.columns.tolist():
-                fake[col] = 0
-        fake = fake[columns]
-        return real, fake
+    # def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    #     """
+    #     Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+    #     categorical columns with many values or very unbalanced values
+    #
+    #     :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
+    #     """
+    #     real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+    #
+    #     columns = sorted(real.columns.tolist())
+    #     real = real[columns]
+    #     fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+    #     for col in columns:
+    #         if col not in fake.columns.tolist():
+    #             fake[col] = 0
+    #     fake = fake[columns]
+    #     return real, fake
 
     def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
         """
