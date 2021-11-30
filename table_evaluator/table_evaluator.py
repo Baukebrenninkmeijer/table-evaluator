@@ -1,9 +1,11 @@
 import copy
+import os
 import warnings
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from pathlib import Path
 from tqdm import tqdm
 from scipy import stats
 from typing import Tuple, Dict, Union
@@ -87,16 +89,18 @@ class TableEvaluator:
         self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(
             self.fake[self.numerical_columns].mean())
 
-    def plot_mean_std(self):
+    def plot_mean_std(self, fname=None):
         """
         Class wrapper function for plotting the mean and std using `viz.plot_mean_std`.
+        :param fname: If not none, saves the plot with this file name. 
         """
-        plot_mean_std(self.real, self.fake)
+        plot_mean_std(self.real, self.fake, fname=fname)
 
-    def plot_cumsums(self, nr_cols=4):
+    def plot_cumsums(self, nr_cols=4, fname=None):
         """
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
+        :param fname: If not none, saves the plot with this file name. 
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -119,12 +123,17 @@ class TableEvaluator:
             f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
             cdf(r, f, col, 'Cumsum', ax=axes[i])
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
-    def plot_distributions(self, nr_cols=3):
+    def plot_distributions(self, nr_cols=3, fname=None):
         """
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
         contains the values of a real columns and the corresponding fake column.
+        :param fname: If not none, saves the plot with this file name. 
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -165,16 +174,21 @@ class TableEvaluator:
                       .pipe((sns.barplot, "data"), x=x, y=y, hue=hue, ax=axes[i], saturation=0.8, palette=palette))
                 ax.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
-    def plot_correlation_difference(self, plot_diff=True, **kwargs):
+    def plot_correlation_difference(self, plot_diff=True, fname=None, **kwargs):
         """
         Plot the association matrices for each table and, if chosen, the difference between them.
 
         :param plot_diff: whether to plot the difference
+        :param fname: If not none, saves the plot with this file name.
         :param kwargs: kwargs for sns.heatmap
         """
-        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff,
+        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff, fname=fname,
                                     **kwargs)
 
     def correlation_distance(self, how: str = 'euclidean') -> float:
@@ -207,9 +221,10 @@ class TableEvaluator:
             fake_corr.values
         )
 
-    def plot_pca(self):
+    def plot_pca(self, fname=None):
         """
         Plot the first two components of a PCA of real and fake data.
+        :param fname: If not none, saves the plot with this file name.
         """
         real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
         fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
@@ -225,6 +240,10 @@ class TableEvaluator:
         sns.scatterplot(ax=ax[1], x=fake_t[:, 0], y=fake_t[:, 1])
         ax[0].set_title('Real data')
         ax[1].set_title('Fake data')
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
@@ -349,17 +368,28 @@ class TableEvaluator:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
         return results
 
-    def visual_evaluation(self, **kwargs):
+    def visual_evaluation(self, save_dir=None, **kwargs):
         """
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the PCA transform.
-
+        :save_dir: directory path to save images 
         :param kwargs: any kwargs for matplotlib.
         """
-        self.plot_mean_std()
-        self.plot_cumsums()
-        self.plot_distributions()
-        self.plot_correlation_difference(**kwargs)
-        self.plot_pca()
+        if save_dir is None: 
+            self.plot_mean_std()
+            self.plot_cumsums()
+            self.plot_distributions()
+            self.plot_correlation_difference(**kwargs)
+            self.plot_pca()    
+        else: 
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=True)
+
+            self.plot_mean_std(fname=save_dir/'mean_std.png')
+            self.plot_cumsums(fname=save_dir/'cumsums.png')
+            self.plot_distributions(fname=save_dir/'distributions.png')
+            self.plot_correlation_difference(fname=save_dir/'correlation_difference.png', **kwargs)
+            self.plot_pca(fname=save_dir/'pca.png') 
+        
 
     def basic_statistical_evaluation(self) -> float:
         """
