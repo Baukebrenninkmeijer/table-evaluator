@@ -16,7 +16,7 @@ from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
-from dython.nominal import compute_associations
+from dython.nominal import compute_associations, numerical_encoding
 from .viz import *
 from .metrics import *
 
@@ -420,7 +420,7 @@ class TableEvaluator:
         Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
         categorical columns with many values or very unbalanced values
 
-        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
+        :return: Real and fake dataframe factorized using the pandas function
         """
         real = self.real
         fake = self.fake
@@ -428,6 +428,24 @@ class TableEvaluator:
             if real[c].dtype == 'object':
                 real[c] = pd.factorize(real[c], sort=True)[0]
                 fake[c] = pd.factorize(fake[c], sort=True)[0]
+
+        return real, fake
+
+    def convert_numerical_one_hot(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+        categorical columns with many values or very unbalanced values
+
+        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
+        """
+        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        columns = sorted(real.columns.tolist())
+        real = real[columns]
+        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        for col in columns:
+            if col not in fake.columns.tolist():
+                fake[col] = 0
+        fake = fake[columns]
 
         return real, fake
 
@@ -524,7 +542,7 @@ class TableEvaluator:
         if n_samples is None:
             n_samples = len(self.real)
 
-        real, fake = self.convert_numerical()
+        real, fake = self.convert_numerical_one_hot()
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
@@ -603,7 +621,7 @@ class TableEvaluator:
             'Correlation column correlations': correlation_correlation,
             'Mean Correlation between fake and real columns': column_correlation,
             f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
-            '1 - MAPE 5 PCA components': pca_variance,
+            #'1 - MAPE 5 PCA components': pca_variance,
         }
         total_result = np.mean(list(all_results.values()))
         all_results['Similarity Score'] = total_result
