@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'table evaluator'
-copyright = '2020, Bauke Brenninkmeijer'
+copyright = '2021, Bauke Brenninkmeijer'
 author = 'Bauke Brenninkmeijer'
 
 # The full version, including alpha/beta/rc tags
@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'm2r',
     'sphinx_rtd_theme',
+    'sphinx.ext.githubpages',
     # 'sphinx.ext.coverage',
 ]
 
