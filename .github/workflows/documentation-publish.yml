@@ -16,6 +16,7 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: docs/source
+        pre-build-command: apt update -y && apt install -y git-all
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
