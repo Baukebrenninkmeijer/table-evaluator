@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to table evaluator’s documentation! &mdash; table evaluator 15-08-2019 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="TableEvaluator" href="table_evaluator.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> table evaluator
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viz.html">Viz</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">table evaluator</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>Welcome to table evaluator’s documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="welcome-to-table-evaluator-s-documentation">
+<h1>Welcome to table evaluator’s documentation!<a class="headerlink" href="#welcome-to-table-evaluator-s-documentation" title="Permalink to this headline"></a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="viz.html">Viz</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a><ul class="simple">
+</ul>
+</li>
+</ul>
+</div>
+<p>Welcome to the documentation for TableEvaluator! Please see the contents/sidebar for a high level overview. The library consists of two main parts. First, the TableEvaluator class, which does most of the heavy lifting and then Helper Functions that provide extra functionality and reusable parts for TableEvaluator.</p>
+</div>
+<div class="section" id="table-evaluator">
+<h1>Table Evaluator<a class="headerlink" href="#table-evaluator" title="Permalink to this headline"></a></h1>
+<a class="reference external image-reference" href="https://badge.fury.io/py/table-evaluator"><img alt="PyPI version" src="https://badge.fury.io/py/table-evaluator.svg" /></a>
+<a class="reference external image-reference" href="https://pypi.python.org/pypi/table_evaluator"><img alt="Supported versions" src="https://img.shields.io/pypi/pyversions/table_evaluator.svg" /></a>
+<a class="reference external image-reference" href="https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator"><img alt="Build Status" src="https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator.svg?branch=master" /></a>
+<a class="reference external image-reference" href="https://pypistats.org/packages/table_evaluator"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/table_evaluator" /></a>
+<p><a class="reference external" href="https://baukebrenninkmeijer.github.io/table-evaluator/">Official documentation</a></p>
+<p>TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does <strong>not</strong> have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<p>The package can be installed with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">table_evaluator</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline"></a></h2>
+<p>The test can be run by cloning the repo and running:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="n">tests</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+<p><strong>Please see the example notebook for the most up-to-date examples. The README example is just that notebook, but sometimes a bit outdated.</strong>
+Start by importing the class</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">table_evaluator</span> <span class="kn">import</span> <span class="n">load_data</span><span class="p">,</span> <span class="n">TableEvaluator</span>
+</pre></div>
+</div>
+<p>The package is used by having two DataFrames; one with the real data and one with the synthetic data. These are passed to the TableEvaluator on init.
+The <code class="docutils literal notranslate"><span class="pre">utils.load_data</span></code> is nice to retrieve these dataframes from disk since it converts them to the same dtypes and columns after loading. However, any dataframe will do as long as they have the same columns and data types.</p>
+<blockquote>
+<div><p>Using the test data available in the <code class="docutils literal notranslate"><span class="pre">data</span></code> directory, we do:</p>
+</div></blockquote>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">real</span><span class="p">,</span> <span class="n">fake</span> <span class="o">=</span> <span class="n">load_data</span><span class="p">(</span><span class="s1">&#39;data/real_test_sample.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;data/fake_test_sample.csv&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>which gives us two dataframes and specifies which columns should be treated as categorical columns.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">real</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>trans_id</p></th>
+<th class="head"><p>account_id</p></th>
+<th class="head"><p>trans_amount</p></th>
+<th class="head"><p>balance_after_trans</p></th>
+<th class="head"><p>trans_type</p></th>
+<th class="head"><p>trans_operation</p></th>
+<th class="head"><p>trans_k_symbol</p></th>
+<th class="head"><p>trans_date</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>951892</p></td>
+<td><p>3245</p></td>
+<td><p>3878.0</p></td>
+<td><p>13680.0</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>REMITTANCE_TO_OTHER_BANK</p></td>
+<td><p>HOUSEHOLD</p></td>
+<td><p>2165</p></td>
+</tr>
+<tr class="row-odd"><td><p>3547680</p></td>
+<td><p>515</p></td>
+<td><p>65.9</p></td>
+<td><p>14898.6</p></td>
+<td><p>CREDIT</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>INTEREST_CREDITED</p></td>
+<td><p>2006</p></td>
+</tr>
+<tr class="row-even"><td><p>1187131</p></td>
+<td><p>4066</p></td>
+<td><p>32245.0</p></td>
+<td><p>57995.5</p></td>
+<td><p>CREDIT</p></td>
+<td><p>COLLECTION_FROM_OTHER_BANK</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>2139</p></td>
+</tr>
+<tr class="row-odd"><td><p>531421</p></td>
+<td><p>1811</p></td>
+<td><p>3990.8</p></td>
+<td><p>23324.9</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>REMITTANCE_TO_OTHER_BANK</p></td>
+<td><p>LOAN_PAYMENT</p></td>
+<td><p>892</p></td>
+</tr>
+<tr class="row-even"><td><p>37081</p></td>
+<td><p>119</p></td>
+<td><p>12100.0</p></td>
+<td><p>36580.0</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>WITHDRAWAL_IN_CASH</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>654</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fake</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>trans_id</p></th>
+<th class="head"><p>account_id</p></th>
+<th class="head"><p>trans_amount</p></th>
+<th class="head"><p>balance_after_trans</p></th>
+<th class="head"><p>trans_type</p></th>
+<th class="head"><p>trans_operation</p></th>
+<th class="head"><p>trans_k_symbol</p></th>
+<th class="head"><p>trans_date</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>911598</p></td>
+<td><p>3001</p></td>
+<td><p>13619.0</p></td>
+<td><p>92079.0</p></td>
+<td><p>CREDIT</p></td>
+<td><p>COLLECTION_FROM_OTHER_BANK</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>1885</p></td>
+</tr>
+<tr class="row-odd"><td><p>377371</p></td>
+<td><p>1042</p></td>
+<td><p>4174.0</p></td>
+<td><p>32470.0</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>REMITTANCE_TO_OTHER_BANK</p></td>
+<td><p>HOUSEHOLD</p></td>
+<td><p>1483</p></td>
+</tr>
+<tr class="row-even"><td><p>970113</p></td>
+<td><p>3225</p></td>
+<td><p>274.0</p></td>
+<td><p>57608.0</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>WITHDRAWAL_IN_CASH</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>1855</p></td>
+</tr>
+<tr class="row-odd"><td><p>450090</p></td>
+<td><p>1489</p></td>
+<td><p>301.0</p></td>
+<td><p>36258.0</p></td>
+<td><p>CREDIT</p></td>
+<td><p>CREDIT_IN_CASH</p></td>
+<td><p>UNKNOWN</p></td>
+<td><p>885</p></td>
+</tr>
+<tr class="row-even"><td><p>1120409</p></td>
+<td><p>3634</p></td>
+<td><p>6303.0</p></td>
+<td><p>50975.0</p></td>
+<td><p>WITHDRAWAL</p></td>
+<td><p>REMITTANCE_TO_OTHER_BANK</p></td>
+<td><p>HOUSEHOLD</p></td>
+<td><p>1211</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">cat_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;trans_type&#39;</span><span class="p">,</span> <span class="s1">&#39;trans_operation&#39;</span><span class="p">,</span> <span class="s1">&#39;trans_k_symbol&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>If we do not specify categorical columns when initializing the TableEvaluator, it will consider all columns with more than 50 unique values a continuous column and anything with less a categorical columns.</p>
+<p>Then we create the TableEvaluator object:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">table_evaluator</span> <span class="o">=</span> <span class="n">TableEvaluator</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">fake</span><span class="p">,</span> <span class="n">cat_cols</span><span class="o">=</span><span class="n">cat_cols</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It’s nice to start with some plots to get a feel for the data and how they correlate. The test samples contain only 1000 samples, which is why the cumulative sum plots are not very smooth.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">table_evaluator</span><span class="o">.</span><span class="n">visual_evaluation</span><span class="p">()</span>
+</pre></div>
+</div>
+<a class="reference external image-reference" href="images/output_7_0.png"><img alt="png" src="_images/output_7_0.png" /></a>
+<a class="reference external image-reference" href="images/output_7_1.png"><img alt="png" src="_images/output_7_1.png" /></a>
+<a class="reference external image-reference" href="images/output_7_2.png"><img alt="png" src="_images/output_7_2.png" /></a>
+<a class="reference external image-reference" href="images/output_7_3.png"><img alt="png" src="_images/output_7_3.png" /></a>
+<p>The <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> method gives us the most complete idea of how close the data sets are together.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">table_evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">target_col</span><span class="o">=</span><span class="s1">&#39;trans_type&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">Correlation</span> <span class="n">metric</span><span class="p">:</span> <span class="n">pearsonr</span>
+
+  <span class="n">Classifier</span> <span class="n">F1</span><span class="o">-</span><span class="n">scores</span><span class="p">:</span>
+                                        <span class="n">real</span>   <span class="n">fake</span>
+  <span class="n">real_data_LogisticRegression_F1</span>     <span class="mf">0.8200</span> <span class="mf">0.8150</span>
+  <span class="n">real_data_RandomForestClassifier_F1</span> <span class="mf">0.9800</span> <span class="mf">0.9800</span>
+  <span class="n">real_data_DecisionTreeClassifier_F1</span> <span class="mf">0.9600</span> <span class="mf">0.9700</span>
+  <span class="n">real_data_MLPClassifier_F1</span>          <span class="mf">0.3500</span> <span class="mf">0.6850</span>
+  <span class="n">fake_data_LogisticRegression_F1</span>     <span class="mf">0.7800</span> <span class="mf">0.7650</span>
+  <span class="n">fake_data_RandomForestClassifier_F1</span> <span class="mf">0.9300</span> <span class="mf">0.9300</span>
+  <span class="n">fake_data_DecisionTreeClassifier_F1</span> <span class="mf">0.9300</span> <span class="mf">0.9400</span>
+  <span class="n">fake_data_MLPClassifier_F1</span>          <span class="mf">0.3600</span> <span class="mf">0.6200</span>
+
+  <span class="n">Miscellaneous</span> <span class="n">results</span><span class="p">:</span>
+                                    <span class="n">Result</span>
+  <span class="n">Column</span> <span class="n">Correlation</span> <span class="n">Distance</span> <span class="n">RMSE</span>          <span class="mf">0.0399</span>
+  <span class="n">Column</span> <span class="n">Correlation</span> <span class="n">distance</span> <span class="n">MAE</span>           <span class="mf">0.0296</span>
+  <span class="n">Duplicate</span> <span class="n">rows</span> <span class="n">between</span> <span class="n">sets</span> <span class="p">(</span><span class="n">real</span><span class="o">/</span><span class="n">fake</span><span class="p">)</span>   <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="n">nearest</span> <span class="n">neighbor</span> <span class="n">mean</span>                     <span class="mf">0.5655</span>
+  <span class="n">nearest</span> <span class="n">neighbor</span> <span class="n">std</span>                      <span class="mf">0.3726</span>
+
+  <span class="n">Results</span><span class="p">:</span>
+                                                  <span class="n">Result</span>
+  <span class="n">basic</span> <span class="n">statistics</span>                                <span class="mf">0.9940</span>
+  <span class="n">Correlation</span> <span class="n">column</span> <span class="n">correlations</span>                 <span class="mf">0.9904</span>
+  <span class="n">Mean</span> <span class="n">Correlation</span> <span class="n">between</span> <span class="n">fake</span> <span class="ow">and</span> <span class="n">real</span> <span class="n">columns</span>  <span class="mf">0.9566</span>
+  <span class="mi">1</span> <span class="o">-</span> <span class="n">MAPE</span> <span class="n">Estimator</span> <span class="n">results</span>                      <span class="mf">0.7843</span>
+  <span class="mi">1</span> <span class="o">-</span> <span class="n">MAPE</span> <span class="mi">5</span> <span class="n">PCA</span> <span class="n">components</span>                       <span class="mf">0.9138</span>
+  <span class="n">Similarity</span> <span class="n">Score</span>                                <span class="mf">0.9278</span>
+
+
+<span class="n">The</span> <span class="n">similarity</span> <span class="n">score</span> <span class="ow">is</span> <span class="n">an</span> <span class="n">aggregate</span> <span class="n">metric</span> <span class="n">of</span> <span class="n">the</span> <span class="n">five</span> <span class="n">other</span> <span class="n">metrics</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">section</span> <span class="k">with</span> <span class="n">results</span><span class="o">.</span> <span class="n">Additionally</span><span class="p">,</span> <span class="n">the</span> <span class="n">F1</span><span class="o">/</span><span class="n">RMSE</span> <span class="n">scores</span> <span class="n">are</span> <span class="n">printed</span> <span class="n">since</span> <span class="n">they</span> <span class="n">give</span> <span class="n">valuable</span> <span class="n">insights</span> <span class="n">into</span> <span class="n">the</span> <span class="n">strengths</span> <span class="ow">and</span> <span class="n">weaknesses</span> <span class="n">of</span> <span class="n">some</span> <span class="n">of</span> <span class="n">these</span> <span class="n">models</span><span class="o">.</span> <span class="n">Lastly</span><span class="p">,</span> <span class="n">some</span> <span class="n">miscellaneous</span> <span class="n">results</span> <span class="n">are</span> <span class="n">printed</span><span class="p">,</span> <span class="n">like</span> <span class="n">the</span> <span class="n">nearest</span> <span class="n">neighbor</span> <span class="n">distance</span> <span class="n">between</span> <span class="n">each</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">fake</span> <span class="n">dataset</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">closest</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">real</span> <span class="n">dataset</span><span class="o">.</span> <span class="n">This</span> <span class="n">provides</span> <span class="n">insight</span> <span class="n">into</span> <span class="n">the</span> <span class="n">privacy</span> <span class="n">retention</span> <span class="n">capability</span> <span class="n">of</span> <span class="n">the</span> <span class="n">model</span><span class="o">.</span> <span class="n">Note</span> <span class="n">that</span> <span class="n">the</span> <span class="n">mean</span> <span class="ow">and</span> <span class="n">standard</span> <span class="n">deviation</span> <span class="n">of</span> <span class="n">nearest</span> <span class="n">neighbor</span> <span class="ow">is</span> <span class="n">limited</span> <span class="n">to</span> <span class="mi">20</span><span class="n">k</span> <span class="n">rows</span><span class="p">,</span> <span class="n">due</span> <span class="n">to</span> <span class="n">time</span> <span class="ow">and</span> <span class="n">hardware</span> <span class="n">limitations</span><span class="o">.</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="full-documentation">
+<h2>Full Documentation<a class="headerlink" href="#full-documentation" title="Permalink to this headline"></a></h2>
+<p>Please see the full documentation on <a class="reference external" href="https://baukebrenninkmeijer.github.io/table-evaluator/">https://baukebrenninkmeijer.github.io/table-evaluator/</a>.</p>
+</div>
+<div class="section" id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline"></a></h2>
+<p>To see the motivation for my decisions, please have a look at my master thesis, found at <a class="reference external" href="https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf">https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf</a></p>
+<p>If you have any tips or suggestions, please contact send me on email.</p>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="table_evaluator.html" class="btn btn-neutral float-right" title="TableEvaluator" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Bauke Brenninkmeijer.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
