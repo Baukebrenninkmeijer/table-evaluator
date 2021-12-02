@@ -21,4 +21,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
         extra_files: README.md
-        # documentation_path:
+        documentation_path: docs/source
