@@ -16,8 +16,8 @@ jobs:
     - name: Build and Commit
       uses: sphinx-notes/pages@master
       with:
-        extra_files: 'README.md'
-        documentation_path: './docs/source/'
+        extra_files: README.md'
+        documentation_path: docs/source/
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
