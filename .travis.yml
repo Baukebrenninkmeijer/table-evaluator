@@ -5,7 +5,7 @@ before_install:
   - pip install travis-sphinx
 
 python:
-  - "3.7"
+  - "3.8"
 script:
   - pip install .
   - pytest tests
