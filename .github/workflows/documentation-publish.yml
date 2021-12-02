@@ -13,13 +13,13 @@ jobs:
       uses: actions/checkout@master
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-    - uses: ammaraskar/sphinx-action@master
+    - name: Build and Commit
+      uses: sphinx-notes/pages@master
       with:
-        docs-folder: "docs/"
+        extra_files: 'README.md'
+        documentation_path: './docs/source/'
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
-        extra_files: 'README.md'
-        documentation_path: './docs/source/'
