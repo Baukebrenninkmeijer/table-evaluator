@@ -16,12 +16,21 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: docs
-        # pre-build-command: apt update -y && apt install -y git-all
-    - name: Push changes
+    - name: Commit documentation changes
+      run: |
+        # git clone https://github.com/ammaraskar/sphinx-action-test.git --branch gh-pages --single-branch gh-pages
+        cp -r docs/build/html/* gh-pages/
+        cd gh-pages
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Update documentation" -a || true
+        # The above command will fail if no changes were present, so we ignore
+        # the return code.    - name: Push changes
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
-        force: true
-        directory: docs/build/html
+        # force: true
+        # directory: docs/build/html
 
