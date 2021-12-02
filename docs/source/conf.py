@@ -33,7 +33,7 @@ release = '15-08-2019'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'm2r',
+    'm2r2',
     'sphinx_rtd_theme',
     'sphinx.ext.githubpages',
     # 'sphinx.ext.coverage',
