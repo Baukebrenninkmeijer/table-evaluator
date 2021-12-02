@@ -17,3 +17,5 @@ tests/__pycache__/
 .vscode/
 
 table_evaluator.egg-info/
+
+.virtual_documents/
