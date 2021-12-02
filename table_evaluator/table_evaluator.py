@@ -526,10 +526,10 @@ class TableEvaluator:
                 break
 
         self.estimators_scores = pd.concat(res).groupby(level=0).mean()
-
-        print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
-            else print('\nRegressor MSE-scores and their Jaccard similarities:')
-        print(self.estimators_scores.to_string())
+        if self.verbose:
+            print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
+                else print('\nRegressor MSE-scores and their Jaccard similarities:')
+            print(self.estimators_scores.to_string())
 
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
@@ -676,15 +676,16 @@ class TableEvaluator:
             )
 
         else:
-            print(f'\n{efficacy_title}:')
-            print(self.estimators_scores.to_string())
+            if self.verbose:
+                print(f'\n{efficacy_title}:')
+                print(self.estimators_scores.to_string())
 
-            print(f'\nPrivacy results:')
-            print(privacy_report.content.to_string())
+                print(f'\nPrivacy results:')
+                print(privacy_report.content.to_string())
 
-            print(f'\nMiscellaneous results:')
-            print(miscellaneous.to_string())
+                print(f'\nMiscellaneous results:')
+                print(miscellaneous.to_string())
 
-            print(f'\nResults:')
-            print(all_results.content.to_string())
-            # return all_results
+                print(f'\nResults:')
+                print(all_results.content.to_string())
+            return all_results
