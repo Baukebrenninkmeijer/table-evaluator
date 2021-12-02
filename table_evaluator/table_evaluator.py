@@ -449,7 +449,7 @@ class TableEvaluator:
 
         return real, fake
 
-    def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
+    def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
         created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on
@@ -458,6 +458,7 @@ class TableEvaluator:
 
         :param target_col: which column should be considered the target both both the regression and classification task.
         :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.
+        :param kfold: if set to True, will perform 5-fold CV, otherwise will just train on 80% and test on 20% of the data once.
         :return: Correlation value or 1 - MAPE
         """
         self.target_col = target_col
@@ -519,6 +520,10 @@ class TableEvaluator:
             self.fit_estimators()
             res.append(self.score_estimators())
 
+            # Break the loop if we don't want the kfold
+            if not kfold:
+                break
+
         self.estimators_scores = pd.concat(res).groupby(level=0).mean()
 
         print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
@@ -576,7 +581,7 @@ class TableEvaluator:
         return column_correlations(real, fake, self.categorical_columns)
 
     def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose=None,
-                 n_samples_distance: int = 20000) -> Dict:
+                 n_samples_distance: int = 20000, kfold: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -586,6 +591,7 @@ class TableEvaluator:
         :param metric: overwrites self.metric. Scoring metric for the attributes.
             By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
         :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
+        :param kfold: Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20% of the data if set to False.
         :param verbose: whether to print verbose logging.
         """
         if verbose is not None:
@@ -601,7 +607,7 @@ class TableEvaluator:
         basic_statistical = self.statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
-        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
+        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
         pca_variance = self.pca_correlation()
         nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
 
