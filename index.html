@@ -93,7 +93,7 @@
 <a class="reference external image-reference" href="https://pypi.python.org/pypi/table_evaluator"><img alt="Supported versions" src="https://img.shields.io/pypi/pyversions/table_evaluator.svg" /></a>
 <a class="reference external image-reference" href="https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master"><img alt="Package deployment" src="https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master" /></a>
 <a class="reference external image-reference" href="https://pypistats.org/packages/table_evaluator"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/table_evaluator" /></a>
-<p><a class="reference external" href="https://baukebrenninkmeijer.github.io/table-evaluator/">Official documentation</a></p>
+<a class="reference external image-reference" href="https://baukebrenninkmeijer.github.io/table-evaluator/"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-%20-blue" /></a>
 <p>TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does <strong>not</strong> have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.</p>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
@@ -108,11 +108,15 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="n">tests</span>
 </pre></div>
 </div>
+<p>if this does not work, the package might not currently be findable. In that case, please install it locally with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
-<p><strong>Please see the example notebook for the most up-to-date examples. The README example is just that notebook, but sometimes a bit outdated.</strong>
-Start by importing the class</p>
+<p><strong>Please see the `example notebook &lt;https://github.com/Baukebrenninkmeijer/table-evaluator/blob/master/example_table_evaluator.ipynb&gt;`_ for the most up-to-date examples. The README example is just that notebook as markdown.</strong></p>
+<p>Start by importing the class</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">table_evaluator</span> <span class="kn">import</span> <span class="n">load_data</span><span class="p">,</span> <span class="n">TableEvaluator</span>
 </pre></div>
 </div>
@@ -332,7 +336,7 @@ The <code class="docutils literal notranslate"><span class="pre">utils.load_data
 </div>
 <div class="section" id="motivation">
 <h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline"></a></h2>
-<p>To see the motivation for my decisions, please have a look at my master thesis, found at <a class="reference external" href="https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf">https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf</a></p>
+<p>To see the motivation for my decisions, please have a look at my master thesis, found at the <a class="reference external" href="https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf">Radboud University</a></p>
 <p>If you have any tips or suggestions, please contact send me on email.</p>
 </div>
 </div>
