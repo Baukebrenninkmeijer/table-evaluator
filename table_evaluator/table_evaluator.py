@@ -389,12 +389,6 @@ class TableEvaluator:
         corr, p = stats.spearmanr(total_metrics['real'], total_metrics['fake'])
         return corr
 
-    def distribution_statistical_evaluation(self) -> pd.DataFrame:
-        """
-
-        :return:
-        """
-
     def correlation_correlation(self) -> float:
         """
         Calculate the correlation coefficient between the association matrices of self.real and self.fake using self.comparison_metric
