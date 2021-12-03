@@ -1,5 +1,4 @@
-name: Publish documentation
-
+name: Run tests
 on:
   push:
 
