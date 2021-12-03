@@ -606,6 +606,7 @@ class TableEvaluator:
             By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
         :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
         :param verbose: whether to print verbose logging.
+        :param return_outputs: Will omit printing and instead return a dictionairy with all results. 
         """
         self.verbose = verbose if verbose is not None else self.verbose
         self.comparison_metric = metric if metric is not None else self.comparison_metric
