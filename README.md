@@ -1,10 +1,9 @@
 # Table Evaluator
 [![PyPI version](https://badge.fury.io/py/table-evaluator.svg)](https://badge.fury.io/py/table-evaluator)
 [![Supported versions](https://img.shields.io/pypi/pyversions/table_evaluator.svg)](https://pypi.python.org/pypi/table_evaluator)
-[![Build Status](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator.svg?branch=master)](https://travis-ci.com/Baukebrenninkmeijer/Table_Evaluator)
+![Package deployment](https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/table_evaluator)](https://pypistats.org/packages/table_evaluator)
-
-[Official documentation](https://baukebrenninkmeijer.github.io/table-evaluator/)
+[![Documentation](https://img.shields.io/badge/Documentation-%20-blue)](https://baukebrenninkmeijer.github.io/table-evaluator/)
 
 TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does **not** have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.
 
@@ -19,9 +18,15 @@ The test can be run by cloning the repo and running:
 ```
 pytest tests
 ```
+if this does not work, the package might not currently be findable. In that case, please install it locally with:
+
+```
+pip install -e .
+```
 
 ## Usage
-**Please see the example notebook for the most up-to-date examples. The README example is just that notebook, but sometimes a bit outdated.**
+**Please see the [example notebook](https://github.com/Baukebrenninkmeijer/table-evaluator/blob/master/example_table_evaluator.ipynb) for the most up-to-date examples. The README example is just that notebook as markdown.**
+
 Start by importing the class
 ```Python
 from table_evaluator import load_data, TableEvaluator
@@ -142,6 +147,6 @@ table_evaluator.evaluate(target_col='trans_type')
 Please see the full documentation on [https://baukebrenninkmeijer.github.io/table-evaluator/](https://baukebrenninkmeijer.github.io/table-evaluator/).
 
 ## Motivation
-To see the motivation for my decisions, please have a look at my master thesis, found at [https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
+To see the motivation for my decisions, please have a look at my master thesis, found at the [Radboud University](https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf)
 
 If you have any tips or suggestions, please contact send me on email.
