@@ -1,6 +1,9 @@
-from IPython.core.display import HTML, display, Markdown
-from IPython import get_ipython
-import ipywidgets as widgets
+try:
+    from IPython.core.display import HTML, display, Markdown
+    from IPython import get_ipython
+    import ipywidgets as widgets
+except ImportError:
+    print('IPython not installed.')
 from typing import Dict
 
 
