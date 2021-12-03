@@ -1,7 +1,7 @@
 # Table Evaluator
 [![PyPI version](https://badge.fury.io/py/table-evaluator.svg)](https://badge.fury.io/py/table-evaluator)
 [![Supported versions](https://img.shields.io/pypi/pyversions/table_evaluator.svg)](https://pypi.python.org/pypi/table_evaluator)
-![example branch parameter](https://github.com/github/docs/actions/workflows/python-publish.yml/badge.svg?branch=master)
+![Package deployment](https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/table_evaluator)](https://pypistats.org/packages/table_evaluator)
 
 [Official documentation](https://baukebrenninkmeijer.github.io/table-evaluator/)
