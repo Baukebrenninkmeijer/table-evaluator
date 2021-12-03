@@ -565,7 +565,7 @@ class TableEvaluator:
         return column_correlations(self.real, self.fake, self.categorical_columns)
 
     def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose: bool = None,
-                 n_samples_distance: int = 20000, notebook: bool = False) -> Dict:
+                 n_samples_distance: int = 20000, notebook: bool = False, return_outputs: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -583,8 +583,6 @@ class TableEvaluator:
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
 
-        # print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
-
         basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
@@ -598,42 +596,29 @@ class TableEvaluator:
 
         miscellaneous = pd.DataFrame({'Result': list(miscellaneous_dict.values())},
                                      index=list(miscellaneous_dict.keys()))
-        # print(f'\nMiscellaneous results:')
 
         privacy_metrics_dict = {
             'Duplicate rows between sets (real/fake)': self.get_duplicates(),
             'nearest neighbor mean': nearest_neighbor[0],
             'nearest neighbor std': nearest_neighbor[1],
         }
+
         privacy_report = EvaluationResult(
             name='Privacy Results',
             content=dict_to_df(privacy_metrics_dict),
         )
 
-        all_results_dict = {
-            'Basic statistics': basic_statistical,
-            'Correlation column correlations': correlation_correlation,
-            'Mean Correlation between fake and real columns': column_correlation,
-            f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
-        }
-        similarity_score = np.mean(list(all_results_dict.values()))
-        all_results_dict['Similarity Score'] = similarity_score
-        # all_results = pd.DataFrame({'Result': list(all_results_dict.values())}, index=list(all_results_dict.keys()))
-        all_results = EvaluationResult(
-            name='Overview Results',
-            content=dict_to_df(all_results_dict)
-        )
+        privacy_tab = [privacy_report]
+
 
         efficacy_title = 'Classifier F1-scores and their Jaccard similarities:' if self.target_type == 'class' \
             else '\nRegressor MSE-scores'
 
-        overview_tab = [all_results, ]
 
         ml_efficacy_tab = [
-            EvaluationResult(name='ML Efficacy', content=self.estimators_scores)
+            EvaluationResult(name=efficacy_title, content=self.estimators_scores)
         ]
 
-        privacy_tab = [privacy_report]
 
         js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
 
@@ -644,6 +629,34 @@ class TableEvaluator:
                              content=kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns)
                              )
         ]
+
+
+        all_results_dict = {
+            'Basic statistics': basic_statistical,
+            'Correlation column correlations': correlation_correlation,
+            'Mean Correlation between fake and real columns': column_correlation,
+            f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
+        }
+        all_results_dict['Similarity Score'] = np.mean(list(all_results_dict.values()))
+
+        summary = EvaluationResult(
+            name='Overview Results',
+            content=dict_to_df(all_results_dict)
+        )
+
+        overview_tab = [summary, ]
+
+        if return_outputs:
+            all_results = [
+                *overview_tab,
+                *ml_efficacy_tab,
+                *privacy_tab,
+                *statistical_tab,
+            ]
+
+            all_results = {x.name: x.content.to_dict(orient='index') for x in all_results}
+
+            return all_results
 
         if notebook:
             visualize_notebook(
@@ -665,5 +678,4 @@ class TableEvaluator:
             print(miscellaneous.to_string())
 
             print(f'\nResults:')
-            print(all_results.content.to_string())
-            # return all_results
+            print(summary.content.to_string())
