@@ -8,7 +8,7 @@ from tqdm import tqdm
 from scipy import stats
 from typing import Tuple, Dict, Union
 from scipy.spatial.distance import cdist
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
@@ -211,8 +211,8 @@ class TableEvaluator:
         """
         Plot the first two components of a PCA of real and fake data.
         """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        real, fake = self.convert_numerical()
+
         pca_r = PCA(n_components=2)
         pca_f = PCA(n_components=2)
 
@@ -274,11 +274,7 @@ class TableEvaluator:
         self.pca_r = PCA(n_components=5)
         self.pca_f = PCA(n_components=5)
 
-        real = self.real
-        fake = self.fake
-
-        real = numerical_encoding(real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(fake, nominal_columns=self.categorical_columns)
+        real, fake = self.convert_numerical()
 
         self.pca_r.fit(real)
         self.pca_f.fit(fake)
@@ -327,10 +323,10 @@ class TableEvaluator:
                                                          [self.real_y_test, self.fake_y_test], ['real', 'fake']):
                     predictions_classifier_real = r_classifier.predict(dataset)
                     predictions_classifier_fake = f_classifier.predict(dataset)
-                    f1_r = f1_score(target, predictions_classifier_real, average="micro")
-                    f1_f = f1_score(target, predictions_classifier_fake, average="micro")
+                    f1_r = f1_score(target, predictions_classifier_real, average='micro')
+                    f1_f = f1_score(target, predictions_classifier_fake, average='micro')
                     jac_sim = jaccard_score(predictions_classifier_real, predictions_classifier_fake, average='micro')
-                    row = {'index': f'{estimator_name}_{dataset_name}_testset', 'f1_real': f1_r, 'f1_fake': f1_f,
+                    row = {'index': f'{estimator_name}_{dataset_name}', 'f1_real': f1_r, 'f1_fake': f1_f,
                            'jaccard_similarity': jac_sim}
                     rows.append(row)
             results = pd.DataFrame(rows).set_index('index')
@@ -420,25 +416,41 @@ class TableEvaluator:
             print(total_metrics.to_string())
         return corr
 
-    # def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    #     """
-    #     Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
-    #     categorical columns with many values or very unbalanced values
-    #
-    #     :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
-    #     """
-    #     real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-    #
-    #     columns = sorted(real.columns.tolist())
-    #     real = real[columns]
-    #     fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
-    #     for col in columns:
-    #         if col not in fake.columns.tolist():
-    #             fake[col] = 0
-    #     fake = fake[columns]
-    #     return real, fake
+    def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+        categorical columns with many values or very unbalanced values
 
-    def estimator_evaluation(self, target_col: str, target_type: str = 'class') -> float:
+        :return: Real and fake dataframe factorized using the pandas function
+        """
+        real = self.real
+        fake = self.fake
+        for c in self.categorical_columns:
+            if real[c].dtype == 'object':
+                real[c] = pd.factorize(real[c], sort=True)[0]
+                fake[c] = pd.factorize(fake[c], sort=True)[0]
+
+        return real, fake
+
+    def convert_numerical_one_hot(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Special function to convert dataset to a numerical representations while making sure they have identical columns. This is sometimes a problem with
+        categorical columns with many values or very unbalanced values
+
+        :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
+        """
+        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        columns = sorted(real.columns.tolist())
+        real = real[columns]
+        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        for col in columns:
+            if col not in fake.columns.tolist():
+                fake[col] = 0
+        fake = fake[columns]
+
+        return real, fake
+
+    def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier, depending on the task. Two sets are
         created of each of the estimators `S_r` and `S_f`, for the real and fake data respectively. `S_f` is trained on ``self.real`` and `S_r` on
@@ -447,42 +459,25 @@ class TableEvaluator:
 
         :param target_col: which column should be considered the target both both the regression and classification task.
         :param target_type: what kind of task this is. Can be either ``class`` or ``regr``.
+        :param kfold: if set to True, will perform 5-fold CV, otherwise will just train on 80% and test on 20% of the data once.
         :return: Correlation value or 1 - MAPE
         """
         self.target_col = target_col
         self.target_type = target_type
 
         # Convert both datasets to numerical representations and split x and  y
-        real_x = numerical_encoding(self.real.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
+        real, fake = self.convert_numerical()
 
-        columns = sorted(real_x.columns.tolist())
-        real_x = real_x[columns]
-        fake_x = numerical_encoding(self.fake.drop([target_col], axis=1), nominal_columns=self.categorical_columns)
-        for col in columns:
-            if col not in fake_x.columns.tolist():
-                fake_x[col] = 0
-        fake_x = fake_x[columns]
+        real_x = real.drop([target_col], axis=1)
+        fake_x = fake.drop([target_col], axis=1)
 
         assert real_x.columns.tolist() == fake_x.columns.tolist(), f'real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}'
 
-        if self.target_type == 'class':
-            # Encode real and fake target the same
-            real_y, uniques = pd.factorize(self.real[target_col])
-            mapping = {key: value for value, key in enumerate(uniques)}
-            fake_y = [mapping.get(key) for key in self.fake[target_col].tolist()]
-        elif self.target_type == 'regr':
-            real_y = self.real[target_col]
-            fake_y = self.fake[target_col]
-        else:
-            raise Exception(f'Target Type must be regr or class')
+        real_y = real[target_col]
+        fake_y = fake[target_col]
 
         # For reproducibilty:
         np.random.seed(self.random_seed)
-
-        self.real_x_train, self.real_x_test, self.real_y_train, self.real_y_test = train_test_split(real_x, real_y,
-                                                                                                    test_size=0.2)
-        self.fake_x_train, self.fake_x_test, self.fake_y_train, self.fake_y_test = train_test_split(fake_x, fake_y,
-                                                                                                    test_size=0.2)
 
         if target_type == 'regr':
             self.estimators = [
@@ -501,19 +496,40 @@ class TableEvaluator:
         else:
             raise ValueError(f'target_type must be \'regr\' or \'class\'')
 
-        self.r_estimators = copy.deepcopy(self.estimators)
-        self.f_estimators = copy.deepcopy(self.estimators)
         self.estimator_names = [type(clf).__name__ for clf in self.estimators]
 
-        for estimator in self.estimators:
-            assert hasattr(estimator, 'fit')
-            assert hasattr(estimator, 'score')
+        # K Fold
+        kf = KFold(n_splits=5)
+        res = []
+        for train_index, test_index in kf.split(real_y):
+            self.real_x_train = real_x.iloc[train_index]
+            self.real_x_test = real_x.iloc[test_index]
+            self.real_y_train = real_y.iloc[train_index]
+            self.real_y_test = real_y.iloc[test_index]
+            self.fake_x_train = fake_x.iloc[train_index]
+            self.fake_x_test = fake_x.iloc[test_index]
+            self.fake_y_train = fake_y.iloc[train_index]
+            self.fake_y_test = fake_y.iloc[test_index]
 
-        self.fit_estimators()
-        self.estimators_scores = self.score_estimators()
-        # print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
-        #     else print('\nRegressor MSE-scores and their Jaccard similarities:')
-        # print(self.estimators_scores.to_string())
+            self.r_estimators = copy.deepcopy(self.estimators)
+            self.f_estimators = copy.deepcopy(self.estimators)
+
+            for estimator in self.estimators:
+                assert hasattr(estimator, 'fit')
+                assert hasattr(estimator, 'score')
+
+            self.fit_estimators()
+            res.append(self.score_estimators())
+
+            # Break the loop if we don't want the kfold
+            if not kfold:
+                break
+
+        self.estimators_scores = pd.concat(res).groupby(level=0).mean()
+        if self.verbose:
+            print('\nClassifier F1-scores and their Jaccard similarities:') if self.target_type == 'class' \
+                else print('\nRegressor MSE-scores and their Jaccard similarities:')
+            print(self.estimators_scores.to_string())
 
         if self.target_type == 'regr':
             corr, p = self.comparison_metric(self.estimators_scores['real'], self.estimators_scores['fake'])
@@ -533,8 +549,8 @@ class TableEvaluator:
         """
         if n_samples is None:
             n_samples = len(self.real)
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+
+        real, fake = self.convert_numerical_one_hot()
 
         columns = sorted(real.columns.tolist())
         real = real[columns]
@@ -562,10 +578,13 @@ class TableEvaluator:
 
         :return: Column correlations between ``self.real`` and ``self.fake``.
         """
-        return column_correlations(self.real, self.fake, self.categorical_columns)
+
+        real, fake = self.convert_numerical()
+
+        return column_correlations(real, fake, self.categorical_columns)
 
     def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose: bool = None,
-                 n_samples_distance: int = 20000, notebook: bool = False) -> Dict:
+                 n_samples_distance: int = 20000, kfold: bool = False, notebook: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -575,6 +594,8 @@ class TableEvaluator:
         :param metric: overwrites self.metric. Scoring metric for the attributes.
             By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
         :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
+        :param kfold: Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20% of the data if set to False.
+        :param notebook: Better visualization of the results in a python notebook
         :param verbose: whether to print verbose logging.
         """
         self.verbose = verbose if verbose is not None else self.verbose
@@ -588,7 +609,7 @@ class TableEvaluator:
         basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
-        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type)
+        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
         nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
 
         miscellaneous_dict = {
@@ -666,4 +687,4 @@ class TableEvaluator:
 
             print(f'\nResults:')
             print(all_results.content.to_string())
-            # return all_results
+            #return all_results
