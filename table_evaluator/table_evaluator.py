@@ -676,16 +676,15 @@ class TableEvaluator:
             )
 
         else:
-            if self.verbose:
-                print(f'\n{efficacy_title}:')
-                print(self.estimators_scores.to_string())
+            print(f'\n{efficacy_title}:')
+            print(self.estimators_scores.to_string())
 
-                print(f'\nPrivacy results:')
-                print(privacy_report.content.to_string())
+            print(f'\nPrivacy results:')
+            print(privacy_report.content.to_string())
 
-                print(f'\nMiscellaneous results:')
-                print(miscellaneous.to_string())
+            print(f'\nMiscellaneous results:')
+            print(miscellaneous.to_string())
 
-                print(f'\nResults:')
-                print(all_results.content.to_string())
-            return all_results
+            print(f'\nResults:')
+            print(all_results.content.to_string())
+            #return all_results
