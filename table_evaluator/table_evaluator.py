@@ -1,9 +1,11 @@
 import copy
+import os
 import warnings
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from pathlib import Path
 from tqdm import tqdm
 from scipy import stats
 from typing import Tuple, Dict, Union
@@ -87,16 +89,18 @@ class TableEvaluator:
         self.fake.loc[:, self.numerical_columns] = self.fake.loc[:, self.numerical_columns].fillna(
             self.fake[self.numerical_columns].mean())
 
-    def plot_mean_std(self):
+    def plot_mean_std(self, fname=None):
         """
         Class wrapper function for plotting the mean and std using `viz.plot_mean_std`.
+        :param fname: If not none, saves the plot with this file name. 
         """
-        plot_mean_std(self.real, self.fake)
+        plot_mean_std(self.real, self.fake, fname=fname)
 
-    def plot_cumsums(self, nr_cols=4):
+    def plot_cumsums(self, nr_cols=4, fname=None):
         """
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
+        :param fname: If not none, saves the plot with this file name. 
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -119,12 +123,17 @@ class TableEvaluator:
             f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
             cdf(r, f, col, 'Cumsum', ax=axes[i])
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
-    def plot_distributions(self, nr_cols=3):
+    def plot_distributions(self, nr_cols=3, fname=None):
         """
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
         contains the values of a real columns and the corresponding fake column.
+        :param fname: If not none, saves the plot with this file name. 
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -165,16 +174,21 @@ class TableEvaluator:
                       .pipe((sns.barplot, "data"), x=x, y=y, hue=hue, ax=axes[i], saturation=0.8, palette=palette))
                 ax.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
-    def plot_correlation_difference(self, plot_diff=True, **kwargs):
+    def plot_correlation_difference(self, plot_diff=True, fname=None, **kwargs):
         """
         Plot the association matrices for each table and, if chosen, the difference between them.
 
         :param plot_diff: whether to plot the difference
+        :param fname: If not none, saves the plot with this file name.
         :param kwargs: kwargs for sns.heatmap
         """
-        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff,
+        plot_correlation_difference(self.real, self.fake, cat_cols=self.categorical_columns, plot_diff=plot_diff, fname=fname,
                                     **kwargs)
 
     def correlation_distance(self, how: str = 'euclidean') -> float:
@@ -207,9 +221,10 @@ class TableEvaluator:
             fake_corr.values
         )
 
-    def plot_pca(self):
+    def plot_pca(self, fname=None):
         """
         Plot the first two components of a PCA of real and fake data.
+        :param fname: If not none, saves the plot with this file name.
         """
         real, fake = self.convert_numerical()
 
@@ -225,6 +240,10 @@ class TableEvaluator:
         sns.scatterplot(ax=ax[1], x=fake_t[:, 0], y=fake_t[:, 1])
         ax[0].set_title('Real data')
         ax[1].set_title('Fake data')
+
+        if fname is not None: 
+            plt.savefig(fname)
+
         plt.show()
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
@@ -345,17 +364,28 @@ class TableEvaluator:
             raise Exception(f'self.target_type should be either \'class\' or \'regr\', but is {self.target_type}.')
         return results
 
-    def visual_evaluation(self, **kwargs):
+    def visual_evaluation(self, save_dir=None, **kwargs):
         """
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the PCA transform.
-
+        :save_dir: directory path to save images 
         :param kwargs: any kwargs for matplotlib.
         """
-        self.plot_mean_std()
-        self.plot_cumsums()
-        self.plot_distributions()
-        self.plot_correlation_difference(**kwargs)
-        self.plot_pca()
+        if save_dir is None: 
+            self.plot_mean_std()
+            self.plot_cumsums()
+            self.plot_distributions()
+            self.plot_correlation_difference(**kwargs)
+            self.plot_pca()    
+        else: 
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=True)
+
+            self.plot_mean_std(fname=save_dir/'mean_std.png')
+            self.plot_cumsums(fname=save_dir/'cumsums.png')
+            self.plot_distributions(fname=save_dir/'distributions.png')
+            self.plot_correlation_difference(fname=save_dir/'correlation_difference.png', **kwargs)
+            self.plot_pca(fname=save_dir/'pca.png') 
+        
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -578,7 +608,7 @@ class TableEvaluator:
         return column_correlations(real, fake, self.categorical_columns)
 
     def evaluate(self, target_col: str, target_type: str = 'class', metric: str = None, verbose: bool = None,
-                 n_samples_distance: int = 20000, kfold: bool = False, notebook: bool = False) -> Dict:
+                 n_samples_distance: int = 20000, kfold: bool = False, notebook: bool = False, return_outputs: bool = False) -> Dict:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
@@ -591,14 +621,13 @@ class TableEvaluator:
         :param kfold: Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20% of the data if set to False.
         :param notebook: Better visualization of the results in a python notebook
         :param verbose: whether to print verbose logging.
+        :param return_outputs: Will omit printing and instead return a dictionairy with all results. 
         """
         self.verbose = verbose if verbose is not None else self.verbose
         self.comparison_metric = metric if metric is not None else self.comparison_metric
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
-
-        # print(f'\nCorrelation metric: {self.comparison_metric.__name__}')
 
         basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
@@ -613,42 +642,29 @@ class TableEvaluator:
 
         miscellaneous = pd.DataFrame({'Result': list(miscellaneous_dict.values())},
                                      index=list(miscellaneous_dict.keys()))
-        # print(f'\nMiscellaneous results:')
 
         privacy_metrics_dict = {
             'Duplicate rows between sets (real/fake)': self.get_duplicates(),
             'nearest neighbor mean': nearest_neighbor[0],
             'nearest neighbor std': nearest_neighbor[1],
         }
+
         privacy_report = EvaluationResult(
             name='Privacy Results',
             content=dict_to_df(privacy_metrics_dict),
         )
 
-        all_results_dict = {
-            'Basic statistics': basic_statistical,
-            'Correlation column correlations': correlation_correlation,
-            'Mean Correlation between fake and real columns': column_correlation,
-            f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
-        }
-        similarity_score = np.mean(list(all_results_dict.values()))
-        all_results_dict['Similarity Score'] = similarity_score
-        # all_results = pd.DataFrame({'Result': list(all_results_dict.values())}, index=list(all_results_dict.keys()))
-        all_results = EvaluationResult(
-            name='Overview Results',
-            content=dict_to_df(all_results_dict)
-        )
+        privacy_tab = [privacy_report]
+
 
         efficacy_title = 'Classifier F1-scores and their Jaccard similarities:' if self.target_type == 'class' \
             else '\nRegressor MSE-scores'
 
-        overview_tab = [all_results, ]
 
         ml_efficacy_tab = [
-            EvaluationResult(name='ML Efficacy', content=self.estimators_scores)
+            EvaluationResult(name=efficacy_title, content=self.estimators_scores)
         ]
 
-        privacy_tab = [privacy_report]
 
         js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
 
@@ -659,6 +675,34 @@ class TableEvaluator:
                              content=kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns)
                              )
         ]
+
+
+        all_results_dict = {
+            'Basic statistics': basic_statistical,
+            'Correlation column correlations': correlation_correlation,
+            'Mean Correlation between fake and real columns': column_correlation,
+            f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
+        }
+        all_results_dict['Similarity Score'] = np.mean(list(all_results_dict.values()))
+
+        summary = EvaluationResult(
+            name='Overview Results',
+            content=dict_to_df(all_results_dict)
+        )
+
+        overview_tab = [summary, ]
+
+        if return_outputs:
+            all_results = [
+                *overview_tab,
+                *ml_efficacy_tab,
+                *privacy_tab,
+                *statistical_tab,
+            ]
+
+            all_results = {x.name: x.content.to_dict(orient='index') for x in all_results}
+
+            return all_results
 
         if notebook:
             visualize_notebook(
@@ -680,5 +724,4 @@ class TableEvaluator:
             print(miscellaneous.to_string())
 
             print(f'\nResults:')
-            print(all_results.content.to_string())
-            #return all_results
+            print(summary.content.to_string())
