@@ -13,6 +13,16 @@ from scipy.spatial.distance import cdist
 from sklearn.model_selection import KFold
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import svm
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+# load existing cnn
+from sklearn.ensemble import VotingClassifier
 from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
@@ -516,6 +526,11 @@ class TableEvaluator:
                 RandomForestClassifier(n_estimators=10, random_state=42),
                 DecisionTreeClassifier(random_state=42),
                 MLPClassifier([50, 50], solver='adam', activation='relu', learning_rate='adaptive', random_state=42),
+                svm.SVC()
+                KNeighborsClassifier(n_neighbors = 3)
+                GaussianNB()
+                AdaBoostClassifier(n_estimators=30, random_state=7)
+                GradientBoostingClassifier(n_estimators=100, random_state=7)
             ]
         else:
             raise ValueError(f'target_type must be \'regr\' or \'class\'')
