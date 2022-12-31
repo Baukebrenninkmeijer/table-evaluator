@@ -14,11 +14,11 @@ setuptools.setup(
     url="https://github.com/Baukebrenninkmeijer/Table-Evaluator",
     packages=setuptools.find_packages(),
     install_requires=[
-        'pandas',
+        'pandas==1.5.*',
         'numpy',
         'tqdm',
         'psutil',
-        'dython==0.5.1',
+        'dython==0.7.3',
         'seaborn',
         'matplotlib',
         'scikit-learn',
