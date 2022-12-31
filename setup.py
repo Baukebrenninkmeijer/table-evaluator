@@ -19,7 +19,7 @@ setuptools.setup(
         'tqdm',
         'psutil',
         'dython==0.7.3',
-        'seaborn<=0.11.1',
+        'seaborn',
         'matplotlib',
         'scikit-learn',
         'scipy'
