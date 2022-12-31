@@ -1,7 +1,7 @@
-dython==0.5.1
+dython==0.7.3
 scipy
-seaborn<=0.11.1
-pandas
+pandas==1.5.*
+seaborn
 numpy
 matplotlib
 tqdm

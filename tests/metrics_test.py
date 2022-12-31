@@ -1,12 +1,11 @@
 import pytest
 import pandas as pd
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
 import sys
 sys.path.append('..')
 from table_evaluator.metrics import *
 from table_evaluator.utils import load_data
-from dython.nominal import compute_associations, numerical_encoding
+from dython.nominal import associations, numerical_encoding
 from pathlib import Path
 
 data_folder = Path('data')
@@ -46,10 +45,10 @@ def test_associations():
     fake_assoc_theil = pd.read_csv(test_data_folder/'fake_associations_theil.csv', index_col='Unnamed: 0')
 
     # Assert equality with saved data
-    pd.testing.assert_frame_equal(real_assoc, compute_associations(real, nominal_columns=cat_cols))
-    pd.testing.assert_frame_equal(real_assoc_theil, compute_associations(real, nominal_columns=cat_cols, theil_u=True))
-    pd.testing.assert_frame_equal(fake_assoc, compute_associations(fake, nominal_columns=cat_cols))
-    pd.testing.assert_frame_equal(fake_assoc_theil, compute_associations(fake, nominal_columns=cat_cols, theil_u=True))
+    pd.testing.assert_frame_equal(real_assoc, associations(real, nominal_columns=cat_cols, compute_only=True)['corr'])
+    pd.testing.assert_frame_equal(real_assoc_theil, associations(real, nominal_columns=cat_cols, nom_nom_assoc='theil', compute_only=True)['corr'])
+    pd.testing.assert_frame_equal(fake_assoc, associations(fake, nominal_columns=cat_cols, compute_only=True)['corr'])
+    pd.testing.assert_frame_equal(fake_assoc_theil, associations(fake, nominal_columns=cat_cols, nom_nom_assoc='theil', compute_only=True)['corr'])
 
 
 def test_numerical_encoding():
