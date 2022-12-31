@@ -18,7 +18,7 @@ from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
-from dython.nominal import compute_associations, numerical_encoding
+from dython.nominal import associations, numerical_encoding
 from .viz import *
 from .metrics import *
 from .notebook import visualize_notebook, isnotebook, EvaluationResult
@@ -92,7 +92,7 @@ class TableEvaluator:
     def plot_mean_std(self, fname=None):
         """
         Class wrapper function for plotting the mean and std using `viz.plot_mean_std`.
-        :param fname: If not none, saves the plot with this file name. 
+        :param fname: If not none, saves the plot with this file name.
         """
         plot_mean_std(self.real, self.fake, fname=fname)
 
@@ -100,7 +100,7 @@ class TableEvaluator:
         """
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
-        :param fname: If not none, saves the plot with this file name. 
+        :param fname: If not none, saves the plot with this file name.
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -124,7 +124,7 @@ class TableEvaluator:
             cdf(r, f, col, 'Cumsum', ax=axes[i])
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
 
-        if fname is not None: 
+        if fname is not None:
             plt.savefig(fname)
 
         plt.show()
@@ -133,7 +133,7 @@ class TableEvaluator:
         """
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
         contains the values of a real columns and the corresponding fake column.
-        :param fname: If not none, saves the plot with this file name. 
+        :param fname: If not none, saves the plot with this file name.
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -175,7 +175,7 @@ class TableEvaluator:
                 ax.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
 
-        if fname is not None: 
+        if fname is not None:
             plt.savefig(fname)
 
         plt.show()
@@ -213,8 +213,8 @@ class TableEvaluator:
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
 
-        real_corr = compute_associations(self.real, nominal_columns=self.categorical_columns, theil_u=True)
-        fake_corr = compute_associations(self.fake, nominal_columns=self.categorical_columns, theil_u=True)
+        real_corr = associations(self.real, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
+        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
 
         return distance_func(
             real_corr.values,
@@ -241,7 +241,7 @@ class TableEvaluator:
         ax[0].set_title('Real data')
         ax[1].set_title('Fake data')
 
-        if fname is not None: 
+        if fname is not None:
             plt.savefig(fname)
 
         plt.show()
@@ -367,16 +367,16 @@ class TableEvaluator:
     def visual_evaluation(self, save_dir=None, **kwargs):
         """
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the PCA transform.
-        :save_dir: directory path to save images 
+        :save_dir: directory path to save images
         :param kwargs: any kwargs for matplotlib.
         """
-        if save_dir is None: 
+        if save_dir is None:
             self.plot_mean_std()
             self.plot_cumsums()
             self.plot_distributions()
             self.plot_correlation_difference(**kwargs)
-            self.plot_pca()    
-        else: 
+            self.plot_pca()
+        else:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -384,8 +384,8 @@ class TableEvaluator:
             self.plot_cumsums(fname=save_dir/'cumsums.png')
             self.plot_distributions(fname=save_dir/'distributions.png')
             self.plot_correlation_difference(fname=save_dir/'correlation_difference.png', **kwargs)
-            self.plot_pca(fname=save_dir/'pca.png') 
-        
+            self.plot_pca(fname=save_dir/'pca.png')
+
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -428,7 +428,7 @@ class TableEvaluator:
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
-            corr_df = compute_associations(ds, nominal_columns=self.categorical_columns, theil_u=True)
+            corr_df = associations(ds, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
             values = corr_df.values
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
@@ -621,7 +621,7 @@ class TableEvaluator:
         :param kfold: Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20% of the data if set to False.
         :param notebook: Better visualization of the results in a python notebook
         :param verbose: whether to print verbose logging.
-        :param return_outputs: Will omit printing and instead return a dictionairy with all results. 
+        :param return_outputs: Will omit printing and instead return a dictionairy with all results.
         """
         self.verbose = verbose if verbose is not None else self.verbose
         self.comparison_metric = metric if metric is not None else self.comparison_metric
