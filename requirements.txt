@@ -1,8 +1,9 @@
 dython==0.7.3
 scipy
-pandas==1.5.*
+pandas==2.0.*
 seaborn
 numpy
 matplotlib
 tqdm
 scikit-learn
+pyarrow
