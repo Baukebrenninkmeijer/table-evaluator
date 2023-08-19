@@ -1,12 +1,16 @@
-import pytest
-import pandas as pd
-import numpy as np
 import sys
+
+import numpy as np
+import pandas as pd
+import pytest
+
 sys.path.append('..')
+from pathlib import Path
+
+from dython.nominal import associations, numerical_encoding
+
 from table_evaluator.metrics import *
 from table_evaluator.utils import load_data
-from dython.nominal import associations, numerical_encoding
-from pathlib import Path
 
 data_folder = Path('data')
 test_data_folder = Path('data/tests')
@@ -39,10 +43,10 @@ def test_associations():
     Tests that check wether the dython associations are still computed as is expected.
     """
     # load test data
-    real_assoc = pd.read_csv(test_data_folder/'real_associations.csv', index_col='Unnamed: 0')
-    real_assoc_theil = pd.read_csv(test_data_folder/'real_associations_theil.csv', index_col='Unnamed: 0')
-    fake_assoc = pd.read_csv(test_data_folder/'fake_associations.csv', index_col='Unnamed: 0')
-    fake_assoc_theil = pd.read_csv(test_data_folder/'fake_associations_theil.csv', index_col='Unnamed: 0')
+    real_assoc = pd.read_parquet(test_data_folder/'real_associations.parquet')
+    real_assoc_theil = pd.read_parquet(test_data_folder/'real_associations_theil.parquet')
+    fake_assoc = pd.read_parquet(test_data_folder/'fake_associations.parquet')
+    fake_assoc_theil = pd.read_parquet(test_data_folder/'fake_associations_theil.parquet')
 
     # Assert equality with saved data
     pd.testing.assert_frame_equal(real_assoc, associations(real, nominal_columns=cat_cols, compute_only=True)['corr'])
@@ -56,13 +60,9 @@ def test_numerical_encoding():
     Tests that check wether the dython numerical_encoding are still computed as is expected.
     """
     num_encoding = numerical_encoding(real, nominal_columns=cat_cols)
-    uint_cols = num_encoding.select_dtypes(include=['uint8']).columns.tolist()
-    num_encoding[uint_cols] = num_encoding[uint_cols].astype('int64')
-    stored_encoding = pd.read_csv(test_data_folder/'real_test_sample_numerical_encoded.csv')
+    stored_encoding = pd.read_parquet(test_data_folder/'real_test_sample_numerical_encoded.parquet')
     pd.testing.assert_frame_equal(num_encoding, stored_encoding)
 
     num_encoding = numerical_encoding(fake, nominal_columns=cat_cols)
-    uint_cols = num_encoding.select_dtypes(include=['uint8']).columns.tolist()
-    num_encoding[uint_cols] = num_encoding[uint_cols].astype('int64')
-    stored_encoding = pd.read_csv(test_data_folder/'fake_test_sample_numerical_encoded.csv')
+    stored_encoding = pd.read_parquet(test_data_folder/'fake_test_sample_numerical_encoded.parquet')
     pd.testing.assert_frame_equal(num_encoding, stored_encoding)

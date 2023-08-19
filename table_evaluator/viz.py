@@ -211,8 +211,8 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None):
 
     ax[0].grid(True)
     ax[1].grid(True)
-    real = real._get_numeric_data()
-    fake = fake._get_numeric_data()
+    real = real.select_dtypes(include='number')
+    fake = fake.select_dtypes(include='number')
     real_mean = np.log(np.add(abs(real.mean()).values, 1e-5))
     fake_mean = np.log(np.add(abs(fake.mean()).values, 1e-5))
     min_mean = min(real_mean) - 1

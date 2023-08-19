@@ -62,7 +62,7 @@ class TableEvaluator:
         if cat_cols is None:
             real = real.infer_objects()
             fake = fake.infer_objects()
-            self.numerical_columns = [column for column in real._get_numeric_data().columns if
+            self.numerical_columns = [column for column in real.select_dtypes(include='number').columns if
                                       len(real[column].unique()) > unique_thresh]
             self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
         else:
