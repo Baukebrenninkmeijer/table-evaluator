@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="table-evaluator",
-    version="v1.5.0",
+    version="v1.6.0",
     author="Bauke Brenninkmeijer",
     author_email="bauke.brenninkmeijer@gmail.com",
     description="A package to evaluate how close a synthetic data set is to real data.",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/Baukebrenninkmeijer/Table-Evaluator",
     packages=setuptools.find_packages(),
     install_requires=[
-        'pandas==1.5.*',
+        'pandas==2.0.*',
         'numpy',
         'tqdm',
         'psutil',

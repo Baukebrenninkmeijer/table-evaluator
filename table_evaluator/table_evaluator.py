@@ -1,28 +1,30 @@
 import copy
 import os
 import warnings
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 from pathlib import Path
-from tqdm import tqdm
-from scipy import stats
-from typing import Tuple, Dict, Union
-from scipy.spatial.distance import cdist
-from sklearn.model_selection import KFold
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.decomposition import PCA
-from sklearn.metrics import f1_score, mean_squared_error, jaccard_score
-from sklearn.exceptions import ConvergenceWarning
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.linear_model import Lasso, Ridge, ElasticNet, LogisticRegression
+from typing import Dict, Tuple, Union
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from dython.nominal import associations, numerical_encoding
-from .viz import *
+from scipy import stats
+from scipy.spatial.distance import cdist
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, Ridge
+from sklearn.metrics import f1_score, jaccard_score, mean_squared_error
+from sklearn.model_selection import KFold
+from sklearn.neural_network import MLPClassifier
+from sklearn.tree import DecisionTreeClassifier
+from tqdm import tqdm
+
 from .metrics import *
-from .notebook import visualize_notebook, isnotebook, EvaluationResult
+from .notebook import EvaluationResult, isnotebook, visualize_notebook
 from .utils import dict_to_df
+from .viz import *
 
 
 class TableEvaluator:
@@ -60,7 +62,7 @@ class TableEvaluator:
         if cat_cols is None:
             real = real.infer_objects()
             fake = fake.infer_objects()
-            self.numerical_columns = [column for column in real._get_numeric_data().columns if
+            self.numerical_columns = [column for column in real.select_dtypes(include='number').columns if
                                       len(real[column].unique()) > unique_thresh]
             self.categorical_columns = [column for column in real.columns if column not in self.numerical_columns]
         else:
@@ -119,9 +121,14 @@ class TableEvaluator:
         fig.suptitle('Cumulative Sums per feature', fontsize=16)
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
-            r = self.real[col]
-            f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-            cdf(r, f, col, 'Cumsum', ax=axes[i])
+            try:
+                r = self.real[col]
+                f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
+                cdf(r, f, col, 'Cumsum', ax=axes[i])
+            except Exception as e:
+                print(f'Error while plotting column {col}')
+                raise e
+
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
 
         if fname is not None:
@@ -153,7 +160,7 @@ class TableEvaluator:
         axes = ax.flatten()
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
-                plot_df = pd.DataFrame({col: self.real[col].append(self.fake[col]), 'kind': ['real'] * self.n_samples + ['fake'] * self.n_samples})
+                plot_df = pd.DataFrame({col: pd.concat([self.real[col], self.fake[col]], axis=0), 'kind': ['real'] * self.n_samples + ['fake'] * self.n_samples})
                 fig = sns.histplot(plot_df, x=col, hue='kind', ax=axes[i], stat='probability', legend=True)
                 axes[i].set_autoscaley_on(True)
             else:
