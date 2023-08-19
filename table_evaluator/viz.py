@@ -1,9 +1,10 @@
-from dython.nominal import associations
-from typing import Union, List, Optional
-import pandas as pd
+from typing import List, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
+from dython.nominal import associations
 
 
 def plot_var_cor(x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs) -> Optional[np.ndarray]:
@@ -69,9 +70,9 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
     else:
         fig, ax = plt.subplots(1, 2, figsize=(20, 8))
 
-    real_corr = associations(real, nominal_columns=cat_cols, plot=False, theil_u=True,
+    real_corr = associations(real, nominal_columns=cat_cols, plot=False, nom_nom_assoc='theil',
                              mark_columns=True, annot=annot, ax=ax[0], cmap=cmap)['corr']
-    fake_corr = associations(fake, nominal_columns=cat_cols, plot=False, theil_u=True,
+    fake_corr = associations(fake, nominal_columns=cat_cols, plot=False, nom_nom_assoc='theil',
                              mark_columns=True, annot=annot, ax=ax[1], cmap=cmap)['corr']
 
     if plot_diff:
@@ -86,7 +87,7 @@ def plot_correlation_difference(real: pd.DataFrame, fake: pd.DataFrame, plot_dif
         ax[i].set_title(label, **title_font)
     plt.tight_layout()
 
-    if fname is not None: 
+    if fname is not None:
         plt.savefig(fname)
 
     plt.show()
@@ -105,12 +106,12 @@ def plot_correlation_comparison(evaluators: List, annot=False):
     flat_ax = ax.flatten()
     flat_ax[nr_plots + 1].clear()
     fake_corr = []
-    real_corr = associations(evaluators[0].real, nominal_columns=evaluators[0].categorical_columns, plot=False, theil_u=True,
+    real_corr = associations(evaluators[0].real, nominal_columns=evaluators[0].categorical_columns, plot=False, nom_nom_assoc='theil', compute_only=True,
                              mark_columns=True, annot=False, cmap=cmap, cbar=False, ax=flat_ax[0])['corr']
     for i in range(1, nr_plots):
         cbar = True if i % (nr_plots - 1) == 0 else False
         fake_corr.append(
-            associations(evaluators[i - 1].fake, nominal_columns=evaluators[0].categorical_columns, plot=False, theil_u=True,
+            associations(evaluators[i - 1].fake, nominal_columns=evaluators[0].categorical_columns, plot=False, nom_nom_assoc='theil', compute_only=True,
                          mark_columns=True, annot=False, cmap=cmap, cbar=cbar, ax=flat_ax[i])['corr']
         )
         if i % (nr_plots - 1) == 0:
@@ -145,11 +146,11 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
     :param data_r: Series with real data
     :param data_f: Series with fake data
     :param xlabel: Label to put on the x-axis
-    :param ylabel: Label to put on the y-axis
+    :param ylabel: Label to put  on the y-axis
     :param ax: The axis to plot on. If ax=None, a new figure is created.
     """
-    x1 = np.sort(data_r)
-    x2 = np.sort(data_f)
+    x1 = data_r.sort_values()
+    x2 = data_f.sort_values()
     y = np.arange(1, len(data_r) + 1) / len(data_r)
 
     ax = ax if ax else plt.subplots()[1]
@@ -167,9 +168,10 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
 
     # If labels are strings, rotate them vertical
     if isinstance(data_r, pd.Series) and data_r.dtypes == 'object':
+        all_labels = set(data_r) | set(data_f)
         ticks_loc = ax.get_xticks()
         ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        ax.set_xticklabels(data_r.sort_values().unique(), rotation='vertical')
+        ax.set_xticklabels(sorted(all_labels), rotation='vertical')
 
     if ax is None:
         plt.show()
@@ -201,7 +203,7 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None):
     :param real: DataFrame containing the real data
     :param fake: DataFrame containing the fake data
     :param ax: Axis to plot on. If none, a new figure is made.
-    :param fname: If not none, saves the plot with this file name. 
+    :param fname: If not none, saves the plot with this file name.
     """
     if ax is None:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
