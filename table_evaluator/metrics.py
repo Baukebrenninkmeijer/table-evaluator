@@ -100,7 +100,8 @@ def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: Li
     return distances_df.set_index('col_name')
 
 
-def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Series, bins=25) -> Dict[str, Any]:
+def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25) -> Dict[str, Any]:
+    bins = min(bins, len(real_col))
     binned_values_real, bins = pd.cut(real_col, bins=bins, retbins=True)
     binned_probs_real = binned_values_real.value_counts(normalize=True, sort=False)
     binned_probs_fake = pd.cut(fake_col, bins=bins).value_counts(normalize=True, sort=False)
@@ -108,7 +109,7 @@ def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Serie
     return {'col_name': colname, 'js_distance': js_distance}
 
 
-def kolmogorov_smirnov_test(col_name, real_col, fake_col):
+def kolmogorov_smirnov_test(col_name, real_col, fake_col) -> Dict[str, Any]:
     statistic, p_value = ks_2samp(real_col, fake_col)
     equality = 'identical' if p_value > 0.01 else 'different'
     return {'col_name': col_name, 'statistic': statistic, 'p-value': p_value, 'equality': equality}
