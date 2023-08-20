@@ -161,7 +161,7 @@ class TableEvaluator:
         for i, col in enumerate(self.real.columns):
             if col not in self.categorical_columns:
                 plot_df = pd.DataFrame({col: pd.concat([self.real[col], self.fake[col]], axis=0), 'kind': ['real'] * self.n_samples + ['fake'] * self.n_samples})
-                fig = sns.histplot(plot_df, x=col, hue='kind', ax=axes[i], stat='probability', legend=True)
+                fig = sns.histplot(plot_df, x=col, hue='kind', ax=axes[i], stat='probability', legend=True, kde=True)
                 axes[i].set_autoscaley_on(True)
             else:
                 real = self.real.copy()
@@ -220,13 +220,12 @@ class TableEvaluator:
         else:
             raise ValueError(f'`how` parameter must be in [euclidean, mae, rmse]')
 
-        real_corr = associations(self.real, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
-        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
-
+        real_corr = associations(self.real, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)['corr'] # type: ignore
+        fake_corr = associations(self.fake, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)['corr'] # type: ignore
         return distance_func(
             real_corr.values,
             fake_corr.values
-        )
+        ) # type: ignore
 
     def plot_pca(self, fname=None):
         """
@@ -435,8 +434,9 @@ class TableEvaluator:
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
-            corr_df = associations(ds, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)
+            corr_df: pd.DataFrame = associations(ds, nominal_columns=self.categorical_columns, nom_nom_assoc='theil', compute_only=True)['corr']
             values = corr_df.values
+            # print(values, type(values))
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
 
@@ -470,14 +470,18 @@ class TableEvaluator:
 
         :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
         """
-        real = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
-        columns = sorted(real.columns.tolist())
-        real = real[columns]
-        fake = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
-        for col in columns:
-            if col not in fake.columns.tolist():
+        real: pd.DataFrame = numerical_encoding(self.real, nominal_columns=self.categorical_columns)
+        real = real.sort_index(axis=1)
+        fake: pd.DataFrame = numerical_encoding(self.fake, nominal_columns=self.categorical_columns)
+        for col in real.columns:
+            if col not in fake:
                 fake[col] = 0
-        fake = fake[columns]
+        fake = fake.sort_index(axis=1)
+
+        # Cast True/False columns to 0/1.
+        bool_cols = real.select_dtypes('bool').columns
+        real[bool_cols] = real[bool_cols].astype(float)
+        fake[bool_cols] = fake[bool_cols].astype(float)
 
         return real, fake
 

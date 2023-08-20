@@ -1,12 +1,14 @@
-import pandas as pd
+from typing import Any, Dict, List
+
 import numpy as np
+import pandas as pd
 import scipy.stats as ss
-from dython.nominal import theils_u, cramers_v
-from sklearn.metrics import mean_squared_error
-from scipy.spatial.distance import jensenshannon
+from dython.nominal import cramers_v, theils_u
 from joblib import Parallel, delayed
-from typing import Dict, Any, List
+from scipy.spatial.distance import jensenshannon
 from scipy.stats import ks_2samp
+from sklearn.metrics import mean_squared_error
+
 
 def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray):
     """
@@ -90,14 +92,11 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
 
 def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> pd.DataFrame:
     assert real.columns.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
-    real_iter = real[numerical_columns].iteritems()
-    fake_iter = fake[numerical_columns].iteritems()
     distances = Parallel(n_jobs=-1)(
         delayed(jensenshannon_distance)
-        (colname, real_col, fake_col) for (colname, real_col), (_, fake_col) in zip(real_iter, fake_iter))
+        (col, real[col], fake[col]) for col in numerical_columns)
 
     distances_df = pd.DataFrame(distances)
-    # distances_df = distances_df.append({'colname': 'mean', 'js_distance': distances_df.js_distance.mean()})
     return distances_df.set_index('col_name')
 
 
@@ -116,10 +115,8 @@ def kolmogorov_smirnov_test(col_name, real_col, fake_col):
 
 def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> List[Dict[str, Any]]:
     assert real.columns.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
-    real_iter = real[numerical_columns].iteritems()
-    fake_iter = fake[numerical_columns].iteritems()
     distances = Parallel(n_jobs=-1)(
         delayed(kolmogorov_smirnov_test)
-        (colname, real_col, fake_col) for (colname, real_col), (_, fake_col) in zip(real_iter, fake_iter))
+        (col, real[col], fake[col]) for col in numerical_columns)
     distances_df = pd.DataFrame(distances)
     return distances_df.set_index('col_name')
