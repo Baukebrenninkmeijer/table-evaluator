@@ -66,3 +66,18 @@ def test_numerical_encoding():
     num_encoding = numerical_encoding(fake, nominal_columns=cat_cols)
     stored_encoding = pd.read_parquet(test_data_folder/'fake_test_sample_numerical_encoded.parquet')
     pd.testing.assert_frame_equal(num_encoding, stored_encoding)
+
+
+def test_jensenshannon_distance():
+    # create some sample data
+    colname = "age"
+    real_col = pd.Series([20, 25, 30, 35, 40])
+    fake_col = pd.Series([22, 27, 32, 37, 42])
+
+    # call the function and get the result
+    result = jensenshannon_distance(colname, real_col, fake_col)
+
+    # check that the result is a dictionary with the correct keys and values
+    assert isinstance(result, dict)
+    assert result["col_name"] == colname
+    assert result["js_distance"] == 0.2736453208486386 # this is the expected JS distance for these data
