@@ -100,41 +100,44 @@ class TableEvaluator:
 
     def plot_cumsums(self, nr_cols=4, fname=None):
         """
-        Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
+        Plot the cumulative sums for all columns in the real and fake dataset. 
+        Height of each row scales with the length of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
-        :param fname: If not none, saves the plot with this file name.
+        :param fname: If not none, saves the plot with this file name. 
         """
+        import matplotlib.pyplot as plt
+    
         nr_charts = len(self.real.columns)
-        nr_rows = max(1, nr_charts // nr_cols)
-        nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
-
-        max_len = 0
-        # Increase the length of plots if the labels are long
-        if not self.real.select_dtypes(include=['object']).empty:
-            lengths = []
-            for d in self.real.select_dtypes(include=['object']):
-                lengths.append(max([len(x.strip()) for x in self.real[d].unique().tolist()]))
-            max_len = max(lengths)
-
+        nr_rows = (nr_charts + nr_cols - 1) // nr_cols  # more concise way to determine number of rows
+    
+        # Calculate max label length for object type columns in a more Pythonic way
+        obj_columns = self.real.select_dtypes(include=['object'])
+        if not obj_columns.empty:
+            max_len = max(len(x.strip()) for col in obj_columns for x in self.real[col].unique())
+        else:
+            max_len = 0
+    
         row_height = 6 + (max_len // 30)
+    
         fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
         fig.suptitle('Cumulative Sums per feature', fontsize=16)
-        axes = ax.flatten()
+        axes = ax.ravel()  # flatten the axis array
+    
         for i, col in enumerate(self.real.columns):
-            try:
-                r = self.real[col]
-                f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-                cdf(r, f, col, 'Cumsum', ax=axes[i])
-            except Exception as e:
-                print(f'Error while plotting column {col}')
-                raise e
-
+            r = self.real[col]
+            f = self.fake[col]
+            cdf(r, f, col, 'Cumsum', ax=axes[i])
+    
+        for i in range(nr_charts, nr_cols * nr_rows):  # Hide any remaining unused subplots
+            axes[i].axis('off')
+    
         plt.tight_layout(rect=[0, 0.02, 1, 0.98])
-
+    
         if fname is not None:
             plt.savefig(fname)
-
+    
         plt.show()
+
 
     def plot_distributions(self, nr_cols=3, fname=None):
         """
