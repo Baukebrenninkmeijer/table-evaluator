@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to table evaluator’s documentation! &mdash; table evaluator 15-08-2019 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Welcome to table evaluator’s documentation! &mdash; table evaluator 1.7.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=030dc6f6"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,10 +43,10 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="viz.html">Viz</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plots.html">Plots</a></li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
 </ul>
@@ -72,20 +76,33 @@
            <div itemprop="articleBody">
              
   <section id="welcome-to-table-evaluator-s-documentation">
-<h1>Welcome to table evaluator’s documentation!<a class="headerlink" href="#welcome-to-table-evaluator-s-documentation" title="Permalink to this headline"></a></h1>
+<h1>Welcome to table evaluator’s documentation!<a class="headerlink" href="#welcome-to-table-evaluator-s-documentation" title="Link to this heading"></a></h1>
 <div class="toctree-wrapper compound">
-<p><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="table_evaluator.html#table_evaluator.table_evaluator.TableEvaluator"><code class="docutils literal notranslate"><span class="pre">TableEvaluator</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="viz.html">Viz</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="plots.html">Plots</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.cdf"><code class="docutils literal notranslate"><span class="pre">cdf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.plot_correlation_comparison"><code class="docutils literal notranslate"><span class="pre">plot_correlation_comparison()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.plot_correlation_difference"><code class="docutils literal notranslate"><span class="pre">plot_correlation_difference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.plot_mean_std"><code class="docutils literal notranslate"><span class="pre">plot_mean_std()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.plot_mean_std_comparison"><code class="docutils literal notranslate"><span class="pre">plot_mean_std_comparison()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="plots.html#table_evaluator.plots.plot_var_cor"><code class="docutils literal notranslate"><span class="pre">plot_var_cor()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#table_evaluator.metrics.column_correlations"><code class="docutils literal notranslate"><span class="pre">column_correlations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#table_evaluator.metrics.euclidean_distance"><code class="docutils literal notranslate"><span class="pre">euclidean_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#table_evaluator.metrics.mean_absolute_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_error()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#table_evaluator.metrics.mean_absolute_percentage_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_percentage_error()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#table_evaluator.metrics.rmse"><code class="docutils literal notranslate"><span class="pre">rmse()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#table_evaluator.utils.load_data"><code class="docutils literal notranslate"><span class="pre">load_data()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -93,7 +110,7 @@
 <p>Welcome to the documentation for TableEvaluator! Please see the contents/sidebar for a high level overview. The library consists of two main parts. First, the TableEvaluator class, which does most of the heavy lifting and then Helper Functions that provide extra functionality and reusable parts for TableEvaluator.</p>
 </section>
 <section id="table-evaluator">
-<h1>Table Evaluator<a class="headerlink" href="#table-evaluator" title="Permalink to this headline"></a></h1>
+<h1>Table Evaluator<a class="headerlink" href="#table-evaluator" title="Link to this heading"></a></h1>
 <a class="reference external image-reference" href="https://badge.fury.io/py/table-evaluator"><img alt="PyPI version" src="https://badge.fury.io/py/table-evaluator.svg" /></a>
 <a class="reference external image-reference" href="https://pypi.python.org/pypi/table_evaluator"><img alt="Supported versions" src="https://img.shields.io/pypi/pyversions/table_evaluator.svg" /></a>
 <a class="reference external image-reference" href="https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master"><img alt="Package deployment" src="https://github.com/Baukebrenninkmeijer/table-evaluator/actions/workflows/python-publish.yml/badge.svg?branch=master" /></a>
@@ -101,14 +118,14 @@
 <a class="reference external image-reference" href="https://baukebrenninkmeijer.github.io/table-evaluator/"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-%20-blue" /></a>
 <p>TableEvaluator is a library to evaluate how similar a synthesized dataset is to a real data. In other words, it tries to give an indication into how real your fake data is. With the rise of GANs, specifically designed for tabular data, many applications are becoming possibilities. For industries like finance, healthcare and goverments, having the capacity to create high quality synthetic data that does <strong>not</strong> have the privacy constraints of normal data is extremely valuable. Since this field is this quite young and developing, I created this library to have a consistent evaluation method for your models.</p>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
 <p>The package can be installed with</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">table_evaluator</span>
 </pre></div>
 </div>
 </section>
 <section id="tests">
-<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline"></a></h2>
+<h2>Tests<a class="headerlink" href="#tests" title="Link to this heading"></a></h2>
 <p>The test can be run by cloning the repo and running:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span> <span class="n">tests</span>
 </pre></div>
@@ -119,7 +136,7 @@
 </div>
 </section>
 <section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
 <p><strong>Please see the `example notebook &lt;https://github.com/Baukebrenninkmeijer/table-evaluator/blob/master/example_table_evaluator.ipynb&gt;`_ for the most up-to-date examples. The README example is just that notebook as markdown.</strong></p>
 <p>Start by importing the class</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">table_evaluator</span> <span class="kn">import</span> <span class="n">load_data</span><span class="p">,</span> <span class="n">TableEvaluator</span>
@@ -316,17 +333,17 @@ The <code class="docutils literal notranslate"><span class="pre">utils.load_data
 </div>
 </section>
 <section id="full-documentation">
-<h2>Full Documentation<a class="headerlink" href="#full-documentation" title="Permalink to this headline"></a></h2>
+<h2>Full Documentation<a class="headerlink" href="#full-documentation" title="Link to this heading"></a></h2>
 <p>Please see the full documentation on <a class="reference external" href="https://baukebrenninkmeijer.github.io/table-evaluator/">https://baukebrenninkmeijer.github.io/table-evaluator/</a>.</p>
 </section>
 <section id="motivation">
-<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline"></a></h2>
+<h2>Motivation<a class="headerlink" href="#motivation" title="Link to this heading"></a></h2>
 <p>To see the motivation for my decisions, please have a look at my master thesis, found at the <a class="reference external" href="https://www.ru.nl/publish/pages/769526/z04_master_thesis_brenninkmeijer.pdf">Radboud University</a></p>
 <p>If you have any tips or suggestions, please contact send me on email.</p>
 </section>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -344,7 +361,7 @@ The <code class="docutils literal notranslate"><span class="pre">utils.load_data
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, Bauke Brenninkmeijer.</p>
+    <p>&#169; Copyright 2024, Bauke Brenninkmeijer.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

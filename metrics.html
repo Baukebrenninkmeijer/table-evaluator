@@ -1,24 +1,28 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Metrics &mdash; table evaluator 15-08-2019 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Metrics &mdash; table evaluator 1.7.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=030dc6f6"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Utils" href="utils.html" />
-    <link rel="prev" title="Viz" href="viz.html" /> 
+    <link rel="prev" title="Plots" href="plots.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -40,11 +44,16 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="table_evaluator.html">TableEvaluator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="viz.html">Viz</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Metrics</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="plots.html">Plots</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.column_correlations"><code class="docutils literal notranslate"><span class="pre">column_correlations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.euclidean_distance"><code class="docutils literal notranslate"><span class="pre">euclidean_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.mean_absolute_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_error()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.mean_absolute_percentage_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_percentage_error()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.rmse"><code class="docutils literal notranslate"><span class="pre">rmse()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
@@ -75,23 +84,110 @@
            <div itemprop="articleBody">
              
   <section id="metrics">
-<h1>Metrics<a class="headerlink" href="#metrics" title="Permalink to this headline"></a></h1>
+<h1>Metrics<a class="headerlink" href="#metrics" title="Link to this heading"></a></h1>
 <div class="toctree-wrapper compound">
 </div>
+<dl class="py function" id="module-table_evaluator.metrics">
+<dt class="sig sig-object py" id="table_evaluator.metrics.column_correlations">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">column_correlations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categorical_columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theil_u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.column_correlations" title="Link to this definition"></a></dt>
+<dd><p>Column-wise correlation calculation between <code class="docutils literal notranslate"><span class="pre">dataset_a</span></code> and <code class="docutils literal notranslate"><span class="pre">dataset_b</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_a</strong> – First DataFrame</p></li>
+<li><p><strong>dataset_b</strong> – Second DataFrame</p></li>
+<li><p><strong>categorical_columns</strong> – The columns containing categorical values</p></li>
+<li><p><strong>theil_u</strong> – Whether to use Theil’s U. If False, use Cramer’s V.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mean correlation between all columns.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.euclidean_distance">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">euclidean_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.euclidean_distance" title="Link to this definition"></a></dt>
+<dd><p>Returns the euclidean distance between y_true and y_pred.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
+<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mean absolute error (float).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.mean_absolute_error">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">mean_absolute_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.mean_absolute_error" title="Link to this definition"></a></dt>
+<dd><p>Returns the mean absolute error between y_true and y_pred.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
+<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mean absolute error (float).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.mean_absolute_percentage_error">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">mean_absolute_percentage_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.mean_absolute_percentage_error" title="Link to this definition"></a></dt>
+<dd><p>Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
+<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mean absolute percentage error (float).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.rmse">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">rmse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.rmse" title="Link to this definition"></a></dt>
+<dd><p>Returns the root mean squared error between y_true and y_pred.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
+<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>root mean squared error (float).</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="viz.html" class="btn btn-neutral float-left" title="Viz" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="plots.html" class="btn btn-neutral float-left" title="Plots" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="utils.html" class="btn btn-neutral float-right" title="Utils" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, Bauke Brenninkmeijer.</p>
+    <p>&#169; Copyright 2024, Bauke Brenninkmeijer.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

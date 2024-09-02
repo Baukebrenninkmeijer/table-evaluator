@@ -11,7 +11,7 @@ Welcome to table evaluator's documentation!
    :caption: Contents:
 
    table_evaluator
-   viz
+   plots
    metrics
    utils
 
