@@ -8,6 +8,15 @@ readme = "README.md"
 repository ="https://github.com/Baukebrenninkmeijer/Table-Evaluator"
 documentation="https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
 keywords=['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
+classifiers = [
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3 :: Only',
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -18,14 +27,15 @@ matplotlib = "^3.9.2"
 numpy = "1.26.4"
 seaborn = "^0.13.2"
 pandas = "==2.0.*"
-scipy = "^1.14.1"
-dython = "0.7.3"
+scipy = "1.11.4"
+dython = "0.7.7"
 pre-commit = "^3.8.0"
 
 
 [tool.poetry.group.development.dependencies]
 m2r2 = "^0.3.3.post2"
 sphinx-rtd-theme = "^2.0.0"
+pytest = "^8.3.2"
 
 [build-system]
 requires = ["poetry-core"]

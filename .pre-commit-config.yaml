@@ -1,6 +1,12 @@
 repos: 
--   repo: https://github.com/python-poetry/poetry
+  - repo: https://github.com/python-poetry/poetry
     rev: '1.8.1'
     hooks:
     -   id: poetry-check
     -   id: poetry-lock
+  - repo: local
+    hooks: 
+    - id: generate_docs
+      name: generate docs
+      entry: sphinx-build -M html docs/source docs/build
+      language: system

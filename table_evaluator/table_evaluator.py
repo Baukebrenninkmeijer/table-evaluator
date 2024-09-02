@@ -1,8 +1,7 @@
 import copy
-import os
 import warnings
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Callable, Dict, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,15 +14,23 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, Ridge
-from sklearn.metrics import f1_score, jaccard_score, mean_squared_error
+from sklearn.metrics import f1_score, jaccard_score
 from sklearn.model_selection import KFold
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
-from tqdm import tqdm
 
-from .metrics import *
-from .notebook import EvaluationResult, isnotebook, visualize_notebook
-from .plots import *
+from table_evaluator.metrics import (
+    column_correlations,
+    euclidean_distance,
+    js_distance_df,
+    kolmogorov_smirnov_df,
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    rmse,
+)
+from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
+
+from .notebook import EvaluationResult, visualize_notebook
 from .utils import dict_to_df
 
 
@@ -42,7 +49,7 @@ class TableEvaluator:
         metric="pearsonr",
         verbose=False,
         n_samples=None,
-        name: str = None,
+        name: str | None = None,
         seed=1337,
     ):
         """
@@ -60,7 +67,7 @@ class TableEvaluator:
         self.unique_thresh = unique_thresh
         self.real = real.copy()
         self.fake = fake.copy()
-        self.comparison_metric = getattr(stats, metric)
+        self.comparison_metric: Callable = getattr(stats, metric)
         self.verbose = verbose
         self.random_seed = seed
 
@@ -102,7 +109,7 @@ class TableEvaluator:
 
         self.real = self.real.sample(self.n_samples)
         self.fake = self.fake.sample(self.n_samples)
-        assert len(self.real) == len(self.fake), f"len(real) != len(fake)"
+        assert len(self.real) == len(self.fake), "len(real) != len(fake)"
 
         self.real.loc[:, self.categorical_columns] = (
             self.real.loc[:, self.categorical_columns].fillna("[NAN]").astype(str)
@@ -283,7 +290,7 @@ class TableEvaluator:
 
             distance_func = custom_cosine
         else:
-            raise ValueError(f"`how` parameter must be in [euclidean, mae, rmse]")
+            raise ValueError("`how` parameter must be in [euclidean, mae, rmse]")
 
         real_corr = associations(
             self.real,
@@ -384,7 +391,7 @@ class TableEvaluator:
                     "fake": self.pca_f.explained_variance_,
                 }
             )
-            print(f"\nTop 5 PCA components:")
+            print("\nTop 5 PCA components:")
             print(results.to_string())
 
         if lingress:
@@ -404,14 +411,14 @@ class TableEvaluator:
         """
 
         if self.verbose:
-            print(f"\nFitting real")
+            print("\nFitting real")
         for i, c in enumerate(self.r_estimators):
             if self.verbose:
                 print(f"{i + 1}: {type(c).__name__}")
             c.fit(self.real_x_train, self.real_y_train)
 
         if self.verbose:
-            print(f"\nFitting fake")
+            print("\nFitting fake")
         for i, c in enumerate(self.f_estimators):
             if self.verbose:
                 print(f"{i + 1}: {type(c).__name__}")
@@ -594,11 +601,11 @@ class TableEvaluator:
         """
         real: pd.DataFrame = numerical_encoding(
             self.real, nominal_columns=self.categorical_columns
-        )
+        )  # type: ignore
         real = real.sort_index(axis=1)
         fake: pd.DataFrame = numerical_encoding(
             self.fake, nominal_columns=self.categorical_columns
-        )
+        )  # type: ignore
         for col in real.columns:
             if col not in fake:
                 fake[col] = 0
@@ -667,7 +674,7 @@ class TableEvaluator:
                 ),
             ]
         else:
-            raise ValueError(f"target_type must be 'regr' or 'class'")
+            raise ValueError("target_type must be 'regr' or 'class'")
 
         self.estimator_names = [type(clf).__name__ for clf in self.estimators]
 
@@ -896,11 +903,11 @@ class TableEvaluator:
             print(f"\n{efficacy_title}:")
             print(self.estimators_scores.to_string())
 
-            print(f"\nPrivacy results:")
+            print("\nPrivacy results:")
             print(privacy_report.content.to_string())
 
-            print(f"\nMiscellaneous results:")
+            print("\nMiscellaneous results:")
             print(miscellaneous.to_string())
 
-            print(f"\nResults:")
+            print("\nResults:")
             print(summary.content.to_string())
