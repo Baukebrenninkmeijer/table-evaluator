@@ -19,7 +19,6 @@ jobs:
     - name: install_dependencies
       run: |
         pip install poetry pytest
-        poetry install
         pip install .
     - name: Run tests
       run: |
