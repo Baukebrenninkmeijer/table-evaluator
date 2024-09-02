@@ -6,24 +6,31 @@
 
 # -- Path setup --------------------------------------------------------------
 
+import sys
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
-# sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../..'))
+from datetime import datetime
+from pathlib import Path
 
+import tomllib
+
+# sys.path.insert(0, os.path.abspath('.'))
+project_base_path = Path(__file__).parents[2]
+sys.path.insert(0, project_base_path.as_posix())
 
 # -- Project information -----------------------------------------------------
 
-project = 'table evaluator'
-copyright = '2021, Bauke Brenninkmeijer'
-author = 'Bauke Brenninkmeijer'
+project = "table evaluator"
+copyright = f"{datetime.now().year}, Bauke Brenninkmeijer"
+author = "Bauke Brenninkmeijer"
 
 # The full version, including alpha/beta/rc tags
-release = '15-08-2019'
+release = tomllib.loads(Path(project_base_path / "pyproject.toml").read_text())["tool"][
+    "poetry"
+]["version"]
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,15 +39,15 @@ release = '15-08-2019'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'm2r2',
-    'sphinx_rtd_theme',
-    'sphinx.ext.githubpages',
+    "sphinx.ext.autodoc",
+    "m2r2",
+    "sphinx_rtd_theme",
+    "sphinx.ext.githubpages",
     # 'sphinx.ext.coverage',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -53,22 +60,22 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 html_theme_options = {
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
+    "logo_only": False,
+    "display_version": True,
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": False,
     # Toc options
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
+    "collapse_navigation": True,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }

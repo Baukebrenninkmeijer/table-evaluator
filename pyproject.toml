@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "table-evaluator"
+version = "1.7.0"
+description = "A package to evaluate how close a synthetic data set is to real data."
+authors = ["Bauke Brenninkmeijer <bauke.brenninkmeijer@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository ="https://github.com/Baukebrenninkmeijer/Table-Evaluator"
+documentation="https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
+keywords=['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyarrow = "^17.0.0"
+scikit-learn = "^1.5.1"
+tqdm = "^4.66.5"
+matplotlib = "^3.9.2"
+numpy = "1.26.4"
+seaborn = "^0.13.2"
+pandas = "==2.0.*"
+scipy = "^1.14.1"
+dython = "0.7.3"
+
+
+[tool.poetry.group.development.dependencies]
+m2r2 = "^0.3.3.post2"
+sphinx-rtd-theme = "^2.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
