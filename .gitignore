@@ -19,3 +19,4 @@ tests/__pycache__/
 table_evaluator.egg-info/
 
 .virtual_documents/
+.python-version

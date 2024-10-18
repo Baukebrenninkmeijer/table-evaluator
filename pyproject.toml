@@ -26,16 +26,23 @@ tqdm = "^4.66.5"
 matplotlib = "^3.9.2"
 numpy = "1.26.4"
 seaborn = "^0.13.2"
-pandas = "==2.0.*"
+pandas = "^2.0.0"
 scipy = "1.11.4"
 dython = "0.7.7"
 pre-commit = "^3.8.0"
+ruff = "^0.6.9"
 
 
 [tool.poetry.group.development.dependencies]
 m2r2 = "^0.3.3.post2"
 sphinx-rtd-theme = "^2.0.0"
 pytest = "^8.3.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest-mock = "^3.14.0"
+ipykernel = "^6.29.5"
+ipython = "^8.28.0"
 
 [build-system]
 requires = ["poetry-core"]

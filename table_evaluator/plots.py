@@ -63,8 +63,9 @@ def plot_correlation_difference(
     fake: pd.DataFrame,
     plot_diff: bool = True,
     cat_cols: list = None,
-    annot=False,
-    fname=None,
+    annot: bool = False,
+    fname: str | None = None,
+    show: bool = True,
 ):
     """
     Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has support for continuous and Categorical
@@ -141,10 +142,13 @@ def plot_correlation_difference(
     if fname is not None:
         plt.savefig(fname)
 
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        return fig
 
 
-def plot_correlation_comparison(evaluators: List, annot=False):
+def plot_correlation_comparison(evaluators: List, annot: bool = False, show: bool = False):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
@@ -219,11 +223,14 @@ def plot_correlation_comparison(evaluators: List, annot=False):
         title_font = {"size": "28"}
         flat_ax[i].set_title(label, **title_font)
     plt.tight_layout()
-    return None
+    if show:
+        plt.show()
+    else:
+        return fig
 
 
 def cdf(
-    data_r, data_f, xlabel: str = "Values", ylabel: str = "Cumulative Sum", ax=None
+    data_r, data_f, xlabel: str = "Values", ylabel: str = "Cumulative Sum", ax=None, show: bool = True
 ):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
@@ -238,31 +245,34 @@ def cdf(
     x2 = data_f.sort_values()
     y = np.arange(1, len(data_r) + 1) / len(data_r)
 
-    ax = ax if ax else plt.subplots()[1]
+    local_ax = ax if ax else plt.subplots()[1]
 
     axis_font = {"size": "14"}
-    ax.set_xlabel(xlabel, **axis_font)
-    ax.set_ylabel(ylabel, **axis_font)
+    local_ax.set_xlabel(xlabel, **axis_font)
+    local_ax.set_ylabel(ylabel, **axis_font)
 
-    ax.grid()
-    ax.plot(x1, y, marker="o", linestyle="none", label="Real", ms=8)
-    ax.plot(x2, y, marker="o", linestyle="none", label="Fake", alpha=0.5)
-    ax.tick_params(axis="both", which="major", labelsize=8)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.1), ncol=3)
+    local_ax.grid()
+    local_ax.plot(x1, y, marker="o", linestyle="none", label="Real", ms=8)
+    local_ax.plot(x2, y, marker="o", linestyle="none", label="Fake", alpha=0.5)
+    local_ax.tick_params(axis="both", which="major", labelsize=8)
+    local_ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.1), ncol=3)
     import matplotlib.ticker as mticker
 
     # If labels are strings, rotate them vertical
     if isinstance(data_r, pd.Series) and data_r.dtypes == "object":
         all_labels = set(data_r) | set(data_f)
-        ticks_loc = ax.get_xticks()
-        ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        ax.set_xticklabels(sorted(all_labels), rotation="vertical")
+        ticks_loc = local_ax.get_xticks()
+        local_ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+        local_ax.set_xticklabels(sorted(all_labels), rotation="vertical")
 
-    if ax is None:
-        plt.show()
+    if ax is None:  
+        if show:
+            plt.show()
+        else:
+            return local_ax
 
 
-def plot_mean_std_comparison(evaluators: List):
+def plot_mean_std_comparison(evaluators: List, show: bool = True):
     """
     Plot comparison between the means and standard deviations from each evaluator in evaluators.
 
@@ -279,9 +289,13 @@ def plot_mean_std_comparison(evaluators: List):
         title_font = {"size": "24"}
         flat_ax[i].set_title(label, **title_font)
     plt.tight_layout()
+    if show:
+        plt.show()
+    else:
+        return fig
 
 
-def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None):
+def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True):
     """
     Plot the means and standard deviations of each dataset.
 
@@ -323,5 +337,7 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None):
     if fname is not None:
         plt.savefig(fname)
 
-    if ax is None:
+    if show:
         plt.show()
+    else:
+        return ax

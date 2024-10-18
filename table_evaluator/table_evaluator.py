@@ -1,7 +1,8 @@
 import copy
+import logging
 import warnings
 from pathlib import Path
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict, Tuple, Union, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,109 +31,137 @@ from table_evaluator.metrics import (
 )
 from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
 
-from .notebook import EvaluationResult, visualize_notebook
-from .utils import dict_to_df
+from table_evaluator.notebook import EvaluationResult, visualize_notebook
+from table_evaluator.utils import dict_to_df
 
+logger = logging.getLogger(__name__)
 
 class TableEvaluator:
     """
     Class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
     Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
     """
+    comparison_metric: Callable
 
     def __init__(
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        cat_cols=None,
-        unique_thresh=0,
-        metric="pearsonr",
-        verbose=False,
-        n_samples=None,
-        name: str | None = None,
-        seed=1337,
+        cat_cols: Optional[List[str]] = None,
+        unique_thresh: int = 0,
+        metric: str | Callable = "pearsonr",
+        verbose: bool = False,
+        n_samples: Optional[int] = None,
+        name: Optional[str] = None,
+        seed: int = 1337,
+        sample: bool = False,
+        infer_types: bool = True,
     ):
         """
-        :param real: Real dataset (pd.DataFrame)
-        :param fake: Synthetic dataset (pd.DataFrame)
-        :param unique_thresh: Threshold for automatic evaluation if column is numeric
-        :param cat_cols: The columns that are to be evaluated as discrete. If passed, unique_thresh is ignored.
-        :param metric: the metric to use for evaluation linear relations. Pearson's r by default, but supports all models in scipy.stats
-        :param verbose: Whether to print verbose output
-        :param n_samples: Number of samples to evaluate. If none, it will take the minimal length of both datasets and cut the larger one off to make sure they
-            are the same length.
-        :param name: Name of the TableEvaluator. Used in some plotting functions like `plots.plot_correlation_comparison` to indicate your model.
+        Initialize the TableEvaluator with real and fake datasets.
+
+        Args:
+            real (pd.DataFrame): Real dataset.
+            fake (pd.DataFrame): Synthetic dataset.
+            cat_cols (Optional[List[str]], optional): Columns to be evaluated as discrete. If provided, unique_thresh is ignored. Defaults to None.
+            unique_thresh (int, optional): Threshold for automatic evaluation if a column is numeric. Defaults to 0.
+            metric (str, optional): Metric for evaluating linear relations. Defaults to "pearsonr".
+            verbose (bool, optional): Whether to print verbose output. Defaults to False.
+            n_samples (Optional[int], optional): Number of samples to evaluate. If None, takes the minimum length of both datasets. Defaults to None.
+            name (Optional[str], optional): Name of the TableEvaluator, used in plotting functions. Defaults to None.
+            seed (int, optional): Random seed for reproducibility. Defaults to 1337.
+            sample (bool, optional): Whether to sample the datasets to n_samples. Defaults to False.
         """
         self.name = name
         self.unique_thresh = unique_thresh
         self.real = real.copy()
         self.fake = fake.copy()
-        self.comparison_metric: Callable = getattr(stats, metric)
+        self.comparison_metric: Callable = (
+            getattr(stats, metric) if isinstance(metric, str) else metric
+        )
         self.verbose = verbose
         self.random_seed = seed
+        self.sample = sample
+        self.infer_types = infer_types
 
-        # Make sure columns and their order are the same.
-        if len(real.columns) == len(fake.columns):
-            fake = fake[real.columns.tolist()]
-        assert (
-            real.columns.tolist() == fake.columns.tolist()
-        ), "Columns in real and fake dataframe are not the same"
+        self._validate_dataframes()
+        self.numerical_columns, self.categorical_columns = self._determine_columns(
+            cat_cols
+        )
 
+        self.n_samples = self._set_sample_size(n_samples)
+        if sample:
+            self.real = self.real.sample(self.n_samples, random_state=self.random_seed)
+            self.fake = self.fake.sample(self.n_samples, random_state=self.random_seed)
+
+        self._fill_missing_values()
+
+    def _validate_dataframes(self):
+        """Ensure that the real and fake dataframes have the same columns."""
+        if len(self.real.columns) != len(self.fake.columns):
+            raise ValueError("Columns in real and fake dataframe are not the same")
+        self.fake = self.fake[self.real.columns.tolist()]
+
+    def _determine_columns(
+        self, cat_cols: Optional[List[str]]
+    ) -> Tuple[List[str], List[str]]:
+        """Determine numerical and categorical columns based on the provided data."""
         if cat_cols is None:
-            real = real.infer_objects()
-            fake = fake.infer_objects()
-            self.numerical_columns = [
+            if self.infer_types:
+                self.real = self.real.infer_objects()
+                self.fake = self.fake.infer_objects()
+            numerical_columns = [
                 column
-                for column in real.select_dtypes(include="number").columns
-                if len(real[column].unique()) > unique_thresh
+                for column in self.real.select_dtypes(include="number").columns
+                if self.real[column].nunique() > self.unique_thresh
             ]
-            self.categorical_columns = [
+            categorical_columns = [
                 column
-                for column in real.columns
-                if column not in self.numerical_columns
+                for column in self.real.columns
+                if column not in numerical_columns
             ]
         else:
-            self.categorical_columns = cat_cols
-            self.numerical_columns = [
-                column for column in real.columns if column not in cat_cols
+            categorical_columns = cat_cols
+            numerical_columns = [
+                column for column in self.real.columns if column not in cat_cols
             ]
+        return numerical_columns, categorical_columns
 
-        # Make sure the number of samples is equal in both datasets.
+    def _set_sample_size(self, n_samples: Optional[int]) -> int:
+        """Set the number of samples to evaluate."""
         if n_samples is None:
-            self.n_samples = min(len(self.real), len(self.fake))
-        elif len(fake) >= n_samples and len(real) >= n_samples:
-            self.n_samples = n_samples
+            return min(len(self.real), len(self.fake))
+        elif len(self.fake) >= n_samples and len(self.real) >= n_samples:
+            return n_samples
         else:
-            raise Exception(
-                f"Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}"
+            raise ValueError(
+                f"Make sure n_samples < len(fake/real). len(real): {len(self.real)}, len(fake): {len(self.fake)}"
             )
 
-        self.real = self.real.sample(self.n_samples)
-        self.fake = self.fake.sample(self.n_samples)
-        assert len(self.real) == len(self.fake), "len(real) != len(fake)"
-
-        self.real.loc[:, self.categorical_columns] = (
-            self.real.loc[:, self.categorical_columns].fillna("[NAN]").astype(str)
+    def _fill_missing_values(self):
+        """Fill missing values in the datasets."""
+        self.real[self.categorical_columns] = (
+            self.real[self.categorical_columns].astype(str).fillna("[NAN]")
         )
-        self.fake.loc[:, self.categorical_columns] = (
-            self.fake.loc[:, self.categorical_columns].fillna("[NAN]").astype(str)
+        self.fake[self.categorical_columns] = (
+            self.fake[self.categorical_columns].astype(str).fillna("[NAN]")
         )
 
-        self.real.loc[:, self.numerical_columns] = self.real.loc[
-            :, self.numerical_columns
-        ].fillna(self.real[self.numerical_columns].mean())
-        self.fake.loc[:, self.numerical_columns] = self.fake.loc[
-            :, self.numerical_columns
-        ].fillna(self.fake[self.numerical_columns].mean())
+        self.real[self.numerical_columns] = self.real[self.numerical_columns].fillna(
+            self.real[self.numerical_columns].mean()
+        )
+        self.fake[self.numerical_columns] = self.fake[self.numerical_columns].fillna(
+            self.fake[self.numerical_columns].mean()
+        )
 
-    def plot_mean_std(self, fname=None):
+    def plot_mean_std(self, fname=None, show: bool = True):
         """
         Class wrapper function for plotting the mean and std using `plots.plot_mean_std`.
         :param fname: If not none, saves the plot with this file name.
         """
-        plot_mean_std(self.real, self.fake, fname=fname)
+        plot_mean_std(self.real, self.fake, fname=fname, show=show)
 
-    def plot_cumsums(self, nr_cols=4, fname=None):
+    def plot_cumsums(self, nr_cols=4, fname=None, show: bool = True):
         """
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
@@ -160,7 +189,7 @@ class TableEvaluator:
             try:
                 r = self.real[col]
                 f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-                cdf(r, f, col, "Cumsum", ax=axes[i])
+                cdf(r, f, col, "Cumsum", local_ax=axes[i])
             except Exception as e:
                 print(f"Error while plotting column {col}")
                 raise e
@@ -169,10 +198,12 @@ class TableEvaluator:
 
         if fname is not None:
             plt.savefig(fname)
+        if show:
+            plt.show()
+        else:
+            return fig
 
-        plt.show()
-
-    def plot_distributions(self, nr_cols=3, fname=None):
+    def plot_distributions(self, nr_cols: int = 3, fname: str = None, show: bool = True):
         """
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
         contains the values of a real columns and the corresponding fake column.
@@ -201,7 +232,7 @@ class TableEvaluator:
                 plot_df = pd.DataFrame(
                     {
                         col: pd.concat([self.real[col], self.fake[col]], axis=0),
-                        "kind": ["real"] * self.n_samples + ["fake"] * self.n_samples,
+                        "kind": ["real"] * len(self.real) + ["fake"] * len(self.fake),
                     }
                 )
                 fig = sns.histplot(
@@ -248,10 +279,12 @@ class TableEvaluator:
 
         if fname is not None:
             plt.savefig(fname)
+        if show:
+            plt.show()
+        else: 
+            return fig
 
-        plt.show()
-
-    def plot_correlation_difference(self, plot_diff=True, fname=None, **kwargs):
+    def plot_correlation_difference(self, plot_diff=True, fname=None, show: bool = True, **kwargs):
         """
         Plot the association matrices for each table and, if chosen, the difference between them.
 
@@ -265,6 +298,7 @@ class TableEvaluator:
             cat_cols=self.categorical_columns,
             plot_diff=plot_diff,
             fname=fname,
+            show=show,
             **kwargs,
         )
 
@@ -306,7 +340,7 @@ class TableEvaluator:
         )["corr"]  # type: ignore
         return distance_func(real_corr.values, fake_corr.values)  # type: ignore
 
-    def plot_pca(self, fname=None):
+    def plot_pca(self, fname: str = None, show: bool = True):
         """
         Plot the first two components of a PCA of real and fake data.
         :param fname: If not none, saves the plot with this file name.
@@ -328,8 +362,10 @@ class TableEvaluator:
 
         if fname is not None:
             plt.savefig(fname)
-
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            return fig
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
         """
@@ -342,6 +378,7 @@ class TableEvaluator:
         fake_hashes = self.fake.apply(lambda x: hash(tuple(x)), axis=1)
 
         dup_idxs = fake_hashes.isin(real_hashes.values)
+        print(dup_idxs)
         dup_idxs = dup_idxs[dup_idxs == True].sort_index().index.tolist()
 
         if self.verbose:
@@ -369,7 +406,7 @@ class TableEvaluator:
         else:
             return len(real_duplicates), len(fake_duplicates)
 
-    def pca_correlation(self, lingress=False):
+    def pca_correlation(self, lingress: bool=False):
         """
         Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent implementation the MAPE(log) is used instead of
         regressions like Pearson's r.
@@ -491,29 +528,29 @@ class TableEvaluator:
             )
         return results
 
-    def visual_evaluation(self, save_dir=None, **kwargs):
+    def visual_evaluation(self, save_dir: str | None = None, show: bool = True, **kwargs):
         """
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, correlation differences and the PCA transform.
         :save_dir: directory path to save images
         :param kwargs: any kwargs for matplotlib.
         """
         if save_dir is None:
-            self.plot_mean_std()
-            self.plot_cumsums()
-            self.plot_distributions()
-            self.plot_correlation_difference(**kwargs)
-            self.plot_pca()
+            self.plot_mean_std(show=show)
+            self.plot_cumsums(show=show)
+            self.plot_distributions(show=show)
+            self.plot_correlation_difference(show=show, **kwargs)
+            self.plot_pca(show=show)
         else:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
 
-            self.plot_mean_std(fname=save_dir / "mean_std.png")
-            self.plot_cumsums(fname=save_dir / "cumsums.png")
-            self.plot_distributions(fname=save_dir / "distributions.png")
+            self.plot_mean_std(fname=save_dir / "mean_std.png", show=show)
+            self.plot_cumsums(fname=save_dir / "cumsums.png", show=show)
+            self.plot_distributions(fname=save_dir / "distributions.png", show=show)
             self.plot_correlation_difference(
-                fname=save_dir / "correlation_difference.png", **kwargs
+                fname=save_dir / "correlation_difference.png", show=show, **kwargs
             )
-            self.plot_pca(fname=save_dir / "pca.png")
+            self.plot_pca(fname=save_dir / "pca.png", show=show)
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -599,22 +636,24 @@ class TableEvaluator:
 
         :return: Real and fake dataframe with categorical columns one-hot encoded and binary columns factorized.
         """
+        cat_cols = self.categorical_columns + self.real.select_dtypes("bool").columns.tolist() + self.fake.select_dtypes("bool").columns.tolist()
         real: pd.DataFrame = numerical_encoding(
-            self.real, nominal_columns=self.categorical_columns
-        )  # type: ignore
+            self.real, nominal_columns=cat_cols
+        ).astype(float)
         real = real.sort_index(axis=1)
         fake: pd.DataFrame = numerical_encoding(
-            self.fake, nominal_columns=self.categorical_columns
-        )  # type: ignore
+            self.fake, nominal_columns=cat_cols
+        ).astype(float)
         for col in real.columns:
             if col not in fake:
-                fake[col] = 0
+                logger.warning(f'Adding column {col} with all 0s')
+                fake[col] = 0.0
         fake = fake.sort_index(axis=1)
 
         # Cast True/False columns to 0/1.
-        bool_cols = real.select_dtypes("bool").columns
-        real[bool_cols] = real[bool_cols].astype(float)
-        fake[bool_cols] = fake[bool_cols].astype(float)
+        # bool_cols = real.select_dtypes("bool").columns
+        # real[bool_cols] = real[bool_cols].astype(float)
+        # fake[bool_cols] = fake[bool_cols].astype(float)
 
         return real, fake
 
@@ -704,7 +743,7 @@ class TableEvaluator:
             # Break the loop if we don't want the kfold
             if not kfold:
                 break
-
+        print(res)
         self.estimators_scores = pd.concat(res).groupby(level=0).mean()
         if self.verbose:
             print(
@@ -774,8 +813,8 @@ class TableEvaluator:
         self,
         target_col: str,
         target_type: str = "class",
-        metric: str = None,
-        verbose: bool = None,
+        metric: str | None= None,
+        verbose: bool | None = None,
         n_samples_distance: int = 20000,
         kfold: bool = False,
         notebook: bool = False,
@@ -795,6 +834,7 @@ class TableEvaluator:
         :param verbose: whether to print verbose logging.
         :param return_outputs: Will omit printing and instead return a dictionairy with all results.
         """
+        self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose
         self.comparison_metric = (
             metric if metric is not None else self.comparison_metric
