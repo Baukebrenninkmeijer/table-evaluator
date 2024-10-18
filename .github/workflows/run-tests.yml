@@ -19,6 +19,8 @@ jobs:
     - name: install_dependencies
       run: |
         pip install poetry pytest
+        poetry lock
+        poetry export --without-hashes --format=requirements.txt -o requirements.txt
         pip install .
     - name: Run tests
       run: |
