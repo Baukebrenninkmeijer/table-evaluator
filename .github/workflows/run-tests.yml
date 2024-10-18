@@ -20,7 +20,7 @@ jobs:
       run: |
         pip install poetry pytest
         poetry lock
-        poetry export --without-hashes --format=requirements.txt -o requirements.txt
+        poetry export --without-hashes --format=requirements.txt -o requirements.txt --with dev
         pip install .
     - name: Run tests
       run: |
