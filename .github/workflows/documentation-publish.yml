@@ -24,8 +24,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        poetry lock
         pip install poetry
+        poetry lock
         poetry install
         pip install .
     - name: Build documentation
