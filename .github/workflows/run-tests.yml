@@ -18,10 +18,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: install_dependencies
       run: |
+        sudo apt install -y gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config
         pip install poetry pytest
         poetry lock
         poetry install
-        # poetry export --without-hashes --format=requirements.txt -o requirements.txt --with dev
         pip install .
     - name: Run tests
       run: |
