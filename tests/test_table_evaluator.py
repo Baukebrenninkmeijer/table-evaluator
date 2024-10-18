@@ -125,7 +125,7 @@ def test_plot_pca(sample_data):
         'seaborn.scatterplot'
     ) as mock_scatterplot, patch('table_evaluator.table_evaluator.PCA') as mock_pca:
         mock_pca().fit_transform.return_value = np.random.rand(5, 2)
-        evaluator.plot_pca()
+        evaluator.plot_pca(show=False)
         mock_subplots.assert_called_once()
         assert mock_scatterplot.call_count == 2
 
