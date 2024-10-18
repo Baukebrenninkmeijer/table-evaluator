@@ -1,6 +1,7 @@
 import copy
 import logging
 import warnings
+from os import PathLike
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
@@ -38,8 +39,9 @@ logger = logging.getLogger(__name__)
 
 class TableEvaluator:
     """
-    Class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data with the `evaluate` method.
-    Additional evaluations can be done with the different methods of evaluate and the visual evaluation method.
+    Class for evaluating synthetic data. It is given the real and fake data and allows the user to easily evaluate data
+    with the `evaluate` method. Additional evaluations can be done with the different methods of evaluate and the visual
+    evaluation method.
     """
 
     comparison_metric: Callable
@@ -64,11 +66,13 @@ class TableEvaluator:
         Args:
             real (pd.DataFrame): Real dataset.
             fake (pd.DataFrame): Synthetic dataset.
-            cat_cols (Optional[List[str]], optional): Columns to be evaluated as discrete. If provided, unique_thresh is ignored. Defaults to None.
+            cat_cols (Optional[List[str]], optional): Columns to be evaluated as discrete. If provided, unique_thresh
+                is ignored. Defaults to None.
             unique_thresh (int, optional): Threshold for automatic evaluation if a column is numeric. Defaults to 0.
             metric (str, optional): Metric for evaluating linear relations. Defaults to "pearsonr".
             verbose (bool, optional): Whether to print verbose output. Defaults to False.
-            n_samples (Optional[int], optional): Number of samples to evaluate. If None, takes the minimum length of both datasets. Defaults to None.
+            n_samples (Optional[int], optional): Number of samples to evaluate. If None, takes the minimum length of
+                both datasets. Defaults to None.
             name (Optional[str], optional): Name of the TableEvaluator, used in plotting functions. Defaults to None.
             seed (int, optional): Random seed for reproducibility. Defaults to 1337.
             sample (bool, optional): Whether to sample the datasets to n_samples. Defaults to False.
@@ -142,15 +146,20 @@ class TableEvaluator:
     def plot_mean_std(self, fname=None, show: bool = True):
         """
         Class wrapper function for plotting the mean and std using `plots.plot_mean_std`.
-        :param fname: If not none, saves the plot with this file name.
+
+        Params:
+            fname (str, Optional): If not none, saves the plot with this file name.
         """
         plot_mean_std(self.real, self.fake, fname=fname, show=show)
 
-    def plot_cumsums(self, nr_cols=4, fname=None, show: bool = True):
+    def plot_cumsums(self, nr_cols=4, fname: PathLike | None = None, show: bool = True):
         """
-        Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length of the labels. Each plot contains the
+        Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length
+        of the labels. Each plot contains the
         values of a real columns and the corresponding fake column.
-        :param fname: If not none, saves the plot with this file name.
+
+        Params:
+            fname str: If not none, saves the plot with this file name.
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -177,7 +186,7 @@ class TableEvaluator:
                 print(f'Error while plotting column {col}')
                 raise e
 
-        plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+        plt.tight_layout(rect=(0.0, 0.02, 1.0, 0.98))
 
         if fname is not None:
             plt.savefig(fname)
@@ -186,11 +195,14 @@ class TableEvaluator:
         else:
             return fig
 
-    def plot_distributions(self, nr_cols: int = 3, fname: str = None, show: bool = True):
+    def plot_distributions(self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True):
         """
-        Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
+        Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales
+        with the length of the labels. Each plot
         contains the values of a real columns and the corresponding fake column.
-        :param fname: If not none, saves the plot with this file name.
+
+        Params:
+            fname (str, Optional): If not none, saves the plot with this file name.
         """
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
@@ -256,7 +268,7 @@ class TableEvaluator:
                     )
                 )
                 ax.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
-        plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+        plt.tight_layout(rect=(0.0, 0.02, 1.0, 0.98))
 
         if fname is not None:
             plt.savefig(fname)
@@ -321,7 +333,7 @@ class TableEvaluator:
         )['corr']  # type: ignore
         return distance_func(real_corr.values, fake_corr.values)  # type: ignore
 
-    def plot_pca(self, fname: str | None = None, show: bool = True):
+    def plot_pca(self, fname: PathLike | None = None, show: bool = True):
         """
         Plot the first two components of a PCA of real and fake data.
         :param fname: If not none, saves the plot with this file name.
@@ -364,7 +376,7 @@ class TableEvaluator:
 
         dup_idxs = fake_hashes.isin(real_hashes.values)
         print(dup_idxs)
-        dup_idxs = dup_idxs[dup_idxs == True].sort_index().index.tolist()
+        dup_idxs = dup_idxs[dup_idxs is True].sort_index().index.tolist()
 
         if self.verbose:
             print(f'Nr copied columns: {len(dup_idxs)}')
@@ -384,7 +396,7 @@ class TableEvaluator:
                 If False, the lengths are returned.
 
         Returns:
-            Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]: 
+            Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]:
                 If return_values is True, returns a tuple of DataFrames with duplicates.
                 If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.
         """
@@ -397,7 +409,7 @@ class TableEvaluator:
 
     def pca_correlation(self, lingress: bool = False):
         """
-        Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent 
+        Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent
         implementation the MAPE(log) is used instead of regressions like Pearson's r.
 
         Args:
@@ -498,11 +510,11 @@ class TableEvaluator:
             raise Exception(f"self.target_type should be either 'class' or 'regr', but is {self.target_type}.")
         return results
 
-    def visual_evaluation(self, save_dir: str | None = None, show: bool = True, **kwargs):
+    def visual_evaluation(self, save_dir: PathLike | None = None, show: bool = True, **kwargs):
         """
-        Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums, 
+        Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums,
         correlation differences and the PCA transform.
-          
+
         Args:
             save_dir (str | None): Directory path to save images.
             show (bool): Whether to display the plots.
@@ -529,11 +541,12 @@ class TableEvaluator:
 
     def basic_statistical_evaluation(self) -> float:
         """
-        Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's 
+        Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's
         Rho. Spearman's is used because these values can differ a lot in magnitude, and Spearman's is more resilient to
         outliers.
 
-        :return: correlation coefficient
+        Returns:
+            float: correlation coefficient
         """
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
@@ -552,7 +565,7 @@ class TableEvaluator:
                 metrics[f'variance_{idx}'] = value
             total_metrics[ds_name] = metrics.values()
 
-        total_metrics.index = metrics.keys()
+        total_metrics.index = list(metrics.keys())  # type: ignore
         self.statistical_results = total_metrics
         if self.verbose:
             print('\nBasic statistical attributes:')
@@ -562,10 +575,10 @@ class TableEvaluator:
 
     def correlation_correlation(self) -> float:
         """
-        Calculate the correlation coefficient between the association matrices of self.real and self.fake using 
+        Calculate the correlation coefficient between the association matrices of self.real and self.fake using
         self.comparison_metric
 
-        Returns: 
+        Returns:
             float: The correlation coefficient
         """
         total_metrics = pd.DataFrame()
@@ -576,7 +589,7 @@ class TableEvaluator:
                 nominal_columns=self.categorical_columns,
                 nom_nom_assoc='theil',
                 compute_only=True,
-            )['corr']
+            )['corr']  # type: ignore
             values = corr_df.values
             # print(values, type(values))
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
@@ -591,10 +604,10 @@ class TableEvaluator:
 
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes 
+        Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes
         a problem with categorical columns with many values or very unbalanced values
 
-        Returns: 
+        Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe factorized using the pandas function
         """
         real = self.real
@@ -611,8 +624,8 @@ class TableEvaluator:
         Convert dataset to a numerical representations while making sure they have identical columns.
         This is sometimes a problem with categorical columns with many values or very unbalanced values
 
-        Returns: 
-            Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe with categorical columns one-hot encoded and 
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe with categorical columns one-hot encoded and
             binary columns factorized.
         """
         cat_cols = (
@@ -620,9 +633,9 @@ class TableEvaluator:
             + self.real.select_dtypes('bool').columns.tolist()
             + self.fake.select_dtypes('bool').columns.tolist()
         )
-        real: pd.DataFrame = numerical_encoding(self.real, nominal_columns=cat_cols).astype(float)
+        real: pd.DataFrame = numerical_encoding(self.real, nominal_columns=cat_cols).astype(float)  # type: ignore
         real = real.sort_index(axis=1)
-        fake: pd.DataFrame = numerical_encoding(self.fake, nominal_columns=cat_cols).astype(float)
+        fake: pd.DataFrame = numerical_encoding(self.fake, nominal_columns=cat_cols).astype(float)  # type: ignore
         for col in real.columns:
             if col not in fake:
                 logger.warning(f'Adding column {col} with all 0s')
@@ -639,8 +652,8 @@ class TableEvaluator:
     def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
         """
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
-        depending on the task. Two sets are created of each of the estimators `S_r` and `S_f`, for the real and fake 
-        data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``. Then, both are evaluated on 
+        depending on the task. Two sets are created of each of the estimators `S_r` and `S_f`, for the real and fake
+        data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``. Then, both are evaluated on
         their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with
         Pearson's. If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
 
@@ -792,20 +805,29 @@ class TableEvaluator:
         kfold: bool = False,
         notebook: bool = False,
         return_outputs: bool = False,
-    ) -> Dict:
+    ) -> Dict | None:
         """
         Determine correlation between attributes from the real and fake dataset using a given metric.
         All metrics from scipy.stats are available.
 
-        :param target_col: column to use for predictions with estimators
-        :param target_type: what kind of task to perform on the target_col. Can be either ``class`` for classification or ``regr`` for regression.
-        :param metric: overwrites self.metric. Scoring metric for the attributes.
-            By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or Kendall Tau (scipy.stats.kendalltau).
-        :param n_samples_distance: The number of samples to take for the row distance. See documentation of ``tableEvaluator.row_distance`` for details.
-        :param kfold: Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20% of the data if set to False.
-        :param notebook: Better visualization of the results in a python notebook
-        :param verbose: whether to print verbose logging.
-        :param return_outputs: Will omit printing and instead return a dictionairy with all results.
+        Args:
+            target_col (str): Column to use for predictions with estimators.
+            target_type (str, optional): Type of task to perform on the target_col. Can be either "class" for
+                classification or "regr" for regression. Defaults to "class".
+            metric (str | None, optional): Overwrites self.metric. Scoring metric for the attributes.
+                By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or
+                Kendall Tau (scipy.stats.kendalltau). Defaults to None.
+            n_samples_distance (int, optional): The number of samples to take for the row distance. See
+                documentation of ``tableEvaluator.row_distance`` for details. Defaults to 20000.
+            kfold (bool, optional): Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20%
+                of the data if set to False. Defaults to False.
+            notebook (bool, optional): Better visualization of the results in a python notebook. Defaults to False.
+            verbose (bool | None, optional): Whether to print verbose logging. Defaults to None.
+            return_outputs (bool, optional): Will omit printing and instead return a dictionary with all results.
+                Defaults to False.
+
+        Returns:
+            Dict: A dictionary containing evaluation results if return_outputs is True, otherwise None.
         """
         self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose

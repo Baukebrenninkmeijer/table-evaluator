@@ -197,7 +197,7 @@ def test_pca_correlation(sample_data):
 
     with patch('table_evaluator.table_evaluator.PCA') as mock_pca, patch.object(
         evaluator, 'comparison_metric', return_value=(0.8, 0.1, 0.1)
-    ) as mock_comp_metric:
+    ):
         mock_pca().explained_variance_ = np.array([0.5, 0.3, 0.2])
         correlation = evaluator.pca_correlation(lingress=True)
         assert isinstance(correlation, float)

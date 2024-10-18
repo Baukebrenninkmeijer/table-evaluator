@@ -4,15 +4,18 @@ repos:
     hooks:
     -   id: poetry-check
     -   id: poetry-lock
-  - repo: local
-    hooks: 
-    - id: generate_docs
-      name: generate docs
-      entry: sphinx-build -M html docs/source docs/build
-      language: system
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.3.4
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks: 
+    - id: generate_docs
+      name: generate docs
+      entry: sphinx-build
+      args: [-M, html, docs/source, docs/build]
+      language: python
+      pass_filenames: false

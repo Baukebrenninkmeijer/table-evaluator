@@ -11,8 +11,8 @@ def plot_var_cor(
     x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs
 ) -> Optional[np.ndarray]:
     """
-    Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the top half of the correlation matrix,
-    since this holds the same values.
+    Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the
+    top half of the correlation matrix, since this holds the same values.
 
     Decomissioned for use of the dython associations function.
 
@@ -27,7 +27,9 @@ def plot_var_cor(
     elif isinstance(x, np.ndarray):
         corr = np.corrcoef(x, rowvar=False)
     else:
-        raise ValueError('Unknown datatype given. Make sure a Pandas DataFrame or Numpy Array is passed for x.')
+        raise ValueError(
+            f'Unknown datatype given ({type(x)}). Make sure a Pandas DataFrame or Numpy Array is passed for x.'
+        )
 
     sns.set(style='white')
     mask = np.zeros_like(corr, dtype=bool)
@@ -60,24 +62,27 @@ def plot_correlation_difference(
     real: pd.DataFrame,
     fake: pd.DataFrame,
     plot_diff: bool = True,
-    cat_cols: list = None,
+    cat_cols: Optional[list] = None,
     annot: bool = False,
     fname: str | None = None,
     show: bool = True,
 ):
     """
-    Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has support for continuous and Categorical
-    (Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if `dis_cols` is not passed.
+    Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has
+    support for continuous and Categorical (Male, Female) data types. All Object and Category dtypes are considered to
+    be Categorical columns if `dis_cols` is not passed.
 
     - Continuous - Continuous: Uses Pearson's correlation coefficient
-    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for both continuous - categorical and categorical - continuous.
+    - Continuous - Categorical: Uses so called correlation ratio (https://en.wikipedia.org/wiki/Correlation_ratio) for
+      both continuous - categorical and categorical - continuous.
     - Categorical - Categorical: Uses Theil's U, an asymmetric correlation metric for Categorical associations
 
-    :param real: DataFrame with real data
-    :param fake: DataFrame with synthetic data
-    :param plot_diff: Plot difference if True, else not
-    :param cat_cols: List of Categorical columns
-    :param boolean annot: Whether to annotate the plot with numbers indicating the associations.
+    Args:
+        real (pd.DataFrame): DataFrame with real data.
+        fake (pd.DataFrame): DataFrame with synthetic data.
+        plot_diff (bool): Plot difference if True, else not.
+        cat_cols (Optional[List[str]]): List of Categorical columns.
+        annot (bool): Whether to annotate the plot with numbers indicating the associations.
     """
     assert isinstance(real, pd.DataFrame), '`real` parameters must be a Pandas DataFrame'
     assert isinstance(fake, pd.DataFrame), '`fake` parameters must be a Pandas DataFrame'
@@ -146,8 +151,9 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
-    :param evaluators: list of TableEvaluator objects
-    :param boolean annot: Whether to annotate the plots with numbers.
+    Args:
+        evaluators (List[TableEvaluator]): List of TableEvaluator objects.
+        annot (bool): Whether to annotate the plots with numbers.
     """
     nr_plots = len(evaluators) + 1
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
@@ -225,11 +231,16 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
 
-    :param data_r: Series with real data
-    :param data_f: Series with fake data
-    :param xlabel: Label to put on the x-axis
-    :param ylabel: Label to put  on the y-axis
-    :param ax: The axis to plot on. If ax=None, a new figure is created.
+    Args:
+        data_r (pd.Series): Series with real data.
+        data_f (pd.Series): Series with fake data.
+        xlabel (str): Label to put on the x-axis.
+        ylabel (str): Label to put on the y-axis.
+        ax (matplotlib.axes.Axes | None): The axis to plot on. If None, a new figure is created.
+        show (bool): Whether to display the plot. Defaults to True.
+
+    Returns:
+        matplotlib.axes.Axes | None: The axis with the plot if show is False, otherwise None.
     """
     x1 = data_r.sort_values()
     x2 = data_f.sort_values()

@@ -41,6 +41,7 @@ extensions = [
     'm2r2',
     'sphinx_rtd_theme',
     'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
     # 'sphinx.ext.coverage',
 ]
 
@@ -50,7 +51,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['tests/*', 'notebooks/*']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -77,3 +78,8 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False,
 }
+
+# Napoleon settings
+napoleon_include_init_with_doc = True
+napoleon_google_docstring = True
+napoleon_include_private_with_doc = True
