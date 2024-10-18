@@ -33,17 +33,13 @@ pre-commit = "^3.8.0"
 ruff = "^0.6.9"
 ipython = "^8.28.0"
 
-
-[tool.poetry.group.development.dependencies]
-m2r2 = "^0.3.3.post2"
-sphinx-rtd-theme = "^2.0.0"
-pytest = "^8.3.2"
-
-
 [tool.poetry.group.dev.dependencies]
 pytest-mock = "^3.14.0"
 ipykernel = "^6.29.5"
 ipython = "^8.28.0"
+m2r2 = "^0.3.3.post2"
+sphinx-rtd-theme = "^2.0.0"
+pytest = "^8.3.2"
 
 [build-system]
 requires = ["poetry-core"]
