@@ -1,12 +1,11 @@
-from typing import List, Tuple, Dict, Union, Any
+from typing import Any, Dict, List, Tuple
+
 import pandas as pd
 
 
-def load_data(path_real: str,
-              path_fake: str,
-              real_sep: str = ',',
-              fake_sep: str = ',',
-              drop_columns: List = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_data(
+    path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: List = None
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
     with the same data types.
@@ -28,8 +27,9 @@ def load_data(path_real: str,
             fake = fake.drop(drop_columns, axis=1)
         except:
             print(f'Some of {drop_columns} were not found on fake.index.')
-        assert len(fake.columns.tolist()) == len(real.columns.tolist()), \
-            f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
+        assert len(fake.columns.tolist()) == len(
+            real.columns.tolist()
+        ), f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
         fake.columns = real.columns
     else:
         fake.columns = real.columns
@@ -40,7 +40,4 @@ def load_data(path_real: str,
 
 
 def dict_to_df(data: Dict[str, Any]):
-    return pd.DataFrame(
-        {'result': list(data.values())},
-        index=list(data.keys())
-    )
+    return pd.DataFrame({'result': list(data.values())}, index=list(data.keys()))

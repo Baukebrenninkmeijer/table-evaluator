@@ -1,5 +1,7 @@
 import pandas as pd
-from table_evaluator.utils import load_data, dict_to_df
+
+from table_evaluator.utils import dict_to_df, load_data
+
 
 def test_load_data(mocker):
     # Test loading real and fake data with matching columns
@@ -7,12 +9,15 @@ def test_load_data(mocker):
     fake_data = pd.DataFrame({'A': [5, 6], 'B': [7, 8]})
 
     # Mocking pd.read_csv
-    mocker.patch('pandas.read_csv', side_effect=lambda path, sep, low_memory: real_data if 'real' in path else fake_data)
+    mocker.patch(
+        'pandas.read_csv', side_effect=lambda path, sep, low_memory: real_data if 'real' in path else fake_data
+    )
 
     real, fake = load_data('path/to/real.csv', 'path/to/fake.csv')
 
     assert real.equals(real_data)
     assert fake.equals(fake_data)
+
 
 def test_dict_to_df():
     # Test converting a dictionary to a DataFrame

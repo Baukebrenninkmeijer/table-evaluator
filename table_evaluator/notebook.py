@@ -1,13 +1,12 @@
 try:
-    from IPython.core.display import HTML, display, Markdown
-    from IPython import get_ipython
     import ipywidgets as widgets
+    from IPython import get_ipython
+    from IPython.core.display import HTML, Markdown, display
 except ImportError:
     print('IPython not installed.')
-from typing import Dict
 
 
-class EvaluationResult(object):
+class EvaluationResult:
     def __init__(self, name, content, prefix=None, appendix=None, notebook=False):
         self.name = name
         self.prefix = prefix
@@ -20,16 +19,20 @@ class EvaluationResult(object):
             output = widgets.Output()
             with output:
                 display(Markdown(f'## {self.name}'))
-                if self.prefix: display(Markdown(self.prefix))
+                if self.prefix:
+                    display(Markdown(self.prefix))
                 display(self.content)
-                if self.appendix: display(Markdown(self.appendix))
+                if self.appendix:
+                    display(Markdown(self.appendix))
             return output
 
         else:
             print(f'\n{self.name}')
-            if self.prefix: print(self.prefix)
+            if self.prefix:
+                print(self.prefix)
             print(self.content)
-            if self.appendix: print(self.appendix)
+            if self.appendix:
+                print(self.appendix)
 
 
 def visualize_notebook(table_evaluator, overview, privacy_metrics, ml_efficacy, statistical):
@@ -41,7 +44,7 @@ def visualize_notebook(table_evaluator, overview, privacy_metrics, ml_efficacy, 
             plots.append(evaluation_report.show())
         if plots:
             dashboards.append(widgets.VBox(plots))
-    display(HTML(f'<h1 style="text-align: center">Synthetic Data Report</h1>'))
+    display(HTML('<h1 style="text-align: center">Synthetic Data Report</h1>'))
     tab = widgets.Tab(dashboards)
     tab.set_title(0, 'Overview')
     tab.set_title(1, 'Privacy Metrics')
@@ -52,12 +55,12 @@ def visualize_notebook(table_evaluator, overview, privacy_metrics, ml_efficacy, 
 
 def isnotebook():
     try:
-        shell = get_ipython().__class__.__name__  #This works due to the except below
+        shell = get_ipython().__class__.__name__  # This works due to the except below
         if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
+            return True  # Jupyter notebook or qtconsole
         elif shell == 'TerminalInteractiveShell':
             return False  # Terminal running IPython
         else:
             return False  # Other type (?)
     except NameError:
-        return False      # Probably standard Python interpreter
+        return False  # Probably standard Python interpreter

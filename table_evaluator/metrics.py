@@ -57,7 +57,7 @@ def rmse(y_true: np.ndarray, y_pred: np.ndarray):
 
 def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray):
     y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
-    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true ** 2)) * np.sqrt(np.sum(y_pred ** 2)))
+    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2)))
 
 
 def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True):
@@ -91,10 +91,10 @@ def column_correlations(dataset_a, dataset_b, categorical_columns, theil_u=True)
 
 
 def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> pd.DataFrame:
-    assert real.columns.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
+    assert real.columns.tolist() == fake.columns.tolist(), 'Colums are not identical between `real` and `fake`. '
     distances = Parallel(n_jobs=-1)(
-        delayed(jensenshannon_distance)
-        (col, real[col], fake[col]) for col in numerical_columns)
+        delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
+    )
 
     distances_df = pd.DataFrame(distances)
     return distances_df.set_index('col_name')
@@ -114,10 +114,11 @@ def kolmogorov_smirnov_test(col_name, real_col, fake_col) -> Dict[str, Any]:
     equality = 'identical' if p_value > 0.01 else 'different'
     return {'col_name': col_name, 'statistic': statistic, 'p-value': p_value, 'equality': equality}
 
+
 def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> List[Dict[str, Any]]:
-    assert real.columns.tolist() == fake.columns.tolist(), f'Colums are not identical between `real` and `fake`. '
+    assert real.columns.tolist() == fake.columns.tolist(), 'Colums are not identical between `real` and `fake`. '
     distances = Parallel(n_jobs=-1)(
-        delayed(kolmogorov_smirnov_test)
-        (col, real[col], fake[col]) for col in numerical_columns)
+        delayed(kolmogorov_smirnov_test)(col, real[col], fake[col]) for col in numerical_columns
+    )
     distances_df = pd.DataFrame(distances)
     return distances_df.set_index('col_name')

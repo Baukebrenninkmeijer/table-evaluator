@@ -31,6 +31,7 @@ scipy = "1.11.4"
 dython = "0.7.7"
 pre-commit = "^3.8.0"
 ruff = "^0.6.9"
+ipython = "^8.28.0"
 
 
 [tool.poetry.group.development.dependencies]
@@ -47,3 +48,30 @@ ipython = "^8.28.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+line-length = 120
+lint.select = [
+    "I001", # Isort rules
+    "N",
+    "A",    # prevent using keywords that clobber python builtins
+    "B",    # bugbear: security warnings
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "ISC",  # implicit string concatenation
+    "UP",   # alert you when better syntax is available in your python version
+    "RUF",  # the ruff developer's own rules
+    ]
+lint.ignore = ["B018", "B023"]
+src = ["table_evaluator"]
+format.quote-style = "single"
+
+[tool.mypy]
+exclude = [
+]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = [""]
+ignore_missing_imports = true
