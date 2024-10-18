@@ -376,7 +376,7 @@ class TableEvaluator:
 
         dup_idxs = fake_hashes.isin(real_hashes.values)
         print(dup_idxs)
-        dup_idxs = dup_idxs[dup_idxs is True].sort_index().index.tolist()
+        dup_idxs = dup_idxs[dup_idxs].sort_index().index.tolist()
 
         if self.verbose:
             print(f'Nr copied columns: {len(dup_idxs)}')
