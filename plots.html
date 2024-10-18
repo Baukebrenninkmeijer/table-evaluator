@@ -95,12 +95,19 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_r</strong> – Series with real data</p></li>
-<li><p><strong>data_f</strong> – Series with fake data</p></li>
-<li><p><strong>xlabel</strong> – Label to put on the x-axis</p></li>
-<li><p><strong>ylabel</strong> – Label to put  on the y-axis</p></li>
-<li><p><strong>ax</strong> – The axis to plot on. If ax=None, a new figure is created.</p></li>
+<li><p><strong>data_r</strong> (<em>pd.Series</em>) – Series with real data.</p></li>
+<li><p><strong>data_f</strong> (<em>pd.Series</em>) – Series with fake data.</p></li>
+<li><p><strong>xlabel</strong> (<em>str</em>) – Label to put on the x-axis.</p></li>
+<li><p><strong>ylabel</strong> (<em>str</em>) – Label to put on the y-axis.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em> | </em><em>None</em>) – The axis to plot on. If None, a new figure is created.</p></li>
+<li><p><strong>show</strong> (<em>bool</em>) – Whether to display the plot. Defaults to True.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axis with the plot if show is False, otherwise None.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes | None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -112,8 +119,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>evaluators</strong> – list of TableEvaluator objects</p></li>
-<li><p><strong>annot</strong> (<em>boolean</em>) – Whether to annotate the plots with numbers.</p></li>
+<li><p><strong>evaluators</strong> (<em>List</em><em>[</em><a class="reference internal" href="table_evaluator.html#table_evaluator.table_evaluator.TableEvaluator" title="table_evaluator.table_evaluator.TableEvaluator"><em>TableEvaluator</em></a><em>]</em>) – List of TableEvaluator objects.</p></li>
+<li><p><strong>annot</strong> (<em>bool</em>) – Whether to annotate the plots with numbers.</p></li>
 </ul>
 </dd>
 </dl>
@@ -121,22 +128,24 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="table_evaluator.plots.plot_correlation_difference">
-<span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_correlation_difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cat_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.plots.plot_correlation_difference" title="Link to this definition"></a></dt>
-<dd><p>Plot the association matrices for the <cite>real</cite> dataframe, <cite>fake</cite> dataframe and plot the difference between them. Has support for continuous and Categorical
-(Male, Female) data types. All Object and Category dtypes are considered to be Categorical columns if <cite>dis_cols</cite> is not passed.</p>
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_correlation_difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cat_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.plots.plot_correlation_difference" title="Link to this definition"></a></dt>
+<dd><p>Plot the association matrices for the <cite>real</cite> dataframe, <cite>fake</cite> dataframe and plot the difference between them. Has
+support for continuous and Categorical (Male, Female) data types. All Object and Category dtypes are considered to
+be Categorical columns if <cite>dis_cols</cite> is not passed.</p>
 <ul class="simple">
 <li><p>Continuous - Continuous: Uses Pearson’s correlation coefficient</p></li>
-<li><p>Continuous - Categorical: Uses so called correlation ratio (<a class="reference external" href="https://en.wikipedia.org/wiki/Correlation_ratio">https://en.wikipedia.org/wiki/Correlation_ratio</a>) for both continuous - categorical and categorical - continuous.</p></li>
+<li><p>Continuous - Categorical: Uses so called correlation ratio (<a class="reference external" href="https://en.wikipedia.org/wiki/Correlation_ratio">https://en.wikipedia.org/wiki/Correlation_ratio</a>) for
+both continuous - categorical and categorical - continuous.</p></li>
 <li><p>Categorical - Categorical: Uses Theil’s U, an asymmetric correlation metric for Categorical associations</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>real</strong> – DataFrame with real data</p></li>
-<li><p><strong>fake</strong> – DataFrame with synthetic data</p></li>
-<li><p><strong>plot_diff</strong> – Plot difference if True, else not</p></li>
-<li><p><strong>cat_cols</strong> – List of Categorical columns</p></li>
-<li><p><strong>annot</strong> (<em>boolean</em>) – Whether to annotate the plot with numbers indicating the associations.</p></li>
+<li><p><strong>real</strong> (<em>pd.DataFrame</em>) – DataFrame with real data.</p></li>
+<li><p><strong>fake</strong> (<em>pd.DataFrame</em>) – DataFrame with synthetic data.</p></li>
+<li><p><strong>plot_diff</strong> (<em>bool</em>) – Plot difference if True, else not.</p></li>
+<li><p><strong>cat_cols</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of Categorical columns.</p></li>
+<li><p><strong>annot</strong> (<em>bool</em>) – Whether to annotate the plot with numbers indicating the associations.</p></li>
 </ul>
 </dd>
 </dl>
@@ -172,8 +181,8 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="table_evaluator.plots.plot_var_cor">
 <span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_var_cor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#table_evaluator.plots.plot_var_cor" title="Link to this definition"></a></dt>
-<dd><p>Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the top half of the correlation matrix,
-since this holds the same values.</p>
+<dd><p>Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the
+top half of the correlation matrix, since this holds the same values.</p>
 <p>Decomissioned for use of the dython associations function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

@@ -51,6 +51,9 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Metrics</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.column_correlations"><code class="docutils literal notranslate"><span class="pre">column_correlations()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.euclidean_distance"><code class="docutils literal notranslate"><span class="pre">euclidean_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.jensenshannon_distance"><code class="docutils literal notranslate"><span class="pre">jensenshannon_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.js_distance_df"><code class="docutils literal notranslate"><span class="pre">js_distance_df()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.kolmogorov_smirnov_test"><code class="docutils literal notranslate"><span class="pre">kolmogorov_smirnov_test()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.mean_absolute_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_error()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.mean_absolute_percentage_error"><code class="docutils literal notranslate"><span class="pre">mean_absolute_percentage_error()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.metrics.rmse"><code class="docutils literal notranslate"><span class="pre">rmse()</span></code></a></li>
@@ -89,19 +92,22 @@
 </div>
 <dl class="py function" id="module-table_evaluator.metrics">
 <dt class="sig sig-object py" id="table_evaluator.metrics.column_correlations">
-<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">column_correlations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categorical_columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theil_u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.column_correlations" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">column_correlations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categorical_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theil_u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.column_correlations" title="Link to this definition"></a></dt>
 <dd><p>Column-wise correlation calculation between <code class="docutils literal notranslate"><span class="pre">dataset_a</span></code> and <code class="docutils literal notranslate"><span class="pre">dataset_b</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dataset_a</strong> – First DataFrame</p></li>
-<li><p><strong>dataset_b</strong> – Second DataFrame</p></li>
-<li><p><strong>categorical_columns</strong> – The columns containing categorical values</p></li>
-<li><p><strong>theil_u</strong> – Whether to use Theil’s U. If False, use Cramer’s V.</p></li>
+<li><p><strong>dataset_a</strong> (<em>pd.DataFrame</em>) – First DataFrame</p></li>
+<li><p><strong>dataset_b</strong> (<em>pd.DataFrame</em>) – Second DataFrame</p></li>
+<li><p><strong>categorical_columns</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The columns containing categorical values</p></li>
+<li><p><strong>theil_u</strong> (<em>bool</em>) – Whether to use Theil’s U. If False, use Cramer’s V.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Mean correlation between all columns.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -113,12 +119,110 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
-<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+<li><p><strong>y_true</strong> (<em>numpy.ndarray</em>) – The ground truth values.</p></li>
+<li><p><strong>y_pred</strong> (<em>numpy.ndarray</em>) – The predicted values.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Mean absolute error (float).</p>
+<dd class="field-even"><p>The mean absolute error.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.jensenshannon_distance">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">jensenshannon_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">colname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">real_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#table_evaluator.metrics.jensenshannon_distance" title="Link to this definition"></a></dt>
+<dd><p>Calculate the Jensen-Shannon distance between real and fake data columns.</p>
+<p>This function bins the data, calculates probability distributions, and then
+computes the Jensen-Shannon distance between these distributions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>colname</strong> (<em>str</em>) – Name of the column being analyzed.</p></li>
+<li><p><strong>real_col</strong> (<em>pd.Series</em>) – Series containing the real data.</p></li>
+<li><p><strong>fake_col</strong> (<em>pd.Series</em>) – Series containing the fake data.</p></li>
+<li><p><strong>bins</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of bins to use for discretization. Defaults to 25.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary containing:</dt><dd><ul class="simple">
+<li><p>’col_name’: Name of the column.</p></li>
+<li><p>’js_distance’: The calculated Jensen-Shannon distance.</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Any]</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The number of bins is capped at the length of the real column to avoid empty bins.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.js_distance_df">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">js_distance_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numerical_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#table_evaluator.metrics.js_distance_df" title="Link to this definition"></a></dt>
+<dd><p>Calculate Jensen-Shannon distances between real and fake data for numerical columns.</p>
+<p>This function computes the Jensen-Shannon distance for each numerical column
+in parallel using joblib’s Parallel and delayed functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>real</strong> (<em>pd.DataFrame</em>) – DataFrame containing the real data.</p></li>
+<li><p><strong>fake</strong> (<em>pd.DataFrame</em>) – DataFrame containing the fake data.</p></li>
+<li><p><strong>numerical_columns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of column names to compute distances for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A DataFrame with column names as index and Jensen-Shannon</dt><dd><p>distances as values.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If the columns in real and fake DataFrames are not identical.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.metrics.kolmogorov_smirnov_test">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">kolmogorov_smirnov_test</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">real_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#table_evaluator.metrics.kolmogorov_smirnov_test" title="Link to this definition"></a></dt>
+<dd><p>Perform Kolmogorov-Smirnov test on real and fake data columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col_name</strong> (<em>str</em>) – Name of the column being tested.</p></li>
+<li><p><strong>real_col</strong> (<em>pd.Series</em>) – Series containing the real data.</p></li>
+<li><p><strong>fake_col</strong> (<em>pd.Series</em>) – Series containing the fake data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary containing:</dt><dd><ul class="simple">
+<li><p>’col_name’: Name of the column.</p></li>
+<li><p>’statistic’: The KS statistic.</p></li>
+<li><p>’p-value’: The p-value of the test.</p></li>
+<li><p>’equality’: ‘identical’ if p-value &gt; 0.01, else ‘different’.</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -143,23 +247,27 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="table_evaluator.metrics.mean_absolute_percentage_error">
 <span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">mean_absolute_percentage_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.mean_absolute_percentage_error" title="Link to this definition"></a></dt>
-<dd><p>Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero values.</p>
+<dd><p>Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero
+values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>y_true</strong> – NumPy.ndarray with the ground truth values.</p></li>
-<li><p><strong>y_pred</strong> – NumPy.ndarray with the ground predicted values.</p></li>
+<li><p><strong>y_true</strong> (<em>numpy.ndarray</em>) – The ground truth values.</p></li>
+<li><p><strong>y_pred</strong> (<em>numpy.ndarray</em>) – The predicted values.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Mean absolute percentage error (float).</p>
+<dd class="field-even"><p>Mean absolute percentage error.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="table_evaluator.metrics.rmse">
-<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">rmse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.metrics.rmse" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.metrics.</span></span><span class="sig-name descname"><span class="pre">rmse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Series</span></span></span><a class="headerlink" href="#table_evaluator.metrics.rmse" title="Link to this definition"></a></dt>
 <dd><p>Returns the root mean squared error between y_true and y_pred.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
