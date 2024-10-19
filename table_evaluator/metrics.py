@@ -10,7 +10,7 @@ from scipy.stats import ks_2samp
 from sklearn.metrics import root_mean_squared_error
 
 
-def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray):
+def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> np.floating[Any]:
     """
     Returns the mean absolute error between y_true and y_pred.
 
@@ -21,7 +21,7 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray):
     return np.mean(np.abs(np.subtract(y_true, y_pred)))
 
 
-def euclidean_distance(y_true: np.ndarray, y_pred: np.ndarray):
+def euclidean_distance(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> float:
     """
     Returns the euclidean distance between y_true and y_pred.
 
@@ -35,7 +35,7 @@ def euclidean_distance(y_true: np.ndarray, y_pred: np.ndarray):
     return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
 
 
-def mean_absolute_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
+def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series):
     """
     Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero
     values.

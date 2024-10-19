@@ -831,7 +831,13 @@ class TableEvaluator:
         """
         self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose
-        self.comparison_metric = metric if metric is not None else self.comparison_metric
+        self.comparison_metric = (
+            getattr(stats, metric)
+            if isinstance(metric, str)
+            else metric
+            if metric is not None
+            else self.comparison_metric
+        )
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
