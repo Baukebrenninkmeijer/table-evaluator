@@ -181,7 +181,7 @@ class TableEvaluator:
             try:
                 r = self.real[col]
                 f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-                cdf(r, f, col, 'Cumsum', local_ax=axes[i])
+                cdf(r, f, col, 'Cumsum', ax=axes[i])
             except Exception as e:
                 print(f'Error while plotting column {col}')
                 raise e
