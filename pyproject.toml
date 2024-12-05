@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "table-evaluator"
-version = "1.7.1"
+version = "1.7.2"
 description = "A package to evaluate how close a synthetic data set is to real data."
 authors = ["Bauke Brenninkmeijer <bauke.brenninkmeijer@gmail.com>"]
 license = "MIT"
