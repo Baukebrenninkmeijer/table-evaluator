@@ -87,6 +87,7 @@ def plot_correlation_difference(
     assert isinstance(real, pd.DataFrame), '`real` parameters must be a Pandas DataFrame'
     assert isinstance(fake, pd.DataFrame), '`fake` parameters must be a Pandas DataFrame'
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    sns.set(style='white')
 
     if cat_cols is None:
         cat_cols = real.select_dtypes(['object', 'category'])
@@ -98,27 +99,51 @@ def plot_correlation_difference(
     real_corr = associations(
         real,
         nominal_columns=cat_cols,
-        plot=False,
+        # plot=False,
         nom_nom_assoc='theil',
-        mark_columns=True,
-        annot=annot,
-        ax=ax[0],
-        cmap=cmap,
+        # mark_columns=True,
+        # annot=annot,
+        # ax=ax[0],
+        # cmap=cmap,
+        compute_only=True,
     )['corr']
     fake_corr = associations(
         fake,
         nominal_columns=cat_cols,
-        plot=False,
+        # plot=False,
         nom_nom_assoc='theil',
-        mark_columns=True,
-        annot=annot,
-        ax=ax[1],
-        cmap=cmap,
+        # mark_columns=True,
+        # annot=annot,
+        # ax=ax[1],
+        # cmap=cmap,
+        compute_only=True,
     )['corr']
 
+    sns.heatmap(
+        real_corr,
+        ax=ax[0],
+        cmap=cmap,
+        square=True,
+        annot=annot,
+        center=0,
+        linewidths=0.5,
+        cbar_kws={'shrink': 0.5},
+        fmt='.2f',
+    )
+    sns.heatmap(
+        fake_corr,
+        ax=ax[1],
+        cmap=cmap,
+        square=True,
+        annot=annot,
+        center=0,
+        linewidths=0.5,
+        cbar_kws={'shrink': 0.5},
+        fmt='.2f',
+    )
+
     if plot_diff:
-        diff = abs(real_corr - fake_corr)
-        sns.set(style='white')
+        diff = (real_corr - fake_corr).abs()
         sns.heatmap(
             diff,
             ax=ax[2],
@@ -131,7 +156,6 @@ def plot_correlation_difference(
             cbar_kws={'shrink': 0.5},
             fmt='.2f',
         )
-
     titles = ['Real', 'Fake', 'Difference'] if plot_diff else ['Real', 'Fake']
     for i, label in enumerate(titles):
         title_font = {'size': '18'}
@@ -140,7 +164,6 @@ def plot_correlation_difference(
 
     if fname is not None:
         plt.savefig(fname)
-
     if show:
         plt.show()
     else:
