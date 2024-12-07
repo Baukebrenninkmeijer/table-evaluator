@@ -40,6 +40,7 @@ ipython = "^8.28.0"
 m2r2 = "^0.3.3.post2"
 sphinx-rtd-theme = "^2.0.0"
 pytest = "^8.3.2"
+ipywidgets = "^8.1.5"
 
 [build-system]
 requires = ["poetry-core"]
