@@ -32,7 +32,7 @@ repos:
         name: pytest-check
         entry: pytest
         additional_dependencies: ["uv"]
-        language: system
+        language: python
         pass_filenames: false
         always_run: true
       - id: generate_docs
