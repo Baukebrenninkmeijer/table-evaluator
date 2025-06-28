@@ -22,7 +22,7 @@ We welcome contributions to the Table Evaluator project! This document provides 
    ```bash
    make setup-dev
    ```
-   
+
    This will:
    - Install all dependencies including development tools
    - Set up pre-commit hooks
@@ -48,7 +48,7 @@ We welcome contributions to the Table Evaluator project! This document provides 
    ```bash
    make dev
    ```
-   
+
    This will format, lint, and test your code.
 
 4. **Commit your changes:**
