@@ -33,6 +33,7 @@ dependencies = [
     "pytest-cov==4.0.0",
     "pytest-mock==3.14.0",
     "m2r2==0.3.3.post2",
+    "sphinx-rtd-theme==2.0.0",
 ]
 
 [project.urls]
