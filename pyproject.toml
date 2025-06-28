@@ -28,7 +28,8 @@ dependencies = [
     "dython==0.7.7",
     "pre-commit==3.8.0",
     "ipython==8.28.0",
-]
+    "pytest==8.3.2",
+    "sphinx==8.2.3",
 
 [project.urls]
 "Homepage" = "https://github.com/Baukebrenninkmeijer/Table-Evaluator"
