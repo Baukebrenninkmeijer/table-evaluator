@@ -39,7 +39,7 @@ jobs:
       run: poetry run bandit -r table_evaluator/ -f json -o bandit-report.json || true
 
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -48,5 +48,5 @@ jobs:
           bandit-report.json
 
     - name: Dependency Review
-      uses: actions/dependency-review-action@v3
+      uses: actions/dependency-review-action@v4
       if: github.event_name == 'pull_request'

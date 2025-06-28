@@ -29,7 +29,7 @@ jobs:
         virtualenvs-in-project: true
 
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: poetry-${{ hashFiles('**/poetry.lock') }}
@@ -71,7 +71,7 @@ jobs:
         virtualenvs-in-project: true
 
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version }}
@@ -81,7 +81,6 @@ jobs:
       run: |
         # Install system dependencies if needed
         # sudo apt install -y gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config
-        poetry lock
         poetry install --with dev
 
     - name: Run tests with coverage
