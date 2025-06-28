@@ -38,11 +38,7 @@ jobs:
     - name: Build documentation
       run: uv run sphinx-build -M html docs/source docs/build
 
-    - name: Run tests with coverage
-      run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term
-
-    - name: Build documentation
-      run: uv run sphinx-build -M html docs/source docs/build
+    - name: Run security scan with bandit
       run: uv run bandit -r table_evaluator/ -f json -o bandit-report.json || true
 
     - name: Check for vulnerabilities with safety
