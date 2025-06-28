@@ -30,7 +30,7 @@ jobs:
         virtualenvs-in-project: true
 
     - name: Install dependencies
-      run: poetry install --with development
+      run: poetry install --with dev
 
     - name: Run safety check
       run: poetry run safety check --json --output safety-report.json || true

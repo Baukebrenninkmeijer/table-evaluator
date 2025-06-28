@@ -16,7 +16,7 @@ help:
 	@echo "  setup-dev   Set up development environment"
 
 install:
-	poetry install --with development
+	poetry install --with dev
 
 test:
 	poetry run pytest tests/ --cov=table_evaluator --cov-report=term --cov-report=html
