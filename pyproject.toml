@@ -31,6 +31,7 @@ dependencies = [
     "pytest==8.3.2",
     "sphinx==8.2.3",
     "pytest-cov==4.0.0",
+    "pytest-mock==3.14.0",
 ]
 
 [project.urls]
