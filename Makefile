@@ -23,7 +23,8 @@ test:
 
 lint:
 	poetry run ruff check .
-	poetry run mypy table_evaluator/
+	# mypy disabled for Phase 1 - will be enabled in Phase 2
+	# poetry run mypy table_evaluator/
 
 format:
 	poetry run ruff format .

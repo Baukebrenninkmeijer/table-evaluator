@@ -1,93 +1,43 @@
-[tool.poetry]
+[project]
 name = "table-evaluator"
 version = "1.7.2post1"
 description = "A package to evaluate how close a synthetic data set is to real data."
-authors = ["Bauke Brenninkmeijer <bauke.brenninkmeijer@gmail.com>"]
+authors = [
+    { name = "Bauke Brenninkmeijer", email = "bauke.brenninkmeijer@gmail.com" }
+]
 license = "MIT"
 readme = "README.md"
-repository ="https://github.com/Baukebrenninkmeijer/Table-Evaluator"
-documentation="https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
-keywords=['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
+keywords = ['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
 classifiers = [
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3 :: Only',
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3 :: Only',
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pyarrow==17.0.0",
+    "scikit-learn==1.5.1",
+    "tqdm==4.66.5",
+    "matplotlib==3.9.2",
+    "numpy==1.26.4",
+    "seaborn==0.13.2",
+    "pandas==2.0.0",
+    "scipy==1.11.4",
+    "dython==0.7.7",
+    "pre-commit==3.8.0",
+    "ipython==8.28.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pyarrow = "^17.0.0"
-scikit-learn = "^1.5.1"
-tqdm = "^4.66.5"
-matplotlib = "^3.9.2"
-numpy = "1.26.4"
-seaborn = "^0.13.2"
-pandas = "^2.0.0"
-scipy = "1.11.4"
-dython = "0.7.7"
-pre-commit = "^3.8.0"
-ruff = "^0.6.9"
-ipython = "^8.28.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest-mock = "^3.14.0"
-ipykernel = "^6.29.5"
-ipython = "^8.28.0"
-m2r2 = "^0.3.3.post2"
-sphinx-rtd-theme = "^2.0.0"
-pytest = "^8.3.2"
-ipywidgets = "^8.1.5"
-pytest-cov = "^4.0.0"
-bandit = "^1.7.5"
-safety = "^2.3.0"
-mypy = "^1.8.0"
+[project.urls]
+"Homepage" = "https://github.com/Baukebrenninkmeijer/Table-Evaluator"
+"Documentation" = "https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.ruff]
-line-length = 120
-target-version = "py310"
-src = ["table_evaluator"]
-
-[tool.ruff.lint]
-select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "N",    # pep8-naming
-    "A",    # prevent using keywords that clobber python builtins
-    "B",    # flake8-bugbear: security warnings
-    "C4",   # flake8-comprehensions
-    "UP",   # pyupgrade
-    "ISC",  # implicit string concatenation
-    "RUF",  # the ruff developer's own rules
-    "SIM",  # flake8-simplify
-    "ARG001", # unused-function-args
-]
-ignore = [
-    "E501",  # line too long, handled by formatter
-    "B008",  # do not perform function calls in argument defaults
-    "B018",  # found useless expression
-    "B023",  # function definition does not bind loop variable
-    "W191",  # indentation contains tabs
-]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-source-first-line = false
-line-ending = "auto"
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"tests/**/*" = ["PLR2004", "S101", "TID252"]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

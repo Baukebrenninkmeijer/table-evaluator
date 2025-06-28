@@ -1,0 +1,86 @@
+name: Code Quality & Security
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run security scans daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+jobs:
+  code-quality-security:
+    runs-on: ubuntu-latest
+    name: Code Quality & Security Checks
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      run: pip install uv
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Run pre-commit hooks
+      uses: pre-commit/action@v3.0.0
+
+    - name: Run security scan with bandit
+      run: uv run bandit -r table_evaluator/ -f json -o bandit-report.json || true
+
+    - name: Check for vulnerabilities with safety
+      run: uv run safety check --json --output safety-report.json || true
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+          bandit-report.json
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      if: github.event_name == 'pull_request'
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    name: Tests on Python ${{ matrix.python-version }}
+    needs: code-quality-security
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      run: pip install uv
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Run tests with coverage
+      run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
