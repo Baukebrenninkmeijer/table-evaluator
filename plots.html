@@ -51,9 +51,9 @@
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.cdf"><code class="docutils literal notranslate"><span class="pre">cdf()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_correlation_comparison"><code class="docutils literal notranslate"><span class="pre">plot_correlation_comparison()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_correlation_difference"><code class="docutils literal notranslate"><span class="pre">plot_correlation_difference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_distributions"><code class="docutils literal notranslate"><span class="pre">plot_distributions()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_mean_std"><code class="docutils literal notranslate"><span class="pre">plot_mean_std()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_mean_std_comparison"><code class="docutils literal notranslate"><span class="pre">plot_mean_std_comparison()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#table_evaluator.plots.plot_var_cor"><code class="docutils literal notranslate"><span class="pre">plot_var_cor()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a></li>
@@ -152,6 +152,17 @@ both continuous - categorical and categorical - continuous.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="table_evaluator.plots.plot_distributions">
+<span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_distributions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nr_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.plots.plot_distributions" title="Link to this definition"></a></dt>
+<dd><p>Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
+contains the values of a real columns and the corresponding fake column.
+:param real: Real dataset (pd.DataFrame)
+:param fake: Synthetic dataset (pd.DataFrame)
+:param nr_cols: Number of columns for the subplot grid.
+:param fname: If not none, saves the plot with this file name.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="table_evaluator.plots.plot_mean_std">
 <span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_mean_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.plots.plot_mean_std" title="Link to this definition"></a></dt>
 <dd><p>Plot the means and standard deviations of each dataset.</p>
@@ -174,27 +185,6 @@ both continuous - categorical and categorical - continuous.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>evaluators</strong> – list of TableEvaluator objects that are to be evaluated.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="table_evaluator.plots.plot_var_cor">
-<span class="sig-prename descclassname"><span class="pre">table_evaluator.plots.</span></span><span class="sig-name descname"><span class="pre">plot_var_cor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#table_evaluator.plots.plot_var_cor" title="Link to this definition"></a></dt>
-<dd><p>Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the
-top half of the correlation matrix, since this holds the same values.</p>
-<p>Decomissioned for use of the dython associations function.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> – Dataframe to plot data from</p></li>
-<li><p><strong>ax</strong> – Axis on which to plot the correlations</p></li>
-<li><p><strong>return_values</strong> – return correlation matrix after plotting</p></li>
-<li><p><strong>kwargs</strong> – Keyword arguments that are passed to <cite>sns.heatmap</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>If return_values=True, returns correlation matrix of <cite>x</cite> as np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>

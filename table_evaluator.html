@@ -49,10 +49,6 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">TableEvaluator</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator"><code class="docutils literal notranslate"><span class="pre">TableEvaluator</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator.__init__"><code class="docutils literal notranslate"><span class="pre">TableEvaluator.__init__()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator._determine_columns"><code class="docutils literal notranslate"><span class="pre">TableEvaluator._determine_columns()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator._fill_missing_values"><code class="docutils literal notranslate"><span class="pre">TableEvaluator._fill_missing_values()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator._set_sample_size"><code class="docutils literal notranslate"><span class="pre">TableEvaluator._set_sample_size()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator._validate_dataframes"><code class="docutils literal notranslate"><span class="pre">TableEvaluator._validate_dataframes()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator.basic_statistical_evaluation"><code class="docutils literal notranslate"><span class="pre">TableEvaluator.basic_statistical_evaluation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator.column_correlations"><code class="docutils literal notranslate"><span class="pre">TableEvaluator.column_correlations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#table_evaluator.table_evaluator.TableEvaluator.convert_numerical"><code class="docutils literal notranslate"><span class="pre">TableEvaluator.convert_numerical()</span></code></a></li>
@@ -141,35 +137,11 @@ both datasets. Defaults to None.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator._determine_columns">
-<span class="sig-name descname"><span class="pre">_determine_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cat_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator._determine_columns" title="Link to this definition"></a></dt>
-<dd><p>Determine numerical and categorical columns based on the provided data.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator._fill_missing_values">
-<span class="sig-name descname"><span class="pre">_fill_missing_values</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator._fill_missing_values" title="Link to this definition"></a></dt>
-<dd><p>Fill missing values in the datasets.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator._set_sample_size">
-<span class="sig-name descname"><span class="pre">_set_sample_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator._set_sample_size" title="Link to this definition"></a></dt>
-<dd><p>Set the number of samples to evaluate.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator._validate_dataframes">
-<span class="sig-name descname"><span class="pre">_validate_dataframes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator._validate_dataframes" title="Link to this definition"></a></dt>
-<dd><p>Ensure that the real and fake dataframes have the same columns.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.basic_statistical_evaluation">
 <span class="sig-name descname"><span class="pre">basic_statistical_evaluation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.basic_statistical_evaluation" title="Link to this definition"></a></dt>
-<dd><p>Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman’s
-Rho. Spearman’s is used because these values can differ a lot in magnitude, and Spearman’s is more resilient to
-outliers.</p>
+<dd><p>Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman’s</p>
+<p>Rho. Spearman’s is used because these values can differ a lot in magnitude, and Spearman’s is more resilient to</p>
+<p>outliers.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>correlation coefficient</p>
@@ -194,8 +166,8 @@ outliers.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.convert_numerical">
 <span class="sig-name descname"><span class="pre">convert_numerical</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.convert_numerical" title="Link to this definition"></a></dt>
-<dd><p>Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes
-a problem with categorical columns with many values or very unbalanced values</p>
+<dd><p>Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes</p>
+<p>a problem with categorical columns with many values or very unbalanced values</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Real and fake dataframe factorized using the pandas function</p>
@@ -209,12 +181,13 @@ a problem with categorical columns with many values or very unbalanced values</p
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.convert_numerical_one_hot">
 <span class="sig-name descname"><span class="pre">convert_numerical_one_hot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.convert_numerical_one_hot" title="Link to this definition"></a></dt>
-<dd><p>Convert dataset to a numerical representations while making sure they have identical columns.
-This is sometimes a problem with categorical columns with many values or very unbalanced values</p>
+<dd><p>Convert dataset to a numerical representations while making sure they have identical columns.</p>
+<p>This is sometimes a problem with categorical columns with many values or very unbalanced values</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Real and fake dataframe with categorical columns one-hot encoded and
-binary columns factorized.</p>
+<dd class="field-odd"><p><p>Real and fake dataframe with categorical columns one-hot encoded and</p>
+<p>binary columns factorized.</p>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>Tuple[pd.DataFrame, pd.DataFrame]</p>
@@ -225,8 +198,8 @@ binary columns factorized.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.correlation_correlation">
 <span class="sig-name descname"><span class="pre">correlation_correlation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.correlation_correlation" title="Link to this definition"></a></dt>
-<dd><p>Calculate the correlation coefficient between the association matrices of self.real and self.fake using
-self.comparison_metric</p>
+<dd><p>Calculate the correlation coefficient between the association matrices of self.real and self.fake using</p>
+<p>self.comparison_metric</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The correlation coefficient</p>
@@ -254,11 +227,11 @@ self.comparison_metric</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.estimator_evaluation">
 <span class="sig-name descname"><span class="pre">estimator_evaluation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'class'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kfold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.estimator_evaluation" title="Link to this definition"></a></dt>
-<dd><p>Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
-depending on the task. Two sets are created of each of the estimators <cite>S_r</cite> and <cite>S_f</cite>, for the real and fake
-data respectively. <cite>S_f</cite> is trained on <code class="docutils literal notranslate"><span class="pre">self.real</span></code> and <cite>S_r</cite> on <code class="docutils literal notranslate"><span class="pre">self.fake</span></code>. Then, both are evaluated on
-their own and the others test set. If target_type is <code class="docutils literal notranslate"><span class="pre">regr</span></code> we do a regression on the RMSE scores with
-Pearson’s. If target_type is <code class="docutils literal notranslate"><span class="pre">class</span></code>, we calculate F1 scores and do return <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">MAPE(F1_r,</span> <span class="pre">F1_f)</span></code>.</p>
+<dd><p>Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,</p>
+<p>depending on the task. Two sets are created of each of the estimators <cite>S_r</cite> and <cite>S_f</cite>, for the real and fake</p>
+<p>data respectively. <cite>S_f</cite> is trained on <code class="docutils literal notranslate"><span class="pre">self.real</span></code> and <cite>S_r</cite> on <code class="docutils literal notranslate"><span class="pre">self.fake</span></code>. Then, both are evaluated on</p>
+<p>their own and the others test set. If target_type is <code class="docutils literal notranslate"><span class="pre">regr</span></code> we do a regression on the RMSE scores with</p>
+<p>Pearson’s. If target_type is <code class="docutils literal notranslate"><span class="pre">class</span></code>, we calculate F1 scores and do return <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">MAPE(F1_r,</span> <span class="pre">F1_f)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -279,25 +252,30 @@ Pearson’s. If target_type is <code class="docutils literal notranslate"><span 
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.evaluate">
 <span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'class'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_samples_distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kfold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notebook</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_outputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.evaluate" title="Link to this definition"></a></dt>
-<dd><p>Determine correlation between attributes from the real and fake dataset using a given metric.
-All metrics from scipy.stats are available.</p>
+<dd><p>Determine correlation between attributes from the real and fake dataset using a given metric.</p>
+<p>All metrics from scipy.stats are available.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>target_col</strong> (<em>str</em>) – Column to use for predictions with estimators.</p></li>
-<li><p><strong>target_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of task to perform on the target_col. Can be either “class” for
-classification or “regr” for regression. Defaults to “class”.</p></li>
-<li><p><strong>metric</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Overwrites self.metric. Scoring metric for the attributes.
-By default Pearson’s r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or
-Kendall Tau (scipy.stats.kendalltau). Defaults to None.</p></li>
-<li><p><strong>n_samples_distance</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of samples to take for the row distance. See
-documentation of <code class="docutils literal notranslate"><span class="pre">tableEvaluator.row_distance</span></code> for details. Defaults to 20000.</p></li>
-<li><p><strong>kfold</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20%
-of the data if set to False. Defaults to False.</p></li>
+<li><p><strong>target_type</strong> (<em>str</em><em>, </em><em>optional</em>) – <p>Type of task to perform on the target_col. Can be either “class” for</p>
+<p>classification or “regr” for regression. Defaults to “class”.</p>
+</p></li>
+<li><p><strong>metric</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – <p>Overwrites self.metric. Scoring metric for the attributes.</p>
+<p>By default Pearson’s r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or</p>
+<p>Kendall Tau (scipy.stats.kendalltau). Defaults to None.</p>
+</p></li>
+<li><p><strong>n_samples_distance</strong> (<em>int</em><em>, </em><em>optional</em>) – <p>The number of samples to take for the row distance. See</p>
+<p>documentation of <code class="docutils literal notranslate"><span class="pre">tableEvaluator.row_distance</span></code> for details. Defaults to 20000.</p>
+</p></li>
+<li><p><strong>kfold</strong> (<em>bool</em><em>, </em><em>optional</em>) – <p>Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20%</p>
+<p>of the data if set to False. Defaults to False.</p>
+</p></li>
 <li><p><strong>notebook</strong> (<em>bool</em><em>, </em><em>optional</em>) – Better visualization of the results in a python notebook. Defaults to False.</p></li>
 <li><p><strong>verbose</strong> (<em>bool</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Whether to print verbose logging. Defaults to None.</p></li>
-<li><p><strong>return_outputs</strong> (<em>bool</em><em>, </em><em>optional</em>) – Will omit printing and instead return a dictionary with all results.
-Defaults to False.</p></li>
+<li><p><strong>return_outputs</strong> (<em>bool</em><em>, </em><em>optional</em>) – <p>Will omit printing and instead return a dictionary with all results.</p>
+<p>Defaults to False.</p>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -324,10 +302,10 @@ Defaults to False.</p></li>
 <dd class="field-odd"><p><strong>return_len</strong> (<em>bool</em>) – Whether to return the length of the copied rows or not.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Dataframe containing the duplicates if return_len=False,</dt><dd><p>else integer indicating the number of copied rows.</p>
-</dd>
-</dl>
+<dd class="field-even"><p><p>Dataframe containing the duplicates if return_len=False,</p>
+<blockquote>
+<div><p>else integer indicating the number of copied rows.</p>
+</div></blockquote>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -342,12 +320,14 @@ Defaults to False.</p></li>
 <dd><p>Return duplicates within each dataset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>return_values</strong> (<em>bool</em>) – Whether to return the duplicate values in the datasets.
-If False, the lengths are returned.</p>
+<dd class="field-odd"><p><strong>return_values</strong> (<em>bool</em>) – <p>Whether to return the duplicate values in the datasets.</p>
+<p>If False, the lengths are returned.</p>
+</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>If return_values is True, returns a tuple of DataFrames with duplicates.
-If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.</p>
+<dd class="field-even"><p><p>If return_values is True, returns a tuple of DataFrames with duplicates.</p>
+<p>If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.</p>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]</p>
@@ -358,8 +338,8 @@ If return_values is False, returns a tuple of integers representing the lengths 
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.pca_correlation">
 <span class="sig-name descname"><span class="pre">pca_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lingress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.pca_correlation" title="Link to this definition"></a></dt>
-<dd><p>Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent
-implementation the MAPE(log) is used instead of regressions like Pearson’s r.</p>
+<dd><p>Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent</p>
+<p>implementation the MAPE(log) is used instead of regressions like Pearson’s r.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>lingress</strong> (<em>bool</em>) – Whether to use a linear regression, in this case Pearson’s.</p>
@@ -391,42 +371,46 @@ implementation the MAPE(log) is used instead of regressions like Pearson’s r.<
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.plot_cumsums">
 <span class="sig-name descname"><span class="pre">plot_cumsums</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nr_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PathLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.plot_cumsums" title="Link to this definition"></a></dt>
-<dd><p>Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length
-of the labels. Each plot contains the
-values of a real columns and the corresponding fake column.</p>
-<dl class="simple">
-<dt>Params:</dt><dd><p>fname str: If not none, saves the plot with this file name.</p>
-</dd>
-</dl>
+<dd><p>Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length</p>
+<p>of the labels. Each plot contains the</p>
+<p>values of a real columns and the corresponding fake column.</p>
+<p>Params:</p>
+<blockquote>
+<div><p>fname str: If not none, saves the plot with this file name.</p>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.plot_distributions">
 <span class="sig-name descname"><span class="pre">plot_distributions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nr_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PathLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.plot_distributions" title="Link to this definition"></a></dt>
-<dd><p>Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales
-with the length of the labels. Each plot
-contains the values of a real columns and the corresponding fake column.</p>
-<dl class="simple">
-<dt>Params:</dt><dd><p>fname (str, Optional): If not none, saves the plot with this file name.</p>
-</dd>
-</dl>
+<dd><p>Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales</p>
+<p>with the length of the labels. Each plot</p>
+<p>contains the values of a real columns and the corresponding fake column.</p>
+<p>Params:</p>
+<blockquote>
+<div><p>fname (str, Optional): If not none, saves the plot with this file name.</p>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.plot_mean_std">
 <span class="sig-name descname"><span class="pre">plot_mean_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.plot_mean_std" title="Link to this definition"></a></dt>
 <dd><p>Class wrapper function for plotting the mean and std using <cite>plots.plot_mean_std</cite>.</p>
-<dl class="simple">
-<dt>Params:</dt><dd><p>fname (str, Optional): If not none, saves the plot with this file name.</p>
-</dd>
-</dl>
+<p>Params:</p>
+<blockquote>
+<div><p>fname (str, Optional): If not none, saves the plot with this file name.</p>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.plot_pca">
 <span class="sig-name descname"><span class="pre">plot_pca</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PathLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.plot_pca" title="Link to this definition"></a></dt>
-<dd><p>Plot the first two components of a PCA of real and fake data.
-:param fname: If not none, saves the plot with this file name.</p>
+<dd><p>Plot the first two components of a PCA of real and fake data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fname</strong> – If not none, saves the plot with this file name.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -457,8 +441,8 @@ contains the values of a real columns and the corresponding fake column.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="table_evaluator.table_evaluator.TableEvaluator.visual_evaluation">
 <span class="sig-name descname"><span class="pre">visual_evaluation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PathLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#table_evaluator.table_evaluator.TableEvaluator.visual_evaluation" title="Link to this definition"></a></dt>
-<dd><p>Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums,
-correlation differences and the PCA transform.</p>
+<dd><p>Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums,</p>
+<p>correlation differences and the PCA transform.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
