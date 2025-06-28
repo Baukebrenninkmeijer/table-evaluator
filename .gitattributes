@@ -1,0 +1,57 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text eol=lf
+
+# Config files
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.rst text eol=lf
+*.txt text eol=lf
+
+# Jupyter notebooks (don't auto-convert line endings)
+*.ipynb text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.mp3 binary
+*.wav binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+*.gz binary
+*.rar binary
+*.7z binary
+
+# Data files
+*.csv text eol=lf
+*.tsv text eol=lf
+*.parquet binary
+*.arrow binary
+
+# Linguist overrides
+docs/* linguist-documentation
+tests/* linguist-test-file
+*.ipynb linguist-documentation

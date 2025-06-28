@@ -1,21 +1,56 @@
-repos: 
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: debug-statements
+      - id: check-docstring-first
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
   - repo: https://github.com/python-poetry/poetry
     rev: '1.8.1'
     hooks:
-    -   id: poetry-check
-    -   id: poetry-lock
+      - id: poetry-check
+      - id: poetry-lock
+        args: ["--no-update"]
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.4
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
   - repo: local
-    hooks: 
-    - id: generate_docs
-      name: generate docs
-      entry: sphinx-build
-      args: [-M, html, docs/source, docs/build]
-      language: python
-      pass_filenames: false
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: poetry run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: generate_docs
+        name: generate docs
+        entry: sphinx-build
+        args: [-M, html, docs/source, docs/build]
+        language: python
+        pass_filenames: false
+        files: ^docs/

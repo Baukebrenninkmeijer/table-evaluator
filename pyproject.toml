@@ -41,34 +41,96 @@ m2r2 = "^0.3.3.post2"
 sphinx-rtd-theme = "^2.0.0"
 pytest = "^8.3.2"
 ipywidgets = "^8.1.5"
+pytest-cov = "^4.0.0"
+bandit = "^1.7.5"
+safety = "^2.3.0"
+mypy = "^1.8.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-
 [tool.ruff]
 line-length = 120
-lint.select = [
-    "I001", # Isort rules
-    "N",
-    "A",    # prevent using keywords that clobber python builtins
-    "B",    # bugbear: security warnings
-    "E",    # pycodestyle
-    "F",    # pyflakes
-    "ISC",  # implicit string concatenation
-    "UP",   # alert you when better syntax is available in your python version
-    "RUF",  # the ruff developer's own rules
-    ]
-lint.ignore = ["B018", "B023"]
+target-version = "py310"
 src = ["table_evaluator"]
-format.quote-style = "single"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "A",    # prevent using keywords that clobber python builtins
+    "B",    # flake8-bugbear: security warnings
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ISC",  # implicit string concatenation
+    "RUF",  # the ruff developer's own rules
+    "SIM",  # flake8-simplify
+    "ARG001", # unused-function-args
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+    "B008",  # do not perform function calls in argument defaults
+    "B018",  # found useless expression
+    "B023",  # function definition does not bind loop variable
+    "W191",  # indentation contains tabs
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-source-first-line = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
 
 [tool.mypy]
-exclude = [
-]
 python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
 
 [[tool.mypy.overrides]]
-module = [""]
+module = ["*"]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["table_evaluator"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\bProtocol\):",
+    "@(abc\.)?abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B601"]
