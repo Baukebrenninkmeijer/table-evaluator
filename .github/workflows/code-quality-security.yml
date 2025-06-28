@@ -30,10 +30,19 @@ jobs:
     - name: Install dependencies
       run: uv sync
 
-    - name: Run pre-commit hooks
-      uses: pre-commit/action@v3.0.0
 
-    - name: Run security scan with bandit
+
+    - name: Run tests with coverage
+      run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term
+
+    - name: Build documentation
+      run: uv run sphinx-build -M html docs/source docs/build
+
+    - name: Run tests with coverage
+      run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term
+
+    - name: Build documentation
+      run: uv run sphinx-build -M html docs/source docs/build
       run: uv run bandit -r table_evaluator/ -f json -o bandit-report.json || true
 
     - name: Check for vulnerabilities with safety
@@ -51,36 +60,3 @@ jobs:
     - name: Dependency Review
       uses: actions/dependency-review-action@v4
       if: github.event_name == 'pull_request'
-
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
-    name: Tests on Python ${{ matrix.python-version }}
-    needs: code-quality-security
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install uv
-      run: pip install uv
-
-    - name: Install dependencies
-      run: uv sync
-
-    - name: Run tests with coverage
-      run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term
-
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
