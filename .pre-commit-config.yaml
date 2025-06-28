@@ -30,13 +30,15 @@ repos:
     hooks:
       - id: pytest-check
         name: pytest-check
-        entry: .venv/bin/pytest
+        entry: pytest
+        additional_dependencies: ["uv"]
         language: system
         pass_filenames: false
         always_run: true
       - id: generate_docs
         name: generate docs
-        entry: .venv/bin/sphinx-build
+        entry: sphinx-build
+        additional_dependencies: ["uv"]
         args: [-M, html, docs/source, docs/build]
         language: python
         pass_filenames: false
