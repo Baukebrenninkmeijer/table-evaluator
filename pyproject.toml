@@ -29,7 +29,7 @@ dependencies = [
     "pre-commit==3.8.0",
     "ipython==8.28.0",
     "pytest==8.3.2",
-    "sphinx==8.2.3",
+    "sphinx==7.3.1",
     "pytest-cov==4.0.0",
     "pytest-mock==3.14.0",
     "m2r2==0.3.3.post2",
