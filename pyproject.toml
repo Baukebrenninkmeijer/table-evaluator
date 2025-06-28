@@ -16,7 +16,6 @@ classifiers = [
     'Programming Language :: Python :: 3 :: Only',
     "Operating System :: OS Independent",
 ]
-packages = ["table_evaluator"]
 dependencies = [
     "pyarrow==17.0.0",
     "scikit-learn==1.5.1",
@@ -39,7 +38,9 @@ dependencies = [
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.pytest.ini_options]
+
+[tool.setuptools.packages]
+find = { }
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
