@@ -17,6 +17,8 @@ from pathlib import Path
 
 import tomllib
 
+import importlib.metadata
+
 # sys.path.insert(0, os.path.abspath('.'))
 project_base_path = Path(__file__).parents[2]
 sys.path.insert(0, project_base_path.as_posix())
@@ -28,7 +30,7 @@ copyright = f'{datetime.now().year}, Bauke Brenninkmeijer'  # noqa: A001
 author = 'Bauke Brenninkmeijer'
 
 # The full version, including alpha/beta/rc tags
-release = tomllib.loads(Path(project_base_path / 'pyproject.toml').read_text())['tool']['poetry']['version']
+release = importlib.metadata.version('table-evaluator')
 
 
 # -- General configuration ---------------------------------------------------
