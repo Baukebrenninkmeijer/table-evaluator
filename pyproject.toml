@@ -41,6 +41,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages]
 find = { }
+
+
+[tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
