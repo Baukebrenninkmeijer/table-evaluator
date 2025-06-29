@@ -4,7 +4,7 @@ from typing import Callable, List
 
 import numpy as np
 import pandas as pd
-from dython.nominal import associations
+from table_evaluator.association_metrics import associations
 from scipy import stats
 from sklearn.decomposition import PCA
 

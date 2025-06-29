@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from dython.nominal import cramers_v, theils_u
+from table_evaluator.association_metrics import cramers_v, theils_u
 from joblib import Parallel, delayed
 from scipy.spatial.distance import jensenshannon
 from scipy.stats import ks_2samp

@@ -244,7 +244,7 @@ def test_correlation_correlation(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch("table_evaluator.table_evaluator.associations") as mock_associations:
+    with patch("table_evaluator.association_metrics.associations") as mock_associations:
         mock_associations.return_value = {"corr": pd.DataFrame(np.random.rand(4, 4))}
         correlation = evaluator.correlation_correlation()
         assert isinstance(correlation, float)

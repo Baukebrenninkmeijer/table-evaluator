@@ -414,25 +414,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dython"
-version = "0.7.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "psutil" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "seaborn" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2d/6b/51aaf4da12a2fd05e6d973cfade6ee2310272106023e6618352218df0cb6/dython-0.7.7.tar.gz", hash = "sha256:0d7a17d214a0a916dffbf39c9e7114fb458f7b0574dab24a301c4dd34188edb2", size = 26941, upload-time = "2024-08-31T21:55:13.859Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/d0/c1a119ac5e256f9f9ab40bc31be1c1fa1ed2646e01d894cc96cdbcdc4aae/dython-0.7.7-py3-none-any.whl", hash = "sha256:70c29e4724486f7881814d941ead55347521359d712b08937b91a24f51efbf82", size = 26674, upload-time = "2024-08-31T21:55:12.121Z" },
-]
-
-[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1525,15 +1506,6 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "80.9.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1678,7 +1650,6 @@ name = "table-evaluator"
 version = "1.8.0"
 source = { editable = "." }
 dependencies = [
-    { name = "dython" },
     { name = "ipython" },
     { name = "m2r2" },
     { name = "matplotlib" },
@@ -1707,7 +1678,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dython", specifier = "==0.7.7" },
     { name = "ipython", specifier = "==8.28.0" },
     { name = "m2r2", specifier = "==0.3.3.post2" },
     { name = "matplotlib", specifier = "==3.9.2" },

@@ -4,7 +4,7 @@ import logging
 from typing import List, Tuple
 
 import pandas as pd
-from dython.nominal import numerical_encoding
+# Removed dython dependency - using native implementation
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +72,11 @@ class DataConverter:
         # Remove duplicates while preserving order
         categorical_cols = list(dict.fromkeys(categorical_cols))
 
-        # Apply one-hot encoding
-        real_encoded: pd.DataFrame = numerical_encoding(
-            real, nominal_columns=categorical_cols
-        ).astype(float)
+        # Apply one-hot encoding using native implementation
+        real_encoded = DataConverter._numerical_encoding(real, categorical_cols)
         real_encoded = real_encoded.sort_index(axis=1)
 
-        fake_encoded: pd.DataFrame = numerical_encoding(
-            fake, nominal_columns=categorical_cols
-        ).astype(float)
+        fake_encoded = DataConverter._numerical_encoding(fake, categorical_cols)
 
         # Ensure both datasets have the same columns
         all_columns = sorted(set(real_encoded.columns) | set(fake_encoded.columns))
@@ -101,6 +97,23 @@ class DataConverter:
         fake_encoded = fake_encoded[all_columns]
 
         return real_encoded, fake_encoded
+
+    @staticmethod
+    def to_numerical_one_hot(
+        real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: List[str]
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Alias for to_one_hot for backward compatibility.
+
+        Args:
+            real: Real dataset
+            fake: Synthetic dataset
+            categorical_columns: List of categorical column names
+
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: One-hot encoded real and fake datasets
+        """
+        return DataConverter.to_one_hot(real, fake, categorical_columns)
 
     @staticmethod
     def ensure_compatible_columns(
@@ -128,3 +141,33 @@ class DataConverter:
         common_columns.sort()
 
         return real[common_columns].copy(), fake[common_columns].copy()
+
+    @staticmethod
+    def _numerical_encoding(
+        df: pd.DataFrame, nominal_columns: List[str]
+    ) -> pd.DataFrame:
+        """
+        Convert a DataFrame to numerical encoding using one-hot encoding for categorical columns.
+
+        This is a native implementation to replace dython.nominal.numerical_encoding.
+
+        Args:
+            df: DataFrame to encode
+            nominal_columns: List of column names to treat as categorical
+
+        Returns:
+            pd.DataFrame: Numerically encoded DataFrame
+        """
+        result_df = df.copy()
+
+        # Apply one-hot encoding to categorical columns
+        for col in nominal_columns:
+            if col in result_df.columns:
+                # Use pandas get_dummies for one-hot encoding
+                encoded = pd.get_dummies(result_df[col], prefix=col, dummy_na=False)
+
+                # Drop the original column and add the encoded columns
+                result_df = result_df.drop(columns=[col])
+                result_df = pd.concat([result_df, encoded], axis=1)
+
+        return result_df.astype(float)

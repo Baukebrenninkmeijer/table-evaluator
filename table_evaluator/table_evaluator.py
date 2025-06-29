@@ -5,7 +5,8 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from dython.nominal import associations, numerical_encoding
+from table_evaluator.association_metrics import associations
+from table_evaluator.data.data_converter import DataConverter
 from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import f1_score, jaccard_score
@@ -488,18 +489,15 @@ class TableEvaluator:
             + self.real.select_dtypes("bool").columns.tolist()
             + self.fake.select_dtypes("bool").columns.tolist()
         )
-        real: pd.DataFrame = numerical_encoding(
-            self.real, nominal_columns=cat_cols
-        ).astype(float)  # type: ignore
+        converter = DataConverter()
+        real, fake = converter.to_numerical_one_hot(self.real, self.fake, cat_cols)
         real = real.sort_index(axis=1)
-        fake: pd.DataFrame = numerical_encoding(
-            self.fake, nominal_columns=cat_cols
-        ).astype(float)  # type: ignore
+        fake = fake.sort_index(axis=1)
+
         for col in real.columns:
             if col not in fake:
                 logger.warning(f"Adding column {col} with all 0s")
                 fake[col] = 0.0
-        fake = fake.sort_index(axis=1)
 
         # Cast True/False columns to 0/1.
         # bool_cols = real.select_dtypes("bool").columns
