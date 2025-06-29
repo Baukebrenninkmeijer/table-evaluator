@@ -26,7 +26,7 @@ def load_data(
         try:
             fake = fake.drop(columns=drop_columns)
         except KeyError:
-            ValueError(f'Some of {drop_columns} were not found in the fake dataset: {fake.columns}.')
+            ValueError(f'Some of {drop_columns} were not found on fake.index.')
         if len(fake.columns.tolist()) != len(real.columns.tolist()):
             raise ValueError(
                 f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
@@ -42,3 +42,65 @@ def load_data(
 
 def dict_to_df(data: Dict[str, Any]):
     return pd.DataFrame({'result': list(data.values())}, index=list(data.keys()))
+
+def _preprocess_data(
+    real: pd.DataFrame,
+    fake: pd.DataFrame,
+    cat_cols=None,
+    unique_thresh=0,
+    n_samples=None,
+    seed=1337,
+) -> Tuple[pd.DataFrame, pd.DataFrame, List[str], List[str]]:
+    # Make sure columns and their order are the same.
+    if len(real.columns) == len(fake.columns):
+        fake = fake[real.columns.tolist()]
+    assert (
+        real.columns.tolist() == fake.columns.tolist()
+    ), "Columns in real and fake dataframe are not the same"
+
+    if cat_cols is None:
+        real = real.infer_objects()
+        fake = fake.infer_objects()
+        numerical_columns = [
+            column
+            for column in real.select_dtypes(include="number").columns
+            if len(real[column].unique()) > unique_thresh
+        ]
+        categorical_columns = [
+            column for column in real.columns if column not in numerical_columns
+        ]
+    else:
+        categorical_columns = cat_cols
+        numerical_columns = [
+            column for column in real.columns if column not in cat_cols
+        ]
+
+    # Make sure the number of samples is equal in both datasets.
+    if n_samples is None:
+        n_samples = min(len(real), len(fake))
+    elif len(fake) >= n_samples and len(real) >= n_samples:
+        n_samples = n_samples
+    else:
+        raise Exception(
+            f"Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}"
+        )
+
+    real = real.sample(n_samples, random_state=seed)
+    fake = fake.sample(n_samples, random_state=seed)
+    assert len(real) == len(fake), "len(real) != len(fake)"
+
+    real.loc[:, categorical_columns] = (
+        real.loc[:, categorical_columns].fillna("[NAN]").astype(str)
+    )
+    fake.loc[:, categorical_columns] = (
+        fake.loc[:, categorical_columns].fillna("[NAN]").astype(str)
+    )
+
+    real.loc[:, numerical_columns] = real.loc[
+        :, numerical_columns
+    ].fillna(real[numerical_columns].mean())
+    fake.loc[:, numerical_columns] = fake.loc[
+        :, numerical_columns
+    ].fillna(fake[numerical_columns].mean())
+
+    return real, fake, numerical_columns, categorical_columns

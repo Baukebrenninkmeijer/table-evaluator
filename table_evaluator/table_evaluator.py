@@ -32,7 +32,7 @@ from table_evaluator.metrics import (
 )
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
-from table_evaluator.utils import dict_to_df
+from table_evaluator.utils import dict_to_df, _preprocess_data
 
 logger = logging.getLogger(__name__)
 
@@ -87,80 +87,43 @@ class TableEvaluator:
         self.sample = sample
         self.infer_types = infer_types
 
-        self._validate_dataframes()
-        self.numerical_columns, self.categorical_columns = self._determine_columns(cat_cols)
-
-        self.n_samples = self._set_sample_size(n_samples)
-        if sample:
-            self.real = self.real.sample(self.n_samples, random_state=self.random_seed)
-            self.fake = self.fake.sample(self.n_samples, random_state=self.random_seed)
-
-        self._fill_missing_values()
-
-    def _validate_dataframes(self):
-        """Ensure that the real and fake dataframes have the same columns."""
-        if len(self.real.columns) != len(self.fake.columns):
-            raise ValueError('Columns in real and fake dataframe are not the same')
-        self.fake = self.fake[self.real.columns.tolist()]
-
-    def _determine_columns(self, cat_cols: Optional[List[str]]) -> Tuple[List[str], List[str]]:
-        """Determine numerical and categorical columns based on the provided data."""
-        if cat_cols is None:
-            if self.infer_types:
-                self.real = self.real.infer_objects()
-                self.fake = self.fake.infer_objects()
-            numerical_columns = [
-                column
-                for column in self.real.select_dtypes(include='number').columns
-                if self.real[column].nunique() > self.unique_thresh
-            ]
-            categorical_columns = [column for column in self.real.columns if column not in numerical_columns]
-        else:
-            categorical_columns = cat_cols
-            numerical_columns = [column for column in self.real.columns if column not in cat_cols]
-        return numerical_columns, categorical_columns
-
-    def _set_sample_size(self, n_samples: Optional[int]) -> int:
-        """Set the number of samples to evaluate."""
-        if n_samples is None:
-            return min(len(self.real), len(self.fake))
-        elif len(self.fake) >= n_samples and len(self.real) >= n_samples:
-            return n_samples
-        else:
-            raise ValueError(
-                f'Make sure n_samples < len(fake/real). len(real): {len(self.real)}, len(fake): {len(self.fake)}'
-            )
-
-    def _fill_missing_values(self):
-        """Fill missing values in the datasets."""
-        self.real[self.categorical_columns] = self.real[self.categorical_columns].astype(str).fillna('[NAN]')
-        self.fake[self.categorical_columns] = self.fake[self.categorical_columns].astype(str).fillna('[NAN]')
-
-        self.real[self.numerical_columns] = self.real[self.numerical_columns].fillna(
-            self.real[self.numerical_columns].mean()
+        self.real, self.fake, self.numerical_columns, self.categorical_columns = _preprocess_data(
+            real=self.real,
+            fake=self.fake,
+            cat_cols=cat_cols,
+            unique_thresh=unique_thresh,
+            n_samples=n_samples,
+            seed=seed,
         )
-        self.fake[self.numerical_columns] = self.fake[self.numerical_columns].fillna(
-            self.fake[self.numerical_columns].mean()
-        )
+        self.n_samples = len(self.real)
 
     def plot_mean_std(self, fname=None, show: bool = True):
         """
         Class wrapper function for plotting the mean and std using `plots.plot_mean_std`.
 
         Params:
+
             fname (str, Optional): If not none, saves the plot with this file name.
+
         """
+
         plot_mean_std(self.real, self.fake, fname=fname, show=show)
 
     def plot_cumsums(self, nr_cols=4, fname: PathLike | None = None, show: bool = True):
         """
+
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length
+
         of the labels. Each plot contains the
+
         values of a real columns and the corresponding fake column.
 
         Params:
+
             fname str: If not none, saves the plot with this file name.
+
         """
+
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
         nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
@@ -197,13 +160,19 @@ class TableEvaluator:
 
     def plot_distributions(self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True):
         """
+
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales
+
         with the length of the labels. Each plot
+
         contains the values of a real columns and the corresponding fake column.
 
         Params:
+
             fname (str, Optional): If not none, saves the plot with this file name.
+
         """
+
         nr_charts = len(self.real.columns)
         nr_rows = max(1, nr_charts // nr_cols)
         nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
@@ -279,29 +248,46 @@ class TableEvaluator:
 
     def plot_correlation_difference(self, plot_diff=True, fname=None, show: bool = True, **kwargs):
         """
+
         Plot the association matrices for each table and, if chosen, the difference between them.
 
         :param plot_diff: whether to plot the difference
+
         :param fname: If not none, saves the plot with this file name.
+
         :param kwargs: kwargs for sns.heatmap
+
         """
+
         plot_correlation_difference(
+
             self.real,
+
             self.fake,
+
             cat_cols=self.categorical_columns,
+
             plot_diff=plot_diff,
+
             fname=fname,
+
             show=show,
+
             **kwargs,
+
         )
 
     def correlation_distance(self, how: str = 'euclidean') -> float:
         """
+
         Calculate distance between correlation matrices with certain metric.
 
         :param how: metric to measure distance. Choose from [``euclidean``, ``mae``, ``rmse``].
+
         :return: distance between the association matrices in the chosen evaluation metric. Default: Euclidean
+
         """
+
         from scipy.spatial.distance import cosine
 
         if how == 'euclidean':
@@ -320,24 +306,38 @@ class TableEvaluator:
             raise ValueError('`how` parameter must be in [euclidean, mae, rmse]')
 
         real_corr = associations(
+
             self.real,
+
             nominal_columns=self.categorical_columns,
+
             nom_nom_assoc='theil',
+
             compute_only=True,
+
         )['corr']  # type: ignore
         fake_corr = associations(
+
             self.fake,
+
             nominal_columns=self.categorical_columns,
+
             nom_nom_assoc='theil',
+
             compute_only=True,
+
         )['corr']  # type: ignore
         return distance_func(real_corr.values, fake_corr.values)  # type: ignore
 
     def plot_pca(self, fname: PathLike | None = None, show: bool = True):
         """
+
         Plot the first two components of a PCA of real and fake data.
+
         :param fname: If not none, saves the plot with this file name.
+
         """
+
         real, fake = self.convert_numerical()
 
         pca_r = PCA(n_components=2)
@@ -362,15 +362,21 @@ class TableEvaluator:
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
         """
+
         Check whether any real values occur in the fake data.
 
         Args:
+
             return_len (bool): Whether to return the length of the copied rows or not.
 
         Returns:
+
             Union[pd.DataFrame, int]: Dataframe containing the duplicates if return_len=False,
+
                 else integer indicating the number of copied rows.
+
         """
+
         real_hashes = self.real.apply(lambda x: hash(tuple(x)), axis=1)
         fake_hashes = self.fake.apply(lambda x: hash(tuple(x)), axis=1)
 
@@ -389,17 +395,25 @@ class TableEvaluator:
 
     def get_duplicates(self, return_values: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame] | Tuple[int, int]:
         """
+
         Return duplicates within each dataset.
 
         Args:
+
             return_values (bool): Whether to return the duplicate values in the datasets.
+
                 If False, the lengths are returned.
 
         Returns:
+
             Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]:
+
                 If return_values is True, returns a tuple of DataFrames with duplicates.
+
                 If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.
+
         """
+
         real_duplicates = self.real[self.real.duplicated(keep=False)]
         fake_duplicates = self.fake[self.fake.duplicated(keep=False)]
         if return_values:
@@ -408,16 +422,23 @@ class TableEvaluator:
             return len(real_duplicates), len(fake_duplicates)
 
     def pca_correlation(self, lingress: bool = False):
+
         """
+
         Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent
+
         implementation the MAPE(log) is used instead of regressions like Pearson's r.
 
         Args:
+
             lingress (bool): Whether to use a linear regression, in this case Pearson's.
 
         Returns:
+
             float: The correlation coefficient if lingress=True, otherwise 1 - MAPE(log(real), log(fake)).
+
         """
+
         self.pca_r = PCA(n_components=5)
         self.pca_f = PCA(n_components=5)
 
@@ -443,8 +464,11 @@ class TableEvaluator:
             return 1 - pca_error
 
     def fit_estimators(self):
+
         """
+
         Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
+
         """
 
         if self.verbose:
@@ -462,11 +486,15 @@ class TableEvaluator:
             c.fit(self.fake_x_train, self.fake_y_train)
 
     def score_estimators(self):
+
         """
+
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
 
         :return: dataframe with the results for each estimator on each data test set.
+
         """
+
         if self.target_type == 'class':
             rows = []
             for r_classifier, f_classifier, estimator_name in zip(
@@ -511,18 +539,27 @@ class TableEvaluator:
         return results
 
     def visual_evaluation(self, save_dir: PathLike | None = None, show: bool = True, **kwargs):
+
         """
+
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums,
+
         correlation differences and the PCA transform.
 
         Args:
+
             save_dir (str | None): Directory path to save images.
+
             show (bool): Whether to display the plots.
+
             **kwargs: Additional keyword arguments for matplotlib.
 
         Returns:
+
             None
+
         """
+
         if save_dir is None:
             self.plot_mean_std(show=show)
             self.plot_cumsums(show=show)
@@ -540,14 +577,21 @@ class TableEvaluator:
             self.plot_pca(fname=save_dir / 'pca.png', show=show)
 
     def basic_statistical_evaluation(self) -> float:
+
         """
+
         Calculate the correlation coefficient between the basic properties of self.real and self.fake using Spearman's
+
         Rho. Spearman's is used because these values can differ a lot in magnitude, and Spearman's is more resilient to
+
         outliers.
 
         Returns:
+
             float: correlation coefficient
+
         """
+
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
@@ -574,13 +618,19 @@ class TableEvaluator:
         return corr
 
     def correlation_correlation(self) -> float:
+
         """
+
         Calculate the correlation coefficient between the association matrices of self.real and self.fake using
+
         self.comparison_metric
 
         Returns:
+
             float: The correlation coefficient
+
         """
+
         total_metrics = pd.DataFrame()
         for ds_name in ['real', 'fake']:
             ds = getattr(self, ds_name)
@@ -604,12 +654,17 @@ class TableEvaluator:
 
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
+
         Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes
+
         a problem with categorical columns with many values or very unbalanced values
 
         Returns:
+
             Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe factorized using the pandas function
+
         """
+
         real = self.real
         fake = self.fake
         for c in self.categorical_columns:
@@ -621,17 +676,27 @@ class TableEvaluator:
 
     def convert_numerical_one_hot(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
+
         Convert dataset to a numerical representations while making sure they have identical columns.
+
         This is sometimes a problem with categorical columns with many values or very unbalanced values
 
         Returns:
+
             Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe with categorical columns one-hot encoded and
+
             binary columns factorized.
+
         """
+
         cat_cols = (
+
             self.categorical_columns
+
             + self.real.select_dtypes('bool').columns.tolist()
+
             + self.fake.select_dtypes('bool').columns.tolist()
+
         )
         real: pd.DataFrame = numerical_encoding(self.real, nominal_columns=cat_cols).astype(float)  # type: ignore
         real = real.sort_index(axis=1)
@@ -651,20 +716,31 @@ class TableEvaluator:
 
     def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
         """
+
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
+
         depending on the task. Two sets are created of each of the estimators `S_r` and `S_f`, for the real and fake
+
         data respectively. `S_f` is trained on ``self.real`` and `S_r` on ``self.fake``. Then, both are evaluated on
+
         their own and the others test set. If target_type is ``regr`` we do a regression on the RMSE scores with
+
         Pearson's. If target_type is ``class``, we calculate F1 scores and do return ``1 - MAPE(F1_r, F1_f)``.
 
         Args:
+
             target_col (str): The column to be considered as the target for both regression and classification tasks.
+
             target_type (str): The type of task. Can be either "class" or "regr".
+
             kfold (bool): If True, performs 5-fold CV. If False, trains on 80% and tests on 20% of the data once.
 
         Returns:
+
             float: Correlation value or 1 - MAPE.
+
         """
+
         self.target_col = target_col
         self.target_type = target_type
 
@@ -675,34 +751,53 @@ class TableEvaluator:
         fake_x = fake.drop([target_col], axis=1)
 
         assert (
+
             real_x.columns.tolist() == fake_x.columns.tolist()
+
         ), f'real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}'
 
         real_y = real[target_col]
         fake_y = fake[target_col]
 
         # For reproducibilty:
+
         np.random.seed(self.random_seed)
 
         if target_type == 'regr':
             self.estimators = [
+
                 RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42),
+
                 Lasso(random_state=42),
+
                 Ridge(alpha=1.0, random_state=42),
+
                 ElasticNet(random_state=42),
+
             ]
         elif target_type == 'class':
             self.estimators = [
+
                 LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=500, random_state=42),
+
                 RandomForestClassifier(n_estimators=10, random_state=42),
+
                 DecisionTreeClassifier(random_state=42),
+
                 MLPClassifier(
+
                     [50, 50],
+
                     solver='adam',
+
                     activation='relu',
+
                     learning_rate='adaptive',
+
                     random_state=42,
+
                 ),
+
             ]
         else:
             raise ValueError("target_type must be 'regr' or 'class'")
@@ -710,6 +805,7 @@ class TableEvaluator:
         self.estimator_names = [type(clf).__name__ for clf in self.estimators]
 
         # K Fold
+
         kf = KFold(n_splits=5)
         res = []
         for train_index, test_index in kf.split(real_y):
@@ -733,6 +829,7 @@ class TableEvaluator:
             res.append(self.score_estimators())
 
             # Break the loop if we don't want the kfold
+
             if not kfold:
                 break
         print(res)
@@ -754,11 +851,15 @@ class TableEvaluator:
 
     def row_distance(self, n_samples: int | None = None) -> Tuple[np.number, np.number]:
         """
+
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
 
         :param n_samples: Number of samples to take for evaluation. Compute time increases exponentially.
+
         :return: `(mean, std)` of these distances.
+
         """
+
         if n_samples is None:
             n_samples = len(self.real)
 
@@ -785,10 +886,13 @@ class TableEvaluator:
         return min_mean, min_std
 
     def column_correlations(self):
+
         """
+
         Wrapper function around `metrics.column_correlation`.
 
         :return: Column correlations between ``self.real`` and ``self.fake``.
+
         """
 
         real, fake = self.convert_numerical()
@@ -796,123 +900,117 @@ class TableEvaluator:
         return column_correlations(real, fake, self.categorical_columns)
 
     def evaluate(
+
         self,
+
         target_col: str,
+
         target_type: str = 'class',
+
         metric: str | None = None,
+
         verbose: bool | None = None,
+
         n_samples_distance: int = 20000,
+
         kfold: bool = False,
+
         notebook: bool = False,
+
         return_outputs: bool = False,
+
     ) -> Dict | None:
+
         """
+
         Determine correlation between attributes from the real and fake dataset using a given metric.
+
         All metrics from scipy.stats are available.
 
         Args:
+
             target_col (str): Column to use for predictions with estimators.
+
             target_type (str, optional): Type of task to perform on the target_col. Can be either "class" for
+
                 classification or "regr" for regression. Defaults to "class".
+
             metric (str | None, optional): Overwrites self.metric. Scoring metric for the attributes.
+
                 By default Pearson's r is used. Alternatives include Spearman rho (scipy.stats.spearmanr) or
+
                 Kendall Tau (scipy.stats.kendalltau). Defaults to None.
+
             n_samples_distance (int, optional): The number of samples to take for the row distance. See
+
                 documentation of ``tableEvaluator.row_distance`` for details. Defaults to 20000.
+
             kfold (bool, optional): Use a 5-fold CV for the ML estimators if set to True. Train/Test on 80%/20%
+
                 of the data if set to False. Defaults to False.
+
             notebook (bool, optional): Better visualization of the results in a python notebook. Defaults to False.
+
             verbose (bool | None, optional): Whether to print verbose logging. Defaults to None.
+
             return_outputs (bool, optional): Will omit printing and instead return a dictionary with all results.
+
                 Defaults to False.
 
         Returns:
+
             Dict: A dictionary containing evaluation results if return_outputs is True, otherwise None.
+
         """
+
         self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose
         self.comparison_metric = (
+
             getattr(stats, metric)
+
             if isinstance(metric, str)
+
             else metric
             if metric is not None
             else self.comparison_metric
+
         )
 
         warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
         pd.options.display.float_format = '{:,.4f}'.format
 
-        basic_statistical = self.basic_statistical_evaluation()
-        correlation_correlation = self.correlation_correlation()
-        column_correlation = self.column_correlations()
-        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
-        nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
-
-        miscellaneous_dict = {
-            'Column Correlation Distance RMSE': self.correlation_distance(how='rmse'),
-            'Column Correlation distance MAE': self.correlation_distance(how='mae'),
-        }
-
-        miscellaneous = pd.DataFrame(
-            {'Result': list(miscellaneous_dict.values())},
-            index=list(miscellaneous_dict.keys()),
-        )
-
-        privacy_metrics_dict = {
-            'Duplicate rows between sets (real/fake)': self.get_duplicates(),
-            'nearest neighbor mean': nearest_neighbor[0],
-            'nearest neighbor std': nearest_neighbor[1],
-        }
-
-        privacy_report = EvaluationResult(
-            name='Privacy Results',
-            content=dict_to_df(privacy_metrics_dict),
-        )
-
-        privacy_tab = [privacy_report]
-
-        efficacy_title = (
-            'Classifier F1-scores and their Jaccard similarities:'
-            if self.target_type == 'class'
-            else '\nRegressor MSE-scores'
-        )
-
-        ml_efficacy_tab = [EvaluationResult(name=efficacy_title, content=self.estimators_scores)]
-
-        js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
-
-        statistical_tab = [
-            EvaluationResult(
-                name='Jensen-Shannon distance',
-                content=js_df,
-                appendix=f'### Mean: {js_df.js_distance.mean(): .3f}',
-            ),
-            EvaluationResult(
-                name='Kolmogorov-Smirnov statistic',
-                content=kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns),
-            ),
-        ]
+        statistical_results, statistical_tab = self._calculate_statistical_metrics()
+        ml_efficacy_results, ml_efficacy_tab = self._calculate_ml_efficacy(target_col, target_type, kfold)
+        privacy_results, privacy_tab = self._calculate_privacy_metrics(n_samples_distance)
 
         all_results_dict = {
-            'Basic statistics': basic_statistical,
-            'Correlation column correlations': correlation_correlation,
-            'Mean Correlation between fake and real columns': column_correlation,
-            f'{"1 - MAPE Estimator results" if self.target_type == "class" else "Correlation RMSE"}': estimators,
+            "Basic statistics": statistical_results["basic_statistical"],
+            "Correlation column correlations": statistical_results["correlation_correlation"],
+            "Mean Correlation between fake and real columns": statistical_results["column_correlation"],
+            f'{"1 - MAPE Estimator results" if target_type == "class" else "Correlation RMSE"}': ml_efficacy_results["estimators"],
         }
         all_results_dict['Similarity Score'] = np.mean(list(all_results_dict.values()))
 
         summary = EvaluationResult(name='Overview Results', content=dict_to_df(all_results_dict))
 
         overview_tab = [
+
             summary,
+
         ]
 
         if return_outputs:
             all_results = [
+
                 *overview_tab,
+
                 *ml_efficacy_tab,
+
                 *privacy_tab,
+
                 *statistical_tab,
+
             ]
 
             all_results = {x.name: x.content.to_dict(orient='index') for x in all_results}
@@ -921,22 +1019,132 @@ class TableEvaluator:
 
         if notebook:
             visualize_notebook(
+
                 self,
+
                 overview=overview_tab,
+
                 privacy_metrics=privacy_tab,
+
                 ml_efficacy=ml_efficacy_tab,
+
                 statistical=statistical_tab,
+
             )
 
         else:
-            print(f'\n{efficacy_title}:')
+            print(f"\n{ml_efficacy_results['efficacy_title']}:")
             print(self.estimators_scores.to_string())
 
-            print('\nPrivacy results:')
-            print(privacy_report.content.to_string())
+            print("\nPrivacy results:")
+            print(privacy_results["privacy_report"].content.to_string())
 
-            print('\nMiscellaneous results:')
-            print(miscellaneous.to_string())
+            print("\nMiscellaneous results:")
+            print(statistical_results["miscellaneous"].to_string())
 
             print('\nResults:')
             print(summary.content.to_string())
+
+    def _calculate_statistical_metrics(self):
+
+        basic_statistical = self.basic_statistical_evaluation()
+        correlation_correlation = self.correlation_correlation()
+        column_correlation = self.column_correlations()
+
+        miscellaneous_dict = {
+            "Column Correlation Distance RMSE": self.correlation_distance(how="rmse"),
+            "Column Correlation distance MAE": self.correlation_distance(how="mae"),
+        }
+
+        miscellaneous = pd.DataFrame(
+            {"Result": list(miscellaneous_dict.values())},
+            index=list(miscellaneous_dict.keys()),
+        )
+
+        js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
+
+        statistical_tab = [
+
+            EvaluationResult(
+
+                name="Jensen-Shannon distance",
+
+                content=js_df,
+
+                appendix=f"### Mean: {js_df.js_distance.mean(): .3f}",
+
+            ),
+
+            EvaluationResult(
+
+                name="Kolmogorov-Smirnov statistic",
+
+                content=kolmogorov_smirnov_df(
+
+                    self.real, self.fake, self.numerical_columns
+
+                ),
+
+            ),
+
+        ]
+        return {
+
+            "basic_statistical": basic_statistical,
+
+            "correlation_correlation": correlation_correlation,
+
+            "column_correlation": column_correlation,
+
+            "miscellaneous": miscellaneous,
+
+        }, statistical_tab
+
+    def _calculate_ml_efficacy(self, target_col: str, target_type: str, kfold: bool):
+
+        estimators = self.estimator_evaluation(
+
+            target_col=target_col, target_type=target_type, kfold=kfold
+
+        )
+        efficacy_title = (
+
+            "Classifier F1-scores and their Jaccard similarities:"
+
+            if target_type == "class"
+
+            else "\nRegressor MSE-scores"
+
+        )
+
+        ml_efficacy_tab = [
+
+            EvaluationResult(name=efficacy_title, content=self.estimators_scores)
+
+        ]
+        return {"estimators": estimators, "efficacy_title": efficacy_title}, ml_efficacy_tab
+
+    def _calculate_privacy_metrics(self, n_samples_distance: int):
+
+        nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
+        privacy_metrics_dict = {
+
+            "Duplicate rows between sets (real/fake)": self.get_duplicates(),
+
+            "nearest neighbor mean": nearest_neighbor[0],
+
+            "nearest neighbor std": nearest_neighbor[1],
+
+        }
+
+        privacy_report = EvaluationResult(
+
+            name="Privacy Results",
+
+            content=dict_to_df(privacy_metrics_dict),
+
+        )
+
+        privacy_tab = [privacy_report]
+
+        return {"privacy_report": privacy_report}, privacy_tab
