@@ -1,8 +1,7 @@
 """Tests for the VisualizationManager class."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -62,19 +61,24 @@ def test_plot_cumsums(sample_data):
     real, fake = sample_data
     manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
 
-    with patch("matplotlib.pyplot.subplots") as mock_subplots, patch(
-        "matplotlib.pyplot.tight_layout"
-    ), patch("matplotlib.pyplot.show"), patch(
+    # Just test that the method exists and can be called without error in a mocked environment
+    with patch(
+        "table_evaluator.visualization.visualization_manager.plt"
+    ) as mock_plt, patch(
         "table_evaluator.visualization.visualization_manager.cdf"
-    ):
-        # Mock the subplots return value
-        from unittest.mock import MagicMock
+    ) as mock_cdf:
+        # Mock plt.subplots to return proper mock objects
+        mock_fig = MagicMock()
+        mock_axes = MagicMock()
+        mock_axes.flatten.return_value = [MagicMock() for _ in range(len(real.columns))]
+        mock_plt.subplots.return_value = (mock_fig, mock_axes)
 
-        fig_mock = MagicMock()
-        axes_mock = np.array([MagicMock() for _ in range(4)])
-        mock_subplots.return_value = (fig_mock, axes_mock)
-
+        # Test that the method can be called
         manager.plot_cumsums(show=False)
+
+        # Verify that plotting functions were called
+        mock_plt.subplots.assert_called_once()
+        assert mock_cdf.call_count == len(real.columns)
 
 
 def test_plot_distributions(sample_data):
@@ -82,19 +86,21 @@ def test_plot_distributions(sample_data):
     real, fake = sample_data
     manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
 
-    with patch("matplotlib.pyplot.subplots") as mock_subplots, patch(
-        "matplotlib.pyplot.tight_layout"
-    ), patch("matplotlib.pyplot.show"), patch("seaborn.histplot"), patch.object(
-        manager, "_plot_categorical_distribution"
-    ):
-        # Mock the subplots return value
-        from unittest.mock import MagicMock
+    # Test that the method exists and can be called without error in a mocked environment
+    with patch(
+        "table_evaluator.visualization.visualization_manager.plt"
+    ) as mock_plt, patch("table_evaluator.visualization.visualization_manager.sns"):
+        # Mock plt.subplots to return proper mock objects
+        mock_fig = MagicMock()
+        mock_axes = MagicMock()
+        mock_axes.flatten.return_value = [MagicMock() for _ in range(len(real.columns))]
+        mock_plt.subplots.return_value = (mock_fig, mock_axes)
 
-        fig_mock = MagicMock()
-        axes_mock = np.array([MagicMock() for _ in range(4)])
-        mock_subplots.return_value = (fig_mock, axes_mock)
-
+        # Test that the method can be called
         manager.plot_distributions(show=False)
+
+        # Verify that plotting functions were called
+        mock_plt.subplots.assert_called_once()
 
 
 def test_plot_correlation_difference(sample_data):
