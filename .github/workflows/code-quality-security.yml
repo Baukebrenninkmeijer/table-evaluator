@@ -27,6 +27,11 @@ jobs:
     - name: Install uv
       run: pip install uv
 
+    - name: Install Arrow C++ library
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libarrow-dev
+
     - name: Clear uv cache
       run: uv cache clean
 
@@ -72,6 +77,11 @@ jobs:
 
     - name: Install uv
       run: pip install uv
+
+    - name: Install Arrow C++ library
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libarrow-dev
 
     - name: Clear uv cache
       run: uv cache clean

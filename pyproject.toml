@@ -6,6 +6,7 @@ authors = [
     { name = "Bauke Brenninkmeijer", email = "bauke.brenninkmeijer@gmail.com" }
 ]
 license = "MIT"
+requires-python = ">=3.10"
 readme = "README.md"
 keywords = ['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
 classifiers = [
