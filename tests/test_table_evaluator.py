@@ -87,9 +87,10 @@ def test_plot_cumsums(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots, patch(
-        'table_evaluator.table_evaluator.cdf'
-    ) as mock_cdf:
+    with (
+        patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots,
+        patch('table_evaluator.table_evaluator.cdf') as mock_cdf,
+    ):
         evaluator.plot_cumsums(show=False)
         mock_subplots.assert_called_once()
         assert mock_cdf.call_count == 4  # One call for each column
@@ -99,9 +100,11 @@ def test_plot_distributions(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots, patch(
-        'seaborn.histplot'
-    ) as mock_histplot, patch('seaborn.barplot') as mock_barplot:
+    with (
+        patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots,
+        patch('seaborn.histplot') as mock_histplot,
+        patch('seaborn.barplot') as mock_barplot,
+    ):
         evaluator.plot_distributions(show=False)
         mock_subplots.assert_called_once()
         assert mock_histplot.call_count == 2  # For numerical columns
@@ -121,9 +124,11 @@ def test_plot_pca(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots, patch(
-        'seaborn.scatterplot'
-    ) as mock_scatterplot, patch('table_evaluator.table_evaluator.PCA') as mock_pca:
+    with (
+        patch('matplotlib.pyplot.subplots', return_value=(MagicMock(), MagicMock())) as mock_subplots,
+        patch('seaborn.scatterplot') as mock_scatterplot,
+        patch('table_evaluator.table_evaluator.PCA') as mock_pca,
+    ):
         mock_pca().fit_transform.return_value = np.random.rand(5, 2)
         evaluator.plot_pca(show=False)
         mock_subplots.assert_called_once()
@@ -195,8 +200,9 @@ def test_pca_correlation(sample_data):
         assert isinstance(correlation, float)
         assert 0 <= correlation <= 1
 
-    with patch('table_evaluator.table_evaluator.PCA') as mock_pca, patch.object(
-        evaluator, 'comparison_metric', return_value=(0.8, 0.1, 0.1)
+    with (
+        patch('table_evaluator.table_evaluator.PCA') as mock_pca,
+        patch.object(evaluator, 'comparison_metric', return_value=(0.8, 0.1, 0.1)),
     ):
         mock_pca().explained_variance_ = np.array([0.5, 0.3, 0.2])
         correlation = evaluator.pca_correlation(lingress=True)
@@ -252,13 +258,14 @@ def test_estimator_evaluation(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake, verbose=True)
 
-    with patch('table_evaluator.table_evaluator.KFold') as mock_kfold, patch(
-        'table_evaluator.table_evaluator.RandomForestClassifier'
-    ) as mock_rf, patch('table_evaluator.table_evaluator.LogisticRegression') as mock_lr, patch(
-        'table_evaluator.table_evaluator.DecisionTreeClassifier'
-    ) as mock_dt, patch('table_evaluator.table_evaluator.MLPClassifier') as mock_mlp, patch(
-        'table_evaluator.table_evaluator.mean_absolute_percentage_error'
-    ) as mock_mape:
+    with (
+        patch('table_evaluator.table_evaluator.KFold') as mock_kfold,
+        patch('table_evaluator.table_evaluator.RandomForestClassifier') as mock_rf,
+        patch('table_evaluator.table_evaluator.LogisticRegression') as mock_lr,
+        patch('table_evaluator.table_evaluator.DecisionTreeClassifier') as mock_dt,
+        patch('table_evaluator.table_evaluator.MLPClassifier') as mock_mlp,
+        patch('table_evaluator.table_evaluator.mean_absolute_percentage_error') as mock_mape,
+    ):
         mock_kfold().split.return_value = [(np.array([0, 1, 2]), np.array([3, 4]))]
         mock_rf().fit.return_value = mock_rf()
         mock_lr().fit.return_value = mock_lr()
@@ -299,10 +306,11 @@ def test_evaluate(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch.object(TableEvaluator, 'basic_statistical_evaluation', return_value=0.8), patch.object(
-        TableEvaluator, 'correlation_correlation', return_value=0.7
-    ), patch.object(TableEvaluator, 'column_correlations', return_value=0.75), patch.object(
-        TableEvaluator, 'row_distance', return_value=(0.5, 0.1)
+    with (
+        patch.object(TableEvaluator, 'basic_statistical_evaluation', return_value=0.8),
+        patch.object(TableEvaluator, 'correlation_correlation', return_value=0.7),
+        patch.object(TableEvaluator, 'column_correlations', return_value=0.75),
+        patch.object(TableEvaluator, 'row_distance', return_value=(0.5, 0.1)),
     ):
         results = evaluator.evaluate('A', target_type='class', return_outputs=True)
         assert isinstance(results, dict)
@@ -314,11 +322,13 @@ def test_visual_evaluation(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch.object(evaluator, 'plot_mean_std') as mock_mean_std, patch.object(
-        evaluator, 'plot_cumsums'
-    ) as mock_cumsums, patch.object(evaluator, 'plot_distributions') as mock_distributions, patch.object(
-        evaluator, 'plot_correlation_difference'
-    ) as mock_correlation_difference, patch.object(evaluator, 'plot_pca') as mock_pca:
+    with (
+        patch.object(evaluator, 'plot_mean_std') as mock_mean_std,
+        patch.object(evaluator, 'plot_cumsums') as mock_cumsums,
+        patch.object(evaluator, 'plot_distributions') as mock_distributions,
+        patch.object(evaluator, 'plot_correlation_difference') as mock_correlation_difference,
+        patch.object(evaluator, 'plot_pca') as mock_pca,
+    ):
         evaluator.visual_evaluation(show=False)
 
         mock_mean_std.assert_called_once()

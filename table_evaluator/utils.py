@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def load_data(
-    path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: Optional[List] = None
+    path_real: str, path_fake: str, real_sep: str = ',', fake_sep: str = ',', drop_columns: Optional[list] = None
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
@@ -43,6 +43,7 @@ def load_data(
 def dict_to_df(data: Dict[str, Any]):
     return pd.DataFrame({'result': list(data.values())}, index=list(data.keys()))
 
+
 def _preprocess_data(
     real: pd.DataFrame,
     fake: pd.DataFrame,
@@ -54,26 +55,20 @@ def _preprocess_data(
     # Make sure columns and their order are the same.
     if len(real.columns) == len(fake.columns):
         fake = fake[real.columns.tolist()]
-    assert (
-        real.columns.tolist() == fake.columns.tolist()
-    ), "Columns in real and fake dataframe are not the same"
+    assert real.columns.tolist() == fake.columns.tolist(), 'Columns in real and fake dataframe are not the same'
 
     if cat_cols is None:
         real = real.infer_objects()
         fake = fake.infer_objects()
         numerical_columns = [
             column
-            for column in real.select_dtypes(include="number").columns
+            for column in real.select_dtypes(include='number').columns
             if len(real[column].unique()) > unique_thresh
         ]
-        categorical_columns = [
-            column for column in real.columns if column not in numerical_columns
-        ]
+        categorical_columns = [column for column in real.columns if column not in numerical_columns]
     else:
         categorical_columns = cat_cols
-        numerical_columns = [
-            column for column in real.columns if column not in cat_cols
-        ]
+        numerical_columns = [column for column in real.columns if column not in cat_cols]
 
     # Make sure the number of samples is equal in both datasets.
     if n_samples is None:
@@ -81,26 +76,16 @@ def _preprocess_data(
     elif len(fake) >= n_samples and len(real) >= n_samples:
         n_samples = n_samples
     else:
-        raise Exception(
-            f"Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}"
-        )
+        raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
 
     real = real.sample(n_samples, random_state=seed)
     fake = fake.sample(n_samples, random_state=seed)
-    assert len(real) == len(fake), "len(real) != len(fake)"
+    assert len(real) == len(fake), 'len(real) != len(fake)'
 
-    real.loc[:, categorical_columns] = (
-        real.loc[:, categorical_columns].fillna("[NAN]").astype(str)
-    )
-    fake.loc[:, categorical_columns] = (
-        fake.loc[:, categorical_columns].fillna("[NAN]").astype(str)
-    )
+    real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna('[NAN]').astype(str)
+    fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna('[NAN]').astype(str)
 
-    real.loc[:, numerical_columns] = real.loc[
-        :, numerical_columns
-    ].fillna(real[numerical_columns].mean())
-    fake.loc[:, numerical_columns] = fake.loc[
-        :, numerical_columns
-    ].fillna(fake[numerical_columns].mean())
+    real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(real[numerical_columns].mean())
+    fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(fake[numerical_columns].mean())
 
     return real, fake, numerical_columns, categorical_columns

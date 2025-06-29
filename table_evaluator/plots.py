@@ -1,4 +1,5 @@
-from typing import List, Optional, Union
+from collections.abc import Sequence
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +12,7 @@ def plot_correlation_difference(
     real: pd.DataFrame,
     fake: pd.DataFrame,
     plot_diff: bool = True,
-    cat_cols: Optional[list] = None,
+    cat_cols: Optional[list[str]] = None,
     annot: bool = False,
     fname: str | None = None,
     show: bool = True,
@@ -30,7 +31,7 @@ def plot_correlation_difference(
         real (pd.DataFrame): DataFrame with real data.
         fake (pd.DataFrame): DataFrame with synthetic data.
         plot_diff (bool): Plot difference if True, else not.
-        cat_cols (Optional[List[str]]): List of Categorical columns.
+        cat_cols (Optional[list[str]]): List of Categorical columns.
         annot (bool): Whether to annotate the plot with numbers indicating the associations.
     """
     assert isinstance(real, pd.DataFrame), '`real` parameters must be a Pandas DataFrame'
@@ -122,7 +123,8 @@ def plot_correlation_difference(
 
 def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None):
     """
-    Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
+    Plot the distribution plots for all columns in the real and fake dataset.
+    Height of each row of plots scales with the length of the labels. Each plot
     contains the values of a real columns and the corresponding fake column.
     :param real: Real dataset (pd.DataFrame)
     :param fake: Synthetic dataset (pd.DataFrame)
@@ -135,32 +137,30 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
 
     max_len = 0
     # Increase the length of plots if the labels are long
-    if not real.select_dtypes(include=["object"]).empty:
+    if not real.select_dtypes(include=['object']).empty:
         lengths = []
-        for d in real.select_dtypes(include=["object"]):
-            lengths.append(
-                max([len(x.strip()) for x in real[d].unique().tolist()])
-            )
+        for d in real.select_dtypes(include=['object']):
+            lengths.append(max([len(x.strip()) for x in real[d].unique().tolist()]))
         max_len = max(lengths)
 
     row_height = 6 + (max_len // 30)
     fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
-    fig.suptitle("Distribution per feature", fontsize=16)
+    fig.suptitle('Distribution per feature', fontsize=16)
     axes = ax.flatten()
     for i, col in enumerate(real.columns):
-        if col not in real.select_dtypes(include=["object", "category"]).columns:
+        if col not in real.select_dtypes(include=['object', 'category']).columns:
             plot_df = pd.DataFrame(
                 {
                     col: pd.concat([real[col], fake[col]], axis=0),
-                    "kind": ["real"] * len(real) + ["fake"] * len(fake),
+                    'kind': ['real'] * len(real) + ['fake'] * len(fake),
                 }
             )
             sns.histplot(
                 plot_df,
                 x=col,
-                hue="kind",
+                hue='kind',
                 ax=axes[i],
-                stat="probability",
+                stat='probability',
                 legend=True,
                 kde=True,
             )
@@ -168,8 +168,8 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
         else:
             real_temp = real.copy()
             fake_temp = fake.copy()
-            real_temp["kind"] = "Real"
-            fake_temp["kind"] = "Fake"
+            real_temp['kind'] = 'Real'
+            fake_temp['kind'] = 'Fake'
             concat = pd.concat([fake_temp, real_temp])
             palette = sns.color_palette(
                 [
@@ -177,7 +177,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
                     (0.2980392156862745, 0.4470588235294118, 0.6901960784313725),
                 ]
             )
-            x, y, hue = col, "proportion", "kind"
+            x, y, hue = col, 'proportion', 'kind'
             ax_curr = (
                 concat[x]
                 .groupby(concat[hue])
@@ -185,7 +185,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
                 .rename(y)
                 .reset_index()
                 .pipe(
-                    (sns.barplot, "data"),
+                    (sns.barplot, 'data'),
                     x=x,
                     y=y,
                     hue=hue,
@@ -194,7 +194,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
                     palette=palette,
                 )
             )
-            ax_curr.set_xticklabels(axes[i].get_xticklabels(), rotation="vertical")
+            ax_curr.set_xticklabels(axes[i].get_xticklabels(), rotation='vertical')
     plt.tight_layout(rect=[0, 0.02, 1, 0.98])
 
     if fname is not None:
@@ -204,7 +204,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
         plt.show()
 
 
-def plot_correlation_comparison(evaluators: List, annot: bool = False, show: bool = False):
+def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show: bool = False):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
@@ -284,7 +284,60 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
         return fig
 
 
-def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', ax=None, show: bool = True):
+def plot_cumsums(real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, show: bool = True):
+    """
+    Plot cumulative sum plots for all columns in the dataframes.
+
+    Args:
+        real (pd.DataFrame): DataFrame with real data.
+        fake (pd.DataFrame): DataFrame with fake data.
+        fname (str | None): Optional filename to save the plot to.
+        show (bool): Whether to display the plot.
+    """
+    import math
+
+    numerical_columns = real.select_dtypes(include=[np.number]).columns
+    if len(numerical_columns) == 0:
+        return
+
+    n_cols = min(3, len(numerical_columns))
+    n_rows = math.ceil(len(numerical_columns) / n_cols)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1:
+        axes = axes
+    else:
+        axes = axes.flatten()
+
+    for i, col in enumerate(numerical_columns):
+        ax = axes[i] if len(numerical_columns) > 1 else axes[0]
+        cdf(real[col], fake[col], xlabel=col, ax=ax, show=False)
+
+    # Hide unused subplots
+    for i in range(len(numerical_columns), len(axes)):
+        axes[i].set_visible(False)
+
+    plt.tight_layout()
+
+    if fname is not None:
+        plt.savefig(fname)
+        if not show:
+            plt.close()
+    if show:
+        plt.show()
+
+
+def cdf(
+    data_r,
+    data_f,
+    xlabel: str = 'Values',
+    ylabel: str = 'Cumulative Sum',
+    ax=None,
+    show: bool = True,
+    fname: str | None = None,
+):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
 
@@ -324,6 +377,10 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
         local_ax.set_xticklabels(sorted(all_labels), rotation='vertical')
 
     if ax is None:
+        if fname is not None:
+            plt.savefig(fname)
+            if not show:
+                plt.close()
         if show:
             plt.show()
         else:

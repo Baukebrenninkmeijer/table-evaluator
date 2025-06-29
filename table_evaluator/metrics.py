@@ -121,7 +121,7 @@ def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: Li
     Raises:
         AssertionError: If the columns in real and fake DataFrames are not identical.
     """
-    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between `real` and `fake`. '
+    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between `real` and `fake`.'
     distances = Parallel(n_jobs=-1)(
         delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
     )
@@ -180,7 +180,7 @@ def kolmogorov_smirnov_test(col_name: str, real_col: pd.Series, fake_col: pd.Ser
     return {'col_name': col_name, 'statistic': statistic, 'p-value': p_value, 'equality': equality}
 
 
-def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> List[Dict[str, Any]]:
+def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list) -> list[dict[str, Any]]:
     assert real.columns.tolist() == fake.columns.tolist(), 'Colums are not identical between `real` and `fake`. '
     distances = Parallel(n_jobs=-1)(
         delayed(kolmogorov_smirnov_test)(col, real[col], fake[col]) for col in numerical_columns
