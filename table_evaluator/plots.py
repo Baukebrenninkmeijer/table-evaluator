@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import List, Optional
 
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ def plot_correlation_difference(
     real: pd.DataFrame,
     fake: pd.DataFrame,
     plot_diff: bool = True,
-    cat_cols: Optional[list] = None,
+    cat_cols: Optional[list[str]] = None,
     annot: bool = False,
     fname: str | None = None,
     show: bool = True,
@@ -30,7 +31,7 @@ def plot_correlation_difference(
         real (pd.DataFrame): DataFrame with real data.
         fake (pd.DataFrame): DataFrame with synthetic data.
         plot_diff (bool): Plot difference if True, else not.
-        cat_cols (Optional[List[str]]): List of Categorical columns.
+        cat_cols (Optional[list[str]]): List of Categorical columns.
         annot (bool): Whether to annotate the plot with numbers indicating the associations.
     """
     assert isinstance(
@@ -124,9 +125,12 @@ def plot_correlation_difference(
         return fig
 
 
-def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None):
+def plot_distributions(
+    real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, show: bool = True
+):
     """
-    Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
+    Plot the distribution plots for all columns in the real and fake dataset.
+    Height of each row of plots scales with the length of the labels. Each plot
     contains the values of a real columns and the corresponding fake column.
     :param real: Real dataset (pd.DataFrame)
     :param fake: Synthetic dataset (pd.DataFrame)
@@ -201,13 +205,16 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
 
     if fname is not None:
         plt.savefig(fname)
-        plt.close(fig)  # Close the figure to prevent it from being displayed
-    else:
+        if not show:
+            plt.close(fig)  # Close the figure to prevent it from being displayed
+    if show:
         plt.show()
+    elif fname is None:
+        plt.close(fig)
 
 
 def plot_correlation_comparison(
-    evaluators: List, annot: bool = False, show: bool = False
+    evaluators: Sequence, annot: bool = False, show: bool = False
 ):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
@@ -290,6 +297,53 @@ def plot_correlation_comparison(
         return fig
 
 
+def plot_cumsums(
+    real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, show: bool = True
+):
+    """
+    Plot cumulative sum plots for all columns in the dataframes.
+
+    Args:
+        real (pd.DataFrame): DataFrame with real data.
+        fake (pd.DataFrame): DataFrame with fake data.
+        fname (str | None): Optional filename to save the plot to.
+        show (bool): Whether to display the plot.
+    """
+    import math
+
+    numerical_columns = real.select_dtypes(include=[np.number]).columns
+    if len(numerical_columns) == 0:
+        return
+
+    n_cols = min(3, len(numerical_columns))
+    n_rows = math.ceil(len(numerical_columns) / n_cols)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1:
+        axes = axes
+    else:
+        axes = axes.flatten()
+
+    for i, col in enumerate(numerical_columns):
+        ax = axes[i] if len(numerical_columns) > 1 else axes[0]
+        cdf(real[col], fake[col], xlabel=col, ax=ax, show=False)
+
+    # Hide unused subplots
+    for i in range(len(numerical_columns), len(axes)):
+        axes[i].set_visible(False)
+
+    plt.tight_layout()
+
+    if fname is not None:
+        plt.savefig(fname)
+        if not show:
+            plt.close()
+    if show:
+        plt.show()
+
+
 def cdf(
     data_r,
     data_f,
@@ -297,6 +351,7 @@ def cdf(
     ylabel: str = "Cumulative Sum",
     ax=None,
     show: bool = True,
+    fname: str | None = None,
 ):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
@@ -337,6 +392,10 @@ def cdf(
         local_ax.set_xticklabels(sorted(all_labels), rotation="vertical")
 
     if ax is None:
+        if fname is not None:
+            plt.savefig(fname)
+            if not show:
+                plt.close()
         if show:
             plt.show()
         else:

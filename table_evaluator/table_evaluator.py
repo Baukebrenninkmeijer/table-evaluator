@@ -32,7 +32,7 @@ from table_evaluator.metrics import (
 )
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
-from table_evaluator.utils import dict_to_df, _preprocess_data
+from table_evaluator.utils import _preprocess_data, dict_to_df
 
 logger = logging.getLogger(__name__)
 
@@ -1028,7 +1028,7 @@ class TableEvaluator:
             )
 
         else:
-            print(f"\n{ml_efficacy_results['efficacy_title']}:")
+            print(f'\n{ml_efficacy_results["efficacy_title"]}:')
             print(self.estimators_scores.to_string())
 
             print("\nPrivacy results:")
@@ -1084,7 +1084,7 @@ class TableEvaluator:
         efficacy_title = (
             "Classifier F1-scores and their Jaccard similarities:"
             if target_type == "class"
-            else "\nRegressor MSE-scores"
+            else "Regressor MSE-scores"
         )
 
         ml_efficacy_tab = [

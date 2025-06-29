@@ -215,7 +215,7 @@ def kolmogorov_smirnov_test(
 
 def kolmogorov_smirnov_df(
     real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List
-) -> List[Dict[str, Any]]:
+) -> pd.DataFrame:
     assert (
         real.columns.tolist() == fake.columns.tolist()
     ), "Colums are not identical between `real` and `fake`. "

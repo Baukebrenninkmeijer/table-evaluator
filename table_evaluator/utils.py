@@ -102,5 +102,4 @@ def _preprocess_data(
     fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(
         fake[numerical_columns].mean()
     )
-
     return real, fake, numerical_columns, categorical_columns

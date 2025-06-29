@@ -46,7 +46,7 @@ def test_evaluate_method():
     assert isinstance(results, dict)
     expected_keys = [
         "Overview Results",
-        "\nRegressor MSE-scores",
+        "Regressor MSE-scores",
         "Privacy Results",
         "Jensen-Shannon distance",
         "Kolmogorov-Smirnov statistic",
