@@ -127,7 +127,11 @@ class VisualizationManager:
             plt.show()
 
     def plot_correlation_difference(
-        self, plot_diff: bool = True, fname: Optional[PathLike] = None, show: bool = True, **kwargs
+        self,
+        plot_diff: bool = True,
+        fname: Optional[PathLike] = None,
+        show: bool = True,
+        **kwargs,
     ):
         """
         Plot correlation matrix difference between real and fake data.

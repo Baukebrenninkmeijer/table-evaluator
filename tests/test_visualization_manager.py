@@ -113,7 +113,7 @@ def test_plot_correlation_difference(sample_data):
     ) as mock_plot:
         manager.plot_correlation_difference(show=False)
         mock_plot.assert_called_once_with(
-            real, fake, categorical_columns=["B", "D"], fname=None, show=False
+            real, fake, cat_cols=["B", "D"], plot_diff=True, fname=None, show=False
         )
 
 

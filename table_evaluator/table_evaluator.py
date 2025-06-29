@@ -1,28 +1,16 @@
-import copy
 import logging
 import warnings
 from os import PathLike
-from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from dython.nominal import associations, numerical_encoding
 from scipy import stats
-from scipy.spatial.distance import cdist
-from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, Ridge
 from sklearn.metrics import f1_score, jaccard_score
-from sklearn.model_selection import KFold
-from sklearn.neural_network import MLPClassifier
-from sklearn.tree import DecisionTreeClassifier
 
 from table_evaluator.core.evaluation_config import EvaluationConfig
-from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
@@ -32,11 +20,9 @@ from table_evaluator.metrics import (
     js_distance_df,
     kolmogorov_smirnov_df,
     mean_absolute_error,
-    mean_absolute_percentage_error,
     rmse,
 )
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
 
@@ -109,27 +95,22 @@ class TableEvaluator:
 
         # Initialize evaluation configuration
         self.config = EvaluationConfig(
-            unique_thresh=unique_thresh,
-            n_samples=n_samples,
-            random_seed=seed
+            unique_thresh=unique_thresh, n_samples=n_samples, random_seed=seed
         )
 
         # Initialize evaluator components
         self.statistical_evaluator = StatisticalEvaluator(
-            comparison_metric=self.comparison_metric,
-            verbose=verbose
+            comparison_metric=self.comparison_metric, verbose=verbose
         )
         self.ml_evaluator = MLEvaluator(
-            comparison_metric=self.comparison_metric,
-            random_seed=seed,
-            verbose=verbose
+            comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose
         )
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
         self.visualization_manager = VisualizationManager(
             real=self.real,
             fake=self.fake,
             categorical_columns=self.categorical_columns,
-            numerical_columns=self.numerical_columns
+            numerical_columns=self.numerical_columns,
         )
 
     def plot_mean_std(self, fname=None, show: bool = True):
@@ -157,7 +138,9 @@ class TableEvaluator:
             fname str: If not none, saves the plot with this file name.
 
         """
-        return self.visualization_manager.plot_cumsums(nr_cols=nr_cols, fname=fname, show=show)
+        return self.visualization_manager.plot_cumsums(
+            nr_cols=nr_cols, fname=fname, show=show
+        )
 
     def plot_distributions(
         self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True
@@ -175,7 +158,9 @@ class TableEvaluator:
             fname (str, Optional): If not none, saves the plot with this file name.
 
         """
-        return self.visualization_manager.plot_distributions(nr_cols=nr_cols, fname=fname, show=show)
+        return self.visualization_manager.plot_distributions(
+            nr_cols=nr_cols, fname=fname, show=show
+        )
 
     def plot_correlation_difference(
         self, plot_diff=True, fname=None, show: bool = True, **kwargs
@@ -287,7 +272,9 @@ class TableEvaluator:
                 If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.
 
         """
-        return self.privacy_evaluator.get_duplicates(self.real, self.fake, return_values)
+        return self.privacy_evaluator.get_duplicates(
+            self.real, self.fake, return_values
+        )
 
     def pca_correlation(self, lingress: bool = False):
         """
@@ -421,7 +408,9 @@ class TableEvaluator:
             None
 
         """
-        return self.visualization_manager.visual_evaluation(save_dir=save_dir, show=show, **kwargs)
+        return self.visualization_manager.visual_evaluation(
+            save_dir=save_dir, show=show, **kwargs
+        )
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -548,13 +537,15 @@ class TableEvaluator:
 
         """
         real, fake = self.convert_numerical()
-        result = self.ml_evaluator.estimator_evaluation(real, fake, target_col, target_type, kfold)
-        
+        result = self.ml_evaluator.estimator_evaluation(
+            real, fake, target_col, target_type, kfold
+        )
+
         # Store the scores for backward compatibility with evaluate() method
         # We need to get the scores from the MLEvaluator but it doesn't expose them
         # Let's temporarily set a placeholder
         self.estimators_scores = pd.DataFrame({"real": [result], "fake": [result]})
-        
+
         return result
 
     def row_distance(self, n_samples: int | None = None) -> Tuple[np.number, np.number]:
@@ -714,7 +705,7 @@ class TableEvaluator:
 
             print("\nResults:")
             print(summary.content.to_string())
-            
+
         return all_results_dict
 
     def _calculate_statistical_metrics(self):
