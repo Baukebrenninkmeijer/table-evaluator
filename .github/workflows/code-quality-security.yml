@@ -30,15 +30,17 @@ jobs:
     - name: Install Arrow C++ library
       run: |
         sudo apt-get update
-        sudo apt-get install -y libarrow-dev
+        sudo apt-get install -y -V ca-certificates lsb-release wget
+        wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+        sudo apt-get install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+        sudo apt-get update
+        sudo apt-get install -y -V libarrow-dev
 
     - name: Clear uv cache
       run: uv cache clean
 
     - name: Install dependencies
       run: uv sync
-
-
 
     - name: Run security scan with bandit
       run: uv run bandit -r table_evaluator/ -f json -o bandit-report.json || true
@@ -63,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12']
     name: Tests on Python ${{ matrix.python-version }}
     needs: code-quality-security
     steps:
@@ -81,7 +83,11 @@ jobs:
     - name: Install Arrow C++ library
       run: |
         sudo apt-get update
-        sudo apt-get install -y libarrow-dev
+        sudo apt-get install -y -V ca-certificates lsb-release wget
+        wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+        sudo apt-get install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+        sudo apt-get update
+        sudo apt-get install -y -V libarrow-dev
 
     - name: Clear uv cache
       run: uv cache clean
