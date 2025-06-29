@@ -7,57 +7,6 @@ import seaborn as sns
 from dython.nominal import associations
 
 
-def plot_var_cor(
-    x: Union[pd.DataFrame, np.ndarray], ax=None, return_values: bool = False, **kwargs
-) -> Optional[np.ndarray]:
-    """
-    Given a DataFrame, plot the correlation between columns. Function assumes all numeric continuous data. It masks the
-    top half of the correlation matrix, since this holds the same values.
-
-    Decomissioned for use of the dython associations function.
-
-    :param x: Dataframe to plot data from
-    :param ax: Axis on which to plot the correlations
-    :param return_values: return correlation matrix after plotting
-    :param kwargs: Keyword arguments that are passed to `sns.heatmap`.
-    :return: If return_values=True, returns correlation matrix of `x` as np.ndarray
-    """
-    if isinstance(x, pd.DataFrame):
-        corr = x.corr().values
-    elif isinstance(x, np.ndarray):
-        corr = np.corrcoef(x, rowvar=False)
-    else:
-        raise ValueError(
-            f'Unknown datatype given ({type(x)}). Make sure a Pandas DataFrame or Numpy Array is passed for x.'
-        )
-
-    sns.set(style='white')
-    mask = np.zeros_like(corr, dtype=bool)
-    mask[np.triu_indices_from(mask)] = True
-
-    if ax is None:
-        f, ax = plt.subplots(figsize=(11, 9))
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
-
-    # Draw the heatmap with the mask and correct aspect ratio
-    sns.heatmap(
-        corr,
-        ax=ax,
-        mask=mask,
-        cmap=cmap,
-        vmax=1,
-        center=0,
-        square=True,
-        linewidths=0.5,
-        cbar_kws={'shrink': 0.5},
-        **kwargs,
-    )
-    if return_values:
-        return corr
-    else:
-        return None
-
-
 def plot_correlation_difference(
     real: pd.DataFrame,
     fake: pd.DataFrame,
@@ -164,10 +113,95 @@ def plot_correlation_difference(
 
     if fname is not None:
         plt.savefig(fname)
-    if show:
+        plt.close(fig)
+    elif show:
         plt.show()
     else:
         return fig
+
+
+def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None):
+    """
+    Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales with the length of the labels. Each plot
+    contains the values of a real columns and the corresponding fake column.
+    :param real: Real dataset (pd.DataFrame)
+    :param fake: Synthetic dataset (pd.DataFrame)
+    :param nr_cols: Number of columns for the subplot grid.
+    :param fname: If not none, saves the plot with this file name.
+    """
+    nr_charts = len(real.columns)
+    nr_rows = max(1, nr_charts // nr_cols)
+    nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
+
+    max_len = 0
+    # Increase the length of plots if the labels are long
+    if not real.select_dtypes(include=["object"]).empty:
+        lengths = []
+        for d in real.select_dtypes(include=["object"]):
+            lengths.append(
+                max([len(x.strip()) for x in real[d].unique().tolist()])
+            )
+        max_len = max(lengths)
+
+    row_height = 6 + (max_len // 30)
+    fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
+    fig.suptitle("Distribution per feature", fontsize=16)
+    axes = ax.flatten()
+    for i, col in enumerate(real.columns):
+        if col not in real.select_dtypes(include=["object", "category"]).columns:
+            plot_df = pd.DataFrame(
+                {
+                    col: pd.concat([real[col], fake[col]], axis=0),
+                    "kind": ["real"] * len(real) + ["fake"] * len(fake),
+                }
+            )
+            sns.histplot(
+                plot_df,
+                x=col,
+                hue="kind",
+                ax=axes[i],
+                stat="probability",
+                legend=True,
+                kde=True,
+            )
+            axes[i].set_autoscaley_on(True)
+        else:
+            real_temp = real.copy()
+            fake_temp = fake.copy()
+            real_temp["kind"] = "Real"
+            fake_temp["kind"] = "Fake"
+            concat = pd.concat([fake_temp, real_temp])
+            palette = sns.color_palette(
+                [
+                    (0.8666666666666667, 0.5176470588235295, 0.3215686274509804),
+                    (0.2980392156862745, 0.4470588235294118, 0.6901960784313725),
+                ]
+            )
+            x, y, hue = col, "proportion", "kind"
+            ax_curr = (
+                concat[x]
+                .groupby(concat[hue])
+                .value_counts(normalize=True)
+                .rename(y)
+                .reset_index()
+                .pipe(
+                    (sns.barplot, "data"),
+                    x=x,
+                    y=y,
+                    hue=hue,
+                    ax=axes[i],
+                    saturation=0.8,
+                    palette=palette,
+                )
+            )
+            ax_curr.set_xticklabels(axes[i].get_xticklabels(), rotation="vertical")
+    plt.tight_layout(rect=[0, 0.02, 1, 0.98])
+
+    if fname is not None:
+        plt.savefig(fname)
+        plt.close(fig)  # Close the figure to prevent it from being displayed
+    else:
+        plt.show()
 
 
 def plot_correlation_comparison(evaluators: List, annot: bool = False, show: bool = False):
@@ -360,8 +394,8 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
 
     if fname is not None:
         plt.savefig(fname)
-
-    if show:
+        plt.close(fig)
+    elif ax is None:
         plt.show()
     else:
         return ax
