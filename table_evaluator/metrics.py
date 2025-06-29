@@ -21,7 +21,9 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> np.floating[A
     return np.mean(np.abs(np.subtract(y_true, y_pred)))
 
 
-def euclidean_distance(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> float:
+def euclidean_distance(
+    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
+) -> float:
     """
     Returns the euclidean distance between y_true and y_pred.
 
@@ -35,7 +37,9 @@ def euclidean_distance(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.S
     return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
 
 
-def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series):
+def mean_absolute_percentage_error(
+    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
+):
     """
     Returns the mean absolute percentage error between y_true and y_pred. Throws ValueError if y_true contains zero
     values.
@@ -51,7 +55,9 @@ def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.nd
     return np.mean(np.abs((y_true - y_pred) / y_true))
 
 
-def rmse(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> np.ndarray | pd.Series:
+def rmse(
+    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
+) -> np.ndarray | pd.Series:
     """
     Returns the root mean squared error between y_true and y_pred.
 
@@ -64,11 +70,16 @@ def rmse(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> np.n
 
 def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
-    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2)))
+    return np.sum(y_true * y_pred) / (
+        np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2))
+    )
 
 
 def column_correlations(
-    dataset_a: pd.DataFrame, dataset_b: pd.DataFrame, categorical_columns: list[str] | None, theil_u=True
+    dataset_a: pd.DataFrame,
+    dataset_b: pd.DataFrame,
+    categorical_columns: list[str] | None,
+    theil_u=True,
 ):
     """
     Column-wise correlation calculation between ``dataset_a`` and ``dataset_b``.
@@ -84,25 +95,33 @@ def column_correlations(
     """
     if categorical_columns is None:
         categorical_columns = list()
-    elif categorical_columns == 'all':
+    elif categorical_columns == "all":
         categorical_columns = dataset_a.columns
     assert dataset_a.columns.tolist() == dataset_b.columns.tolist()
-    corr = pd.DataFrame(columns=dataset_a.columns, index=['correlation'])
+    corr = pd.DataFrame(columns=dataset_a.columns, index=["correlation"])
 
     for column in dataset_a.columns.tolist():
         if column in categorical_columns:
             if theil_u:
-                corr[column] = theils_u(dataset_a[column].sort_values(), dataset_b[column].sort_values())
+                corr[column] = theils_u(
+                    dataset_a[column].sort_values(), dataset_b[column].sort_values()
+                )
             else:
-                corr[column] = cramers_v(dataset_a[column].sort_values(), dataset_b[column].sort_vaues())
+                corr[column] = cramers_v(
+                    dataset_a[column].sort_values(), dataset_b[column].sort_vaues()
+                )
         else:
-            corr[column], _ = ss.pearsonr(dataset_a[column].sort_values(), dataset_b[column].sort_values())
+            corr[column], _ = ss.pearsonr(
+                dataset_a[column].sort_values(), dataset_b[column].sort_values()
+            )
     corr.fillna(value=np.nan, inplace=True)
     correlation = np.mean(corr.values.flatten())
     return correlation
 
 
-def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]) -> pd.DataFrame:
+def js_distance_df(
+    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]
+) -> pd.DataFrame:
     """
     Calculate Jensen-Shannon distances between real and fake data for numerical columns.
 
@@ -121,16 +140,21 @@ def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: Li
     Raises:
         AssertionError: If the columns in real and fake DataFrames are not identical.
     """
-    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between `real` and `fake`. '
+    assert (
+        real.columns.tolist() == fake.columns.tolist()
+    ), "Columns are not identical between `real` and `fake`. "
     distances = Parallel(n_jobs=-1)(
-        delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
+        delayed(jensenshannon_distance)(col, real[col], fake[col])
+        for col in numerical_columns
     )
 
     distances_df = pd.DataFrame(distances)
-    return distances_df.set_index('col_name')
+    return distances_df.set_index("col_name")
 
 
-def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25) -> Dict[str, Any]:
+def jensenshannon_distance(
+    colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25
+) -> Dict[str, Any]:
     """
     Calculate the Jensen-Shannon distance between real and fake data columns.
 
@@ -154,12 +178,16 @@ def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Serie
     bins = min(bins, len(real_col))
     binned_values_real, actual_bins = pd.cut(x=real_col, bins=bins, retbins=True)
     binned_probs_real = binned_values_real.value_counts(normalize=True, sort=False)
-    binned_probs_fake = pd.cut(fake_col, bins=actual_bins).value_counts(normalize=True, sort=False)
+    binned_probs_fake = pd.cut(fake_col, bins=actual_bins).value_counts(
+        normalize=True, sort=False
+    )
     js_distance = jensenshannon(binned_probs_real, binned_probs_fake)
-    return {'col_name': colname, 'js_distance': js_distance}
+    return {"col_name": colname, "js_distance": js_distance}
 
 
-def kolmogorov_smirnov_test(col_name: str, real_col: pd.Series, fake_col: pd.Series) -> Dict[str, Any]:
+def kolmogorov_smirnov_test(
+    col_name: str, real_col: pd.Series, fake_col: pd.Series
+) -> Dict[str, Any]:
     """
     Perform Kolmogorov-Smirnov test on real and fake data columns.
 
@@ -176,14 +204,24 @@ def kolmogorov_smirnov_test(col_name: str, real_col: pd.Series, fake_col: pd.Ser
             - 'equality': 'identical' if p-value > 0.01, else 'different'.
     """
     statistic, p_value = ks_2samp(real_col, fake_col)
-    equality = 'identical' if p_value > 0.01 else 'different'  # type: ignore
-    return {'col_name': col_name, 'statistic': statistic, 'p-value': p_value, 'equality': equality}
+    equality = "identical" if p_value > 0.01 else "different"  # type: ignore
+    return {
+        "col_name": col_name,
+        "statistic": statistic,
+        "p-value": p_value,
+        "equality": equality,
+    }
 
 
-def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List) -> List[Dict[str, Any]]:
-    assert real.columns.tolist() == fake.columns.tolist(), 'Colums are not identical between `real` and `fake`. '
+def kolmogorov_smirnov_df(
+    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List
+) -> List[Dict[str, Any]]:
+    assert (
+        real.columns.tolist() == fake.columns.tolist()
+    ), "Colums are not identical between `real` and `fake`. "
     distances = Parallel(n_jobs=-1)(
-        delayed(kolmogorov_smirnov_test)(col, real[col], fake[col]) for col in numerical_columns
+        delayed(kolmogorov_smirnov_test)(col, real[col], fake[col])
+        for col in numerical_columns
     )
     distances_df = pd.DataFrame(distances)
-    return distances_df.set_index('col_name')
+    return distances_df.set_index("col_name")
