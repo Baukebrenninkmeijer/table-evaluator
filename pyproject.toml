@@ -1,6 +1,8 @@
 [project]
 name = "table-evaluator"
-version = "1.7.2post1"
+version = "1.8.0"
+# Alternative: Use setuptools_scm for automatic versioning
+# dynamic = ["version"]
 description = "A package to evaluate how close a synthetic data set is to real data."
 authors = [
     { name = "Bauke Brenninkmeijer", email = "bauke.brenninkmeijer@gmail.com" }
@@ -35,7 +37,12 @@ dependencies = [
     "pytest-mock==3.14.0",
     "m2r2==0.3.3.post2",
     "sphinx-rtd-theme==2.0.0",
+    "tomli>=1.2.0;python_version<'3.11'",
 ]
+
+# Alternative setuptools_scm configuration (commented out)
+# [tool.setuptools_scm]
+# write_to = "table_evaluator/_version.py"
 
 [project.urls]
 "Homepage" = "https://github.com/Baukebrenninkmeijer/Table-Evaluator"
@@ -46,8 +53,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 
-[tool.setuptools.packages]
-find = { }
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["table_evaluator*"]
 
 
 [tool.pytest.ini_options]
