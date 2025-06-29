@@ -1,74 +1,97 @@
-[tool.poetry]
+[project]
 name = "table-evaluator"
 version = "1.7.2post1"
 description = "A package to evaluate how close a synthetic data set is to real data."
-authors = ["Bauke Brenninkmeijer <bauke.brenninkmeijer@gmail.com>"]
+authors = [
+    { name = "Bauke Brenninkmeijer", email = "bauke.brenninkmeijer@gmail.com" }
+]
 license = "MIT"
+requires-python = ">=3.10"
 readme = "README.md"
-repository ="https://github.com/Baukebrenninkmeijer/Table-Evaluator"
-documentation="https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
-keywords=['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
+keywords = ['Table-evaluation', 'synthetic-data', 'data-generation', 'data', 'generation', 'data-evaluation']
 classifiers = [
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3 :: Only',
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3 :: Only',
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pyarrow==17.0.0",
+    "scikit-learn==1.5.1",
+    "tqdm==4.66.5",
+    "matplotlib==3.9.2",
+    "numpy==1.26.4",
+    "seaborn==0.13.2",
+    "pandas==2.2.2",
+    "scipy==1.12.0",
+    "dython==0.7.7",
+    "pre-commit==3.8.0",
+    "ipython==8.28.0",
+    "pytest==8.3.2",
+    "sphinx==7.3.1",
+    "pytest-cov==4.0.0",
+    "pytest-mock==3.14.0",
+    "m2r2==0.3.3.post2",
+    "sphinx-rtd-theme==2.0.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pyarrow = "^17.0.0"
-scikit-learn = "^1.5.1"
-tqdm = "^4.66.5"
-matplotlib = "^3.9.2"
-numpy = "1.26.4"
-seaborn = "^0.13.2"
-pandas = "^2.0.0"
-scipy = "1.11.4"
-dython = "0.7.7"
-pre-commit = "^3.8.0"
-ruff = "^0.6.9"
-ipython = "^8.28.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest-mock = "^3.14.0"
-ipykernel = "^6.29.5"
-ipython = "^8.28.0"
-m2r2 = "^0.3.3.post2"
-sphinx-rtd-theme = "^2.0.0"
-pytest = "^8.3.2"
-ipywidgets = "^8.1.5"
+[project.urls]
+"Homepage" = "https://github.com/Baukebrenninkmeijer/Table-Evaluator"
+"Documentation" = "https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 
-[tool.ruff]
-line-length = 120
-lint.select = [
-    "I001", # Isort rules
-    "N",
-    "A",    # prevent using keywords that clobber python builtins
-    "B",    # bugbear: security warnings
-    "E",    # pycodestyle
-    "F",    # pyflakes
-    "ISC",  # implicit string concatenation
-    "UP",   # alert you when better syntax is available in your python version
-    "RUF",  # the ruff developer's own rules
-    ]
-lint.ignore = ["B018", "B023"]
-src = ["table_evaluator"]
-format.quote-style = "single"
+[tool.setuptools.packages]
+find = { }
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
 
 [tool.mypy]
-exclude = [
-]
 python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
 
 [[tool.mypy.overrides]]
-module = [""]
+module = ["*"]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["table_evaluator"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B601"]
