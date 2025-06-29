@@ -121,7 +121,7 @@ def plot_correlation_difference(
         return fig
 
 
-def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None):
+def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, show: bool = True):
     """
     Plot the distribution plots for all columns in the real and fake dataset.
     Height of each row of plots scales with the length of the labels. Each plot
@@ -199,9 +199,12 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
 
     if fname is not None:
         plt.savefig(fname)
-        plt.close(fig)  # Close the figure to prevent it from being displayed
-    else:
+        if not show:
+            plt.close(fig)  # Close the figure to prevent it from being displayed
+    if show:
         plt.show()
+    elif fname is None:
+        plt.close(fig)
 
 
 def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show: bool = False):
