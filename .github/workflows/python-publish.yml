@@ -40,6 +40,8 @@ jobs:
       run: uv cache clean
     - name: Install dependencies
       run: uv sync
+    - name: Clean dist directory
+      run: rm -rf dist/*
     - name: Build package
       run: uv build
     - name: Publish package
@@ -49,4 +51,4 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         verbose: true
-        verify_metadata: false
+        verify-metadata: false
