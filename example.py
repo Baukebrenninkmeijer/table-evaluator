@@ -12,4 +12,4 @@ if __name__ == "__main__":
     te = TableEvaluator(real, fake)
 
     te.visual_evaluation()
-    te.evaluate(target_col='Age')
+    te.evaluate(target_col="Age")

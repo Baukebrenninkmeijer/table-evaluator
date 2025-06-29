@@ -26,6 +26,13 @@ repos:
   #       additional_dependencies: []
   #       args: [--ignore-missing-imports, --no-strict-optional]
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
   - repo: local
     hooks:
       - id: pytest-check

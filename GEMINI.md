@@ -3,7 +3,7 @@
 This document outlines specific considerations and practices for interacting with the Gemini CLI within this project.
 
 ## Workflow
-If you are changing code as result of a task, always run the associated tests. If there are no tests, ask the user whether to create tests for the changed code or not. 
+If you are changing code as result of a task, always run the associated tests. If there are no tests, ask the user whether to create tests for the changed code or not.
 
 ## Worktree Management
 

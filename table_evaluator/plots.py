@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,13 +33,17 @@ def plot_correlation_difference(
         cat_cols (Optional[List[str]]): List of Categorical columns.
         annot (bool): Whether to annotate the plot with numbers indicating the associations.
     """
-    assert isinstance(real, pd.DataFrame), '`real` parameters must be a Pandas DataFrame'
-    assert isinstance(fake, pd.DataFrame), '`fake` parameters must be a Pandas DataFrame'
+    assert isinstance(
+        real, pd.DataFrame
+    ), "`real` parameters must be a Pandas DataFrame"
+    assert isinstance(
+        fake, pd.DataFrame
+    ), "`fake` parameters must be a Pandas DataFrame"
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    sns.set(style='white')
+    sns.set(style="white")
 
     if cat_cols is None:
-        cat_cols = real.select_dtypes(['object', 'category'])
+        cat_cols = real.select_dtypes(["object", "category"])
     if plot_diff:
         fig, ax = plt.subplots(1, 3, figsize=(24, 7))
     else:
@@ -49,24 +53,24 @@ def plot_correlation_difference(
         real,
         nominal_columns=cat_cols,
         # plot=False,
-        nom_nom_assoc='theil',
+        nom_nom_assoc="theil",
         # mark_columns=True,
         # annot=annot,
         # ax=ax[0],
         # cmap=cmap,
         compute_only=True,
-    )['corr']
+    )["corr"]
     fake_corr = associations(
         fake,
         nominal_columns=cat_cols,
         # plot=False,
-        nom_nom_assoc='theil',
+        nom_nom_assoc="theil",
         # mark_columns=True,
         # annot=annot,
         # ax=ax[1],
         # cmap=cmap,
         compute_only=True,
-    )['corr']
+    )["corr"]
 
     sns.heatmap(
         real_corr,
@@ -76,8 +80,8 @@ def plot_correlation_difference(
         annot=annot,
         center=0,
         linewidths=0.5,
-        cbar_kws={'shrink': 0.5},
-        fmt='.2f',
+        cbar_kws={"shrink": 0.5},
+        fmt=".2f",
     )
     sns.heatmap(
         fake_corr,
@@ -87,8 +91,8 @@ def plot_correlation_difference(
         annot=annot,
         center=0,
         linewidths=0.5,
-        cbar_kws={'shrink': 0.5},
-        fmt='.2f',
+        cbar_kws={"shrink": 0.5},
+        fmt=".2f",
     )
 
     if plot_diff:
@@ -102,12 +106,12 @@ def plot_correlation_difference(
             annot=annot,
             center=0,
             linewidths=0.5,
-            cbar_kws={'shrink': 0.5},
-            fmt='.2f',
+            cbar_kws={"shrink": 0.5},
+            fmt=".2f",
         )
-    titles = ['Real', 'Fake', 'Difference'] if plot_diff else ['Real', 'Fake']
+    titles = ["Real", "Fake", "Difference"] if plot_diff else ["Real", "Fake"]
     for i, label in enumerate(titles):
-        title_font = {'size': '18'}
+        title_font = {"size": "18"}
         ax[i].set_title(label, **title_font)
     plt.tight_layout()
 
@@ -138,9 +142,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
     if not real.select_dtypes(include=["object"]).empty:
         lengths = []
         for d in real.select_dtypes(include=["object"]):
-            lengths.append(
-                max([len(x.strip()) for x in real[d].unique().tolist()])
-            )
+            lengths.append(max([len(x.strip()) for x in real[d].unique().tolist()]))
         max_len = max(lengths)
 
     row_height = 6 + (max_len // 30)
@@ -204,7 +206,9 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
         plt.show()
 
 
-def plot_correlation_comparison(evaluators: List, annot: bool = False, show: bool = False):
+def plot_correlation_comparison(
+    evaluators: List, annot: bool = False, show: bool = False
+):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
@@ -222,14 +226,14 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
         evaluators[0].real,
         nominal_columns=evaluators[0].categorical_columns,
         plot=False,
-        nom_nom_assoc='theil',
+        nom_nom_assoc="theil",
         compute_only=True,
         mark_columns=True,
         annot=False,
         cmap=cmap,
         cbar=False,
         ax=flat_ax[0],
-    )['corr']
+    )["corr"]
     for i in range(1, nr_plots):
         cbar = True if i % (nr_plots - 1) == 0 else False
         fake_corr.append(
@@ -237,14 +241,14 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
                 evaluators[i - 1].fake,
                 nominal_columns=evaluators[0].categorical_columns,
                 plot=False,
-                nom_nom_assoc='theil',
+                nom_nom_assoc="theil",
                 compute_only=True,
                 mark_columns=True,
                 annot=False,
                 cmap=cmap,
                 cbar=cbar,
                 ax=flat_ax[i],
-            )['corr']
+            )["corr"]
         )
         if i % (nr_plots - 1) == 0:
             cbar = flat_ax[i].collections[0].colorbar
@@ -253,7 +257,7 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
     for i in range(1, nr_plots):
         cbar = True if i % (nr_plots - 1) == 0 else False
         diff = abs(real_corr - fake_corr[i - 1])
-        sns.set(style='white')
+        sns.set(style="white")
         az = sns.heatmap(
             diff,
             ax=flat_ax[i + nr_plots],
@@ -264,18 +268,20 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
             center=0,
             linewidths=0,
             cbar=cbar,
-            fmt='.2f',
+            fmt=".2f",
         )
         if i % (nr_plots - 1) == 0:
             cbar = az.collections[0].colorbar
             cbar.ax.tick_params(labelsize=20)
-    titles = ['Real'] + [e.name if e.name is not None else idx for idx, e in enumerate(evaluators)]
+    titles = ["Real"] + [
+        e.name if e.name is not None else idx for idx, e in enumerate(evaluators)
+    ]
     for i, label in enumerate(titles):
         flat_ax[i].set_yticklabels([])
         flat_ax[i].set_xticklabels([])
         flat_ax[i + nr_plots].set_yticklabels([])
         flat_ax[i + nr_plots].set_xticklabels([])
-        title_font = {'size': '28'}
+        title_font = {"size": "28"}
         flat_ax[i].set_title(label, **title_font)
     plt.tight_layout()
     if show:
@@ -284,7 +290,14 @@ def plot_correlation_comparison(evaluators: List, annot: bool = False, show: boo
         return fig
 
 
-def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', ax=None, show: bool = True):
+def cdf(
+    data_r,
+    data_f,
+    xlabel: str = "Values",
+    ylabel: str = "Cumulative Sum",
+    ax=None,
+    show: bool = True,
+):
     """
     Plot continous density function on optionally given ax. If no ax, cdf is plotted and shown.
 
@@ -305,23 +318,23 @@ def cdf(data_r, data_f, xlabel: str = 'Values', ylabel: str = 'Cumulative Sum', 
 
     local_ax = ax if ax else plt.subplots()[1]
 
-    axis_font = {'size': '14'}
+    axis_font = {"size": "14"}
     local_ax.set_xlabel(xlabel, **axis_font)
     local_ax.set_ylabel(ylabel, **axis_font)
 
     local_ax.grid()
-    local_ax.plot(x1, y, marker='o', linestyle='none', label='Real', ms=8)
-    local_ax.plot(x2, y, marker='o', linestyle='none', label='Fake', alpha=0.5)
-    local_ax.tick_params(axis='both', which='major', labelsize=8)
-    local_ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3)
+    local_ax.plot(x1, y, marker="o", linestyle="none", label="Real", ms=8)
+    local_ax.plot(x2, y, marker="o", linestyle="none", label="Fake", alpha=0.5)
+    local_ax.tick_params(axis="both", which="major", labelsize=8)
+    local_ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.1), ncol=3)
     import matplotlib.ticker as mticker
 
     # If labels are strings, rotate them vertical
-    if isinstance(data_r, pd.Series) and data_r.dtypes == 'object':
+    if isinstance(data_r, pd.Series) and data_r.dtypes == "object":
         all_labels = set(data_r) | set(data_f)
         ticks_loc = local_ax.get_xticks()
         local_ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        local_ax.set_xticklabels(sorted(all_labels), rotation='vertical')
+        local_ax.set_xticklabels(sorted(all_labels), rotation="vertical")
 
     if ax is None:
         if show:
@@ -344,7 +357,7 @@ def plot_mean_std_comparison(evaluators: List, show: bool = True):
 
     titles = [e.name if e is not None else idx for idx, e in enumerate(evaluators)]
     for i, label in enumerate(titles):
-        title_font = {'size': '24'}
+        title_font = {"size": "24"}
         flat_ax[i].set_title(label, **title_font)
     plt.tight_layout()
     if show:
@@ -353,7 +366,9 @@ def plot_mean_std_comparison(evaluators: List, show: bool = True):
         return fig
 
 
-def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True):
+def plot_mean_std(
+    real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True
+):
     """
     Plot the means and standard deviations of each dataset.
 
@@ -364,12 +379,12 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
     """
     if ax is None:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-        fig.suptitle('Absolute Log Mean and STDs of numeric data\n', fontsize=16)
+        fig.suptitle("Absolute Log Mean and STDs of numeric data\n", fontsize=16)
 
     ax[0].grid(True)
     ax[1].grid(True)
-    real = real.select_dtypes(include='number')
-    fake = fake.select_dtypes(include='number')
+    real = real.select_dtypes(include="number")
+    fake = fake.select_dtypes(include="number")
     real_mean = np.log(np.add(abs(real.mean()).values, 1e-5))
     fake_mean = np.log(np.add(abs(fake.mean()).values, 1e-5))
     min_mean = min(real_mean) - 1
@@ -377,9 +392,9 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
     line = np.arange(min_mean, max_mean)
     sns.lineplot(x=line, y=line, ax=ax[0])
     sns.scatterplot(x=real_mean, y=fake_mean, ax=ax[0])
-    ax[0].set_title('Means of real and fake data')
-    ax[0].set_xlabel('real data mean (log)')
-    ax[0].set_ylabel('fake data mean (log)')
+    ax[0].set_title("Means of real and fake data")
+    ax[0].set_xlabel("real data mean (log)")
+    ax[0].set_ylabel("fake data mean (log)")
 
     real_std = np.log(np.add(real.std().values, 1e-5))
     fake_std = np.log(np.add(fake.std().values, 1e-5))
@@ -388,9 +403,9 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
     line = np.arange(min_std, max_std)
     sns.lineplot(x=line, y=line, ax=ax[1])
     sns.scatterplot(x=real_std, y=fake_std, ax=ax[1])
-    ax[1].set_title('Stds of real and fake data')
-    ax[1].set_xlabel('real data std (log)')
-    ax[1].set_ylabel('fake data std (log)')
+    ax[1].set_title("Stds of real and fake data")
+    ax[1].set_xlabel("real data std (log)")
+    ax[1].set_ylabel("fake data std (log)")
 
     if fname is not None:
         plt.savefig(fname)

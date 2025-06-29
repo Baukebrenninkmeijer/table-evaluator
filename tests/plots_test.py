@@ -1,13 +1,13 @@
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from table_evaluator.plots import plot_distributions
 
+
 def test_plot_distributions(tmp_path):
-    real_data = pd.DataFrame(np.random.rand(100, 3), columns=['col1', 'col2', 'col3'])
-    fake_data = pd.DataFrame(np.random.rand(100, 3), columns=['col1', 'col2', 'col3'])
-    
+    real_data = pd.DataFrame(np.random.rand(100, 3), columns=["col1", "col2", "col3"])
+    fake_data = pd.DataFrame(np.random.rand(100, 3), columns=["col1", "col2", "col3"])
+
     # Test with fname (saving to file)
     fname = tmp_path / "distributions.png"
     plot_distributions(real_data, fake_data, fname=fname)
