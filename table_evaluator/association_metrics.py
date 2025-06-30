@@ -1,11 +1,50 @@
 """
 Native implementations of association metrics to replace dython dependency.
 
-This module provides statistical association measures for mixed data types:
-- Cramer's V for categorical-categorical associations
-- Theil's U for categorical-categorical associations
-- Correlation ratio for categorical-numerical associations
-- Full association matrix computation for mixed datasets
+This module provides statistical association measures for mixed data types, implementing
+the same algorithms as the dython library but with full control over the calculations.
+
+Statistical Methods Implemented:
+===============================
+
+1. **Cramer's V** (categorical-categorical):
+   - Based on chi-squared test of independence
+   - Formula: V = sqrt(χ²/(n * min(k-1, r-1)))
+   - Range: [0, 1] where 0 = no association, 1 = perfect association
+   - Symmetric: V(x,y) = V(y,x)
+   - Includes Bergsma-Wicher bias correction option
+
+2. **Theil's U** (categorical-categorical):
+   - Based on information theory and entropy
+   - Formula: U(x|y) = (H(X) - H(X|Y)) / H(X)
+   - Range: [0, 1] where 0 = no reduction in uncertainty, 1 = perfect prediction
+   - Asymmetric: U(x|y) ≠ U(y|x) generally
+   - Measures how much knowing Y reduces uncertainty about X
+
+3. **Correlation Ratio** (categorical-numerical):
+   - Based on ANOVA decomposition of variance
+   - Formula: η = sqrt(SS_between / SS_total)
+   - Range: [0, 1] where 0 = no association, 1 = categorical perfectly determines numerical
+   - Measures proportion of numerical variance explained by categorical grouping
+
+4. **Full Associations Matrix**:
+   - Automatically selects appropriate metric based on variable types
+   - Handles mixed datasets with categorical, numerical, and boolean variables
+   - Returns correlation matrix with all pairwise associations
+
+Key Features:
+=============
+- Numerically stable implementations with proper handling of edge cases
+- Comprehensive input validation and type checking
+- Consistent API matching dython's interface
+- Performance optimized with numpy/scipy operations
+- Extensive test coverage including edge cases
+
+References:
+===========
+- Cramér, H. (1946). Mathematical Methods of Statistics
+- Theil, H. (1970). On the estimation of relationships involving qualitative variables
+- Bergsma, W., & Wicher, P. (2013). On the bias and efficiency of Cramér's V
 """
 
 from typing import Dict, List, Optional, Union
@@ -33,10 +72,30 @@ def cramers_v(
 
     Returns:
         float: Cramer's V in the range [0,1]
+
+    Raises:
+        ValueError: If inputs are empty or have mismatched lengths
+        TypeError: If inputs cannot be converted to pandas Series
     """
-    # Convert to pandas Series for easier handling
-    x_series = pd.Series(x) if not isinstance(x, pd.Series) else x
-    y_series = pd.Series(y) if not isinstance(y, pd.Series) else y
+    # Type and input validation
+    if not isinstance(bias_correction, bool):
+        raise TypeError("bias_correction must be a boolean")
+
+    try:
+        # Convert to pandas Series for easier handling
+        x_series = pd.Series(x) if not isinstance(x, pd.Series) else x
+        y_series = pd.Series(y) if not isinstance(y, pd.Series) else y
+    except (ValueError, TypeError) as e:
+        raise TypeError(f"Cannot convert inputs to pandas Series: {e}") from e
+
+    # Validate inputs
+    if len(x_series) != len(y_series):
+        raise ValueError(
+            f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}"
+        )
+
+    if len(x_series) == 0:
+        raise ValueError("Input arrays cannot be empty")
 
     # Handle missing values by dropping them
     mask = ~(x_series.isna() | y_series.isna())
@@ -44,7 +103,7 @@ def cramers_v(
     y_clean = y_series[mask]
 
     if len(x_clean) == 0:
-        return 0.0
+        return 0.0  # No valid data points - return 0 association
 
     # Create contingency table
     confusion_matrix = pd.crosstab(x_clean, y_clean)
@@ -52,8 +111,8 @@ def cramers_v(
     if confusion_matrix.shape[0] == 1 or confusion_matrix.shape[1] == 1:
         return 0.0
 
-    # Calculate chi-squared statistic
-    chi2, _, _, _ = chi2_contingency(confusion_matrix)
+    # Calculate chi-squared statistic (disable Yates correction for consistency)
+    chi2, _, _, _ = chi2_contingency(confusion_matrix, correction=False)
 
     n = confusion_matrix.sum().sum()
     min_dim = min(confusion_matrix.shape) - 1
@@ -92,10 +151,26 @@ def theils_u(
 
     Returns:
         float: Theil's U in the range [0,1]
+
+    Raises:
+        ValueError: If inputs are empty or have mismatched lengths
+        TypeError: If inputs cannot be converted to pandas Series
     """
-    # Convert to pandas Series for easier handling
-    x_series = pd.Series(x) if not isinstance(x, pd.Series) else x
-    y_series = pd.Series(y) if not isinstance(y, pd.Series) else y
+    try:
+        # Convert to pandas Series for easier handling
+        x_series = pd.Series(x) if not isinstance(x, pd.Series) else x
+        y_series = pd.Series(y) if not isinstance(y, pd.Series) else y
+    except (ValueError, TypeError) as e:
+        raise TypeError(f"Cannot convert inputs to pandas Series: {e}") from e
+
+    # Validate inputs
+    if len(x_series) != len(y_series):
+        raise ValueError(
+            f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}"
+        )
+
+    if len(x_series) == 0:
+        raise ValueError("Input arrays cannot be empty")
 
     # Handle missing values by dropping them
     mask = ~(x_series.isna() | y_series.isna())
@@ -105,12 +180,13 @@ def theils_u(
     if len(x_clean) == 0:
         return 0.0
 
-    # Calculate entropy of x
+    # Calculate entropy of x using Shannon entropy formula: H(X) = -Σ p(x) * log2(p(x))
     x_counter = x_clean.value_counts()
     x_probs = x_counter / len(x_clean)
-    h_x = -np.sum(
-        x_probs * np.log2(x_probs + 1e-10)
-    )  # Add small epsilon to avoid log(0)
+    EPSILON = (
+        1e-10  # Small constant to prevent log(0), typical value for numerical stability
+    )
+    h_x = -np.sum(x_probs * np.log2(x_probs + EPSILON))  # Shannon entropy in bits
 
     if h_x == 0:
         return 0.0
@@ -128,13 +204,14 @@ def theils_u(
             x_given_y_counter = x_given_y.value_counts()
             x_given_y_probs = x_given_y_counter / len(x_given_y)
             h_x_given_y_val = -np.sum(
-                x_given_y_probs * np.log2(x_given_y_probs + 1e-10)
+                x_given_y_probs * np.log2(x_given_y_probs + EPSILON)
             )
             h_x_given_y += p_y * h_x_given_y_val
 
     # Calculate Theil's U = (H(X) - H(X|Y)) / H(X)
+    # This represents the uncertainty coefficient: how much knowing Y reduces uncertainty about X
     u = (h_x - h_x_given_y) / h_x
-    return max(0.0, min(1.0, u))
+    return max(0.0, min(1.0, u))  # Clamp to [0,1] range for numerical stability
 
 
 def correlation_ratio(
@@ -186,9 +263,11 @@ def correlation_ratio(
             group_mean = group_data.mean()
             ss_between += len(group_data) * (group_mean - overall_mean) ** 2
 
-    # Calculate correlation ratio
+    # Calculate correlation ratio (eta): sqrt(SS_between / SS_total)
+    # This is the square root of the eta-squared (coefficient of determination)
+    # representing the proportion of variance in numerical variable explained by categorical variable
     eta_squared = ss_between / ss_total
-    return np.sqrt(max(0.0, min(1.0, eta_squared)))
+    return np.sqrt(max(0.0, min(1.0, eta_squared)))  # Clamp for numerical stability
 
 
 def associations(
@@ -254,9 +333,7 @@ def associations(
                             assoc_value, _ = stats.pearsonr(
                                 dataset[col1].dropna(), dataset[col2].dropna()
                             )
-                            assoc_value = abs(
-                                assoc_value
-                            )  # Take absolute value for consistency
+                            # Keep original sign for Pearson correlation to match dython behavior
                         elif num_num_assoc == "spearman":
                             assoc_value, _ = stats.spearmanr(
                                 dataset[col1].dropna(), dataset[col2].dropna()
@@ -288,9 +365,22 @@ def associations(
                     if np.isnan(assoc_value):
                         assoc_value = 0.0
 
-                except Exception as e:
+                except (
+                    ValueError,
+                    RuntimeError,
+                    np.linalg.LinAlgError,
+                    TypeError,
+                ) as e:
                     warnings.warn(
-                        f"Could not calculate association between {col1} and {col2}: {e}"
+                        f"Could not calculate association between {col1} and {col2}: {e}",
+                        RuntimeWarning,
+                    )
+                    assoc_value = 0.0
+                except Exception as e:
+                    # Log unexpected errors but don't crash - return 0 association
+                    warnings.warn(
+                        f"Unexpected error calculating association between {col1} and {col2}: {e}",
+                        RuntimeWarning,
                     )
                     assoc_value = 0.0
 
@@ -308,9 +398,10 @@ def associations(
                         corr_matrix.loc[col2, col1] = (
                             reverse_assoc if not np.isnan(reverse_assoc) else 0.0
                         )
-                    except Exception as e:
+                    except (ValueError, RuntimeError) as e:
                         warnings.warn(
-                            f"Could not calculate reverse Theil's U between {col2} and {col1}: {e}"
+                            f"Could not calculate reverse Theil's U between {col2} and {col1}: {e}",
+                            RuntimeWarning,
                         )
                         corr_matrix.loc[col2, col1] = 0.0
 

@@ -63,24 +63,81 @@ class DataConverter:
             Tuple[pd.DataFrame, pd.DataFrame]: One-hot encoded real and fake datasets
         """
         # Include boolean columns in encoding
-        categorical_cols = (
+        extended_categorical_cols = DataConverter._extend_categorical_columns(
+            categorical_columns, real, fake
+        )
+
+        # Apply one-hot encoding using native implementation
+        real_encoded = DataConverter._numerical_encoding(
+            real, extended_categorical_cols
+        )
+        fake_encoded = DataConverter._numerical_encoding(
+            fake, extended_categorical_cols
+        )
+
+        # Ensure both datasets have the same columns
+        return DataConverter._align_columns(real_encoded, fake_encoded)
+
+    @staticmethod
+    def to_numerical_one_hot(
+        real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: List[str]
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Convert datasets to numerical representations using one-hot encoding.
+
+        This method is identical to to_one_hot and exists for backward compatibility.
+
+        Args:
+            real: Real dataset
+            fake: Synthetic dataset
+            categorical_columns: List of categorical column names
+
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: One-hot encoded real and fake datasets
+        """
+        return DataConverter.to_one_hot(real, fake, categorical_columns)
+
+    @staticmethod
+    def _extend_categorical_columns(
+        categorical_columns: List[str], real: pd.DataFrame, fake: pd.DataFrame
+    ) -> List[str]:
+        """
+        Extend categorical columns to include boolean columns from both datasets.
+
+        Args:
+            categorical_columns: Base categorical column names
+            real: Real dataset
+            fake: Synthetic dataset
+
+        Returns:
+            List[str]: Extended list of categorical columns without duplicates
+        """
+        extended_cols = (
             categorical_columns
             + real.select_dtypes("bool").columns.tolist()
             + fake.select_dtypes("bool").columns.tolist()
         )
-
         # Remove duplicates while preserving order
-        categorical_cols = list(dict.fromkeys(categorical_cols))
+        return list(dict.fromkeys(extended_cols))
 
-        # Apply one-hot encoding using native implementation
-        real_encoded = DataConverter._numerical_encoding(real, categorical_cols)
-        real_encoded = real_encoded.sort_index(axis=1)
+    @staticmethod
+    def _align_columns(
+        real_encoded: pd.DataFrame, fake_encoded: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Ensure both datasets have identical columns in the same order.
 
-        fake_encoded = DataConverter._numerical_encoding(fake, categorical_cols)
+        Args:
+            real_encoded: Real dataset after encoding
+            fake_encoded: Fake dataset after encoding
 
-        # Ensure both datasets have the same columns
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: Aligned datasets with same columns
+        """
+        # Get all unique columns and sort for consistency
         all_columns = sorted(set(real_encoded.columns) | set(fake_encoded.columns))
 
+        # Add missing columns with zeros
         for col in all_columns:
             if col not in real_encoded.columns:
                 logger.warning(
@@ -93,27 +150,11 @@ class DataConverter:
                 )
                 fake_encoded[col] = 0.0
 
+        # Reorder columns to match
         real_encoded = real_encoded[all_columns]
         fake_encoded = fake_encoded[all_columns]
 
         return real_encoded, fake_encoded
-
-    @staticmethod
-    def to_numerical_one_hot(
-        real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: List[str]
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Alias for to_one_hot for backward compatibility.
-
-        Args:
-            real: Real dataset
-            fake: Synthetic dataset
-            categorical_columns: List of categorical column names
-
-        Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: One-hot encoded real and fake datasets
-        """
-        return DataConverter.to_one_hot(real, fake, categorical_columns)
 
     @staticmethod
     def ensure_compatible_columns(

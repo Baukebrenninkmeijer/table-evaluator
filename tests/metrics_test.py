@@ -64,10 +64,10 @@ def test_associations():
     # Test diagonal values are 1.0 (self-correlation)
     np.testing.assert_array_almost_equal(np.diag(corr_matrix), 1.0, decimal=5)
 
-    # Test values are in valid range [0, 1] for most association metrics
-    assert (corr_matrix.values >= 0).all() and (
+    # Test values are in valid range [-1, 1] (Pearson correlations can be negative)
+    assert (corr_matrix.values >= -1).all() and (
         corr_matrix.values <= 1
-    ).all(), "Association values should be in [0,1]"
+    ).all(), "Association values should be in [-1,1]"
 
     # Test Theil's U version
     real_assoc_theil = associations(
