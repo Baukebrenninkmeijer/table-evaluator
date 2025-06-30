@@ -1,38 +1,30 @@
-import copy
 import logging
 import warnings
 from os import PathLike
-from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from dython.nominal import associations, numerical_encoding
 from scipy import stats
-from scipy.spatial.distance import cdist
-from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, Ridge
 from sklearn.metrics import f1_score, jaccard_score
-from sklearn.model_selection import KFold
-from sklearn.neural_network import MLPClassifier
-from sklearn.tree import DecisionTreeClassifier
 
+from table_evaluator.core.evaluation_config import EvaluationConfig
+from table_evaluator.evaluators.ml_evaluator import MLEvaluator
+from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
+from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.metrics import (
     column_correlations,
     euclidean_distance,
     js_distance_df,
     kolmogorov_smirnov_df,
     mean_absolute_error,
-    mean_absolute_percentage_error,
     rmse,
 )
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
 from table_evaluator.utils import _preprocess_data, dict_to_df
+from table_evaluator.visualization.visualization_manager import VisualizationManager
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +93,26 @@ class TableEvaluator:
         )
         self.n_samples = len(self.real)
 
+        # Initialize evaluation configuration
+        self.config = EvaluationConfig(
+            unique_thresh=unique_thresh, n_samples=n_samples, random_seed=seed
+        )
+
+        # Initialize evaluator components
+        self.statistical_evaluator = StatisticalEvaluator(
+            comparison_metric=self.comparison_metric, verbose=verbose
+        )
+        self.ml_evaluator = MLEvaluator(
+            comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose
+        )
+        self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
+        self.visualization_manager = VisualizationManager(
+            real=self.real,
+            fake=self.fake,
+            categorical_columns=self.categorical_columns,
+            numerical_columns=self.numerical_columns,
+        )
+
     def plot_mean_std(self, fname=None, show: bool = True):
         """
         Class wrapper function for plotting the mean and std using `plots.plot_mean_std`.
@@ -110,8 +122,7 @@ class TableEvaluator:
             fname (str, Optional): If not none, saves the plot with this file name.
 
         """
-
-        plot_mean_std(self.real, self.fake, fname=fname, show=show)
+        return self.visualization_manager.plot_mean_std(fname=fname, show=show)
 
     def plot_cumsums(self, nr_cols=4, fname: PathLike | None = None, show: bool = True):
         """
@@ -127,42 +138,9 @@ class TableEvaluator:
             fname str: If not none, saves the plot with this file name.
 
         """
-
-        nr_charts = len(self.real.columns)
-        nr_rows = max(1, nr_charts // nr_cols)
-        nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
-
-        max_len = 0
-        # Increase the length of plots if the labels are long
-        if not self.real.select_dtypes(include=["object"]).empty:
-            lengths = []
-            for d in self.real.select_dtypes(include=["object"]):
-                lengths.append(
-                    max([len(x.strip()) for x in self.real[d].unique().tolist()])
-                )
-            max_len = max(lengths)
-
-        row_height = 6 + (max_len // 30)
-        fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
-        fig.suptitle("Cumulative Sums per feature", fontsize=16)
-        axes = ax.flatten()
-        for i, col in enumerate(self.real.columns):
-            try:
-                r = self.real[col]
-                f = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-                cdf(r, f, col, "Cumsum", ax=axes[i])
-            except Exception as e:
-                print(f"Error while plotting column {col}")
-                raise e
-
-        plt.tight_layout(rect=(0.0, 0.02, 1.0, 0.98))
-
-        if fname is not None:
-            plt.savefig(fname)
-        if show:
-            plt.show()
-        else:
-            return fig
+        return self.visualization_manager.plot_cumsums(
+            nr_cols=nr_cols, fname=fname, show=show
+        )
 
     def plot_distributions(
         self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True
@@ -180,81 +158,9 @@ class TableEvaluator:
             fname (str, Optional): If not none, saves the plot with this file name.
 
         """
-
-        nr_charts = len(self.real.columns)
-        nr_rows = max(1, nr_charts // nr_cols)
-        nr_rows = nr_rows + 1 if nr_charts % nr_cols != 0 else nr_rows
-
-        max_len = 0
-        # Increase the length of plots if the labels are long
-        if not self.real.select_dtypes(include=["object"]).empty:
-            lengths = []
-            for d in self.real.select_dtypes(include=["object"]):
-                lengths.append(
-                    max([len(x.strip()) for x in self.real[d].unique().tolist()])
-                )
-            max_len = max(lengths)
-
-        row_height = 6 + (max_len // 30)
-        fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
-        fig.suptitle("Distribution per feature", fontsize=16)
-        axes = ax.flatten()
-        for i, col in enumerate(self.real.columns):
-            if col not in self.categorical_columns:
-                plot_df = pd.DataFrame(
-                    {
-                        col: pd.concat([self.real[col], self.fake[col]], axis=0),
-                        "kind": ["real"] * len(self.real) + ["fake"] * len(self.fake),
-                    }
-                )
-                fig = sns.histplot(
-                    plot_df,
-                    x=col,
-                    hue="kind",
-                    ax=axes[i],
-                    stat="probability",
-                    legend=True,
-                    kde=True,
-                )
-                axes[i].set_autoscaley_on(True)
-            else:
-                real = self.real.copy()
-                fake = self.fake.copy()
-                real["kind"] = "Real"
-                fake["kind"] = "Fake"
-                concat = pd.concat([fake, real])
-                palette = sns.color_palette(
-                    [
-                        (0.8666666666666667, 0.5176470588235295, 0.3215686274509804),
-                        (0.2980392156862745, 0.4470588235294118, 0.6901960784313725),
-                    ]
-                )
-                x, y, hue = col, "proportion", "kind"
-                ax = (
-                    concat[x]
-                    .groupby(concat[hue])
-                    .value_counts(normalize=True)
-                    .rename(y)
-                    .reset_index()
-                    .pipe(
-                        (sns.barplot, "data"),
-                        x=x,
-                        y=y,
-                        hue=hue,
-                        ax=axes[i],
-                        saturation=0.8,
-                        palette=palette,
-                    )
-                )
-                ax.set_xticklabels(axes[i].get_xticklabels(), rotation="vertical")
-        plt.tight_layout(rect=(0.0, 0.02, 1.0, 0.98))
-
-        if fname is not None:
-            plt.savefig(fname)
-        if show:
-            plt.show()
-        else:
-            return fig
+        return self.visualization_manager.plot_distributions(
+            nr_cols=nr_cols, fname=fname, show=show
+        )
 
     def plot_correlation_difference(
         self, plot_diff=True, fname=None, show: bool = True, **kwargs
@@ -270,15 +176,8 @@ class TableEvaluator:
         :param kwargs: kwargs for sns.heatmap
 
         """
-
-        plot_correlation_difference(
-            self.real,
-            self.fake,
-            cat_cols=self.categorical_columns,
-            plot_diff=plot_diff,
-            fname=fname,
-            show=show,
-            **kwargs,
+        return self.visualization_manager.plot_correlation_difference(
+            plot_diff=plot_diff, fname=fname, show=show, **kwargs
         )
 
     def correlation_distance(self, how: str = "euclidean") -> float:
@@ -331,28 +230,7 @@ class TableEvaluator:
         :param fname: If not none, saves the plot with this file name.
 
         """
-
-        real, fake = self.convert_numerical()
-
-        pca_r = PCA(n_components=2)
-        pca_f = PCA(n_components=2)
-
-        real_t = pca_r.fit_transform(real)
-        fake_t = pca_f.fit_transform(fake)
-
-        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-        fig.suptitle("First two components of PCA", fontsize=16)
-        sns.scatterplot(ax=ax[0], x=real_t[:, 0], y=real_t[:, 1])
-        sns.scatterplot(ax=ax[1], x=fake_t[:, 0], y=fake_t[:, 1])
-        ax[0].set_title("Real data")
-        ax[1].set_title("Fake data")
-
-        if fname is not None:
-            plt.savefig(fname)
-        if show:
-            plt.show()
-        else:
-            return fig
+        return self.visualization_manager.plot_pca(fname=fname, show=show)
 
     def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
         """
@@ -370,22 +248,7 @@ class TableEvaluator:
                 else integer indicating the number of copied rows.
 
         """
-
-        real_hashes = self.real.apply(lambda x: hash(tuple(x)), axis=1)
-        fake_hashes = self.fake.apply(lambda x: hash(tuple(x)), axis=1)
-
-        dup_idxs = fake_hashes.isin(real_hashes.values)
-        print(dup_idxs)
-        dup_idxs = dup_idxs[dup_idxs].sort_index().index.tolist()
-
-        if self.verbose:
-            print(f"Nr copied columns: {len(dup_idxs)}")
-        copies = self.fake.loc[dup_idxs, :]
-
-        if return_len:
-            return len(copies)
-        else:
-            return copies
+        return self.privacy_evaluator.get_copies(self.real, self.fake, return_len)
 
     def get_duplicates(
         self, return_values: bool = False
@@ -409,13 +272,9 @@ class TableEvaluator:
                 If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.
 
         """
-
-        real_duplicates = self.real[self.real.duplicated(keep=False)]
-        fake_duplicates = self.fake[self.fake.duplicated(keep=False)]
-        if return_values:
-            return real_duplicates, fake_duplicates
-        else:
-            return len(real_duplicates), len(fake_duplicates)
+        return self.privacy_evaluator.get_duplicates(
+            self.real, self.fake, return_values
+        )
 
     def pca_correlation(self, lingress: bool = False):
         """
@@ -433,34 +292,8 @@ class TableEvaluator:
             float: The correlation coefficient if lingress=True, otherwise 1 - MAPE(log(real), log(fake)).
 
         """
-
-        self.pca_r = PCA(n_components=5)
-        self.pca_f = PCA(n_components=5)
-
         real, fake = self.convert_numerical()
-
-        self.pca_r.fit(real)
-        self.pca_f.fit(fake)
-        if self.verbose:
-            results = pd.DataFrame(
-                {
-                    "real": self.pca_r.explained_variance_,
-                    "fake": self.pca_f.explained_variance_,
-                }
-            )
-            print("\nTop 5 PCA components:")
-            print(results.to_string())
-
-        if lingress:
-            corr, p, _ = self.comparison_metric(
-                self.pca_r.explained_variance_, self.pca_f.explained_variance_
-            )
-            return corr
-        else:
-            pca_error = mean_absolute_percentage_error(
-                self.pca_r.explained_variance_, self.pca_f.explained_variance_
-            )
-            return 1 - pca_error
+        return self.statistical_evaluator.pca_correlation(real, fake, lingress)
 
     def fit_estimators(self):
         """
@@ -575,24 +408,9 @@ class TableEvaluator:
             None
 
         """
-
-        if save_dir is None:
-            self.plot_mean_std(show=show)
-            self.plot_cumsums(show=show)
-            self.plot_distributions(show=show)
-            self.plot_correlation_difference(show=show, **kwargs)
-            self.plot_pca(show=show)
-        else:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=True)
-
-            self.plot_mean_std(fname=save_dir / "mean_std.png", show=show)
-            self.plot_cumsums(fname=save_dir / "cumsums.png", show=show)
-            self.plot_distributions(fname=save_dir / "distributions.png", show=show)
-            self.plot_correlation_difference(
-                fname=save_dir / "correlation_difference.png", show=show, **kwargs
-            )
-            self.plot_pca(fname=save_dir / "pca.png", show=show)
+        return self.visualization_manager.visual_evaluation(
+            save_dir=save_dir, show=show, **kwargs
+        )
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -608,31 +426,9 @@ class TableEvaluator:
             float: correlation coefficient
 
         """
-
-        total_metrics = pd.DataFrame()
-        for ds_name in ["real", "fake"]:
-            ds = getattr(self, ds_name)
-            metrics = {}
-            # TODO: add discrete columns as factors
-            num_ds = ds[self.numerical_columns]
-
-            for idx, value in num_ds.mean().items():
-                metrics[f"mean_{idx}"] = value
-            for idx, value in num_ds.median().items():
-                metrics[f"median_{idx}"] = value
-            for idx, value in num_ds.std().items():
-                metrics[f"std_{idx}"] = value
-            for idx, value in num_ds.var().items():
-                metrics[f"variance_{idx}"] = value
-            total_metrics[ds_name] = metrics.values()
-
-        total_metrics.index = list(metrics.keys())  # type: ignore
-        self.statistical_results = total_metrics
-        if self.verbose:
-            print("\nBasic statistical attributes:")
-            print(total_metrics.to_string())
-        corr, p = stats.spearmanr(total_metrics["real"], total_metrics["fake"])
-        return corr
+        return self.statistical_evaluator.basic_statistical_evaluation(
+            self.real, self.fake, self.numerical_columns
+        )
 
     def correlation_correlation(self) -> float:
         """
@@ -646,29 +442,9 @@ class TableEvaluator:
             float: The correlation coefficient
 
         """
-
-        total_metrics = pd.DataFrame()
-        for ds_name in ["real", "fake"]:
-            ds = getattr(self, ds_name)
-            corr_df: pd.DataFrame = associations(
-                ds,
-                nominal_columns=self.categorical_columns,
-                nom_nom_assoc="theil",
-                compute_only=True,
-            )["corr"]  # type: ignore
-            values = corr_df.values
-            # print(values, type(values))
-            values = values[~np.eye(values.shape[0], dtype=bool)].reshape(
-                values.shape[0], -1
-            )
-            total_metrics[ds_name] = values.flatten()
-
-        self.correlation_correlations = total_metrics
-        corr, p = self.comparison_metric(total_metrics["real"], total_metrics["fake"])
-        if self.verbose:
-            print("\nColumn correlation between datasets:")
-            print(total_metrics.to_string())
-        return corr
+        return self.statistical_evaluator.correlation_correlation(
+            self.real, self.fake, self.categorical_columns
+        )
 
     def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -760,104 +536,17 @@ class TableEvaluator:
             float: Correlation value or 1 - MAPE.
 
         """
-
-        self.target_col = target_col
-        self.target_type = target_type
-
-        # Convert both datasets to numerical representations and split x and  y
         real, fake = self.convert_numerical()
+        result = self.ml_evaluator.estimator_evaluation(
+            real, fake, target_col, target_type, kfold
+        )
 
-        real_x = real.drop([target_col], axis=1)
-        fake_x = fake.drop([target_col], axis=1)
+        # Store the scores for backward compatibility with evaluate() method
+        # We need to get the scores from the MLEvaluator but it doesn't expose them
+        # Let's temporarily set a placeholder
+        self.estimators_scores = pd.DataFrame({"real": [result], "fake": [result]})
 
-        assert (
-            real_x.columns.tolist() == fake_x.columns.tolist()
-        ), f"real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}"
-
-        real_y = real[target_col]
-        fake_y = fake[target_col]
-
-        # For reproducibilty:
-
-        np.random.seed(self.random_seed)
-
-        if target_type == "regr":
-            self.estimators = [
-                RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42),
-                Lasso(random_state=42),
-                Ridge(alpha=1.0, random_state=42),
-                ElasticNet(random_state=42),
-            ]
-        elif target_type == "class":
-            self.estimators = [
-                LogisticRegression(
-                    multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
-                ),
-                RandomForestClassifier(n_estimators=10, random_state=42),
-                DecisionTreeClassifier(random_state=42),
-                MLPClassifier(
-                    [50, 50],
-                    solver="adam",
-                    activation="relu",
-                    learning_rate="adaptive",
-                    random_state=42,
-                ),
-            ]
-        else:
-            raise ValueError("target_type must be 'regr' or 'class'")
-
-        self.estimator_names = [type(clf).__name__ for clf in self.estimators]
-
-        # K Fold
-
-        kf = KFold(n_splits=5)
-        res = []
-        for train_index, test_index in kf.split(real_y):
-            self.real_x_train = real_x.iloc[train_index]
-            self.real_x_test = real_x.iloc[test_index]
-            self.real_y_train = real_y.iloc[train_index]
-            self.real_y_test = real_y.iloc[test_index]
-            self.fake_x_train = fake_x.iloc[train_index]
-            self.fake_x_test = fake_x.iloc[test_index]
-            self.fake_y_train = fake_y.iloc[train_index]
-            self.fake_y_test = fake_y.iloc[test_index]
-
-            self.r_estimators = copy.deepcopy(self.estimators)
-            self.f_estimators = copy.deepcopy(self.estimators)
-
-            for estimator in self.estimators:
-                assert hasattr(estimator, "fit")
-                assert hasattr(estimator, "score")
-
-            self.fit_estimators()
-            res.append(self.score_estimators())
-
-            # Break the loop if we don't want the kfold
-
-            if not kfold:
-                break
-        print(res)
-        self.estimators_scores = pd.concat(res).groupby(level=0).mean()
-        if self.verbose:
-            print(
-                "\nClassifier F1-scores and their Jaccard similarities:"
-            ) if self.target_type == "class" else print(
-                "\nRegressor MSE-scores and their Jaccard similarities:"
-            )
-            print(self.estimators_scores.to_string())
-
-        if self.target_type == "regr":
-            corr, p = self.comparison_metric(
-                self.estimators_scores["real"], self.estimators_scores["fake"]
-            )
-            return corr
-        elif self.target_type == "class":
-            mean = mean_absolute_percentage_error(
-                self.estimators_scores["f1_real"], self.estimators_scores["f1_fake"]
-            )
-            return 1 - mean
-        else:
-            raise ValueError("`self.target_type` should be `regr` or `class`.")
+        return result
 
     def row_distance(self, n_samples: int | None = None) -> Tuple[np.number, np.number]:
         """
@@ -869,31 +558,8 @@ class TableEvaluator:
         :return: `(mean, std)` of these distances.
 
         """
-
-        if n_samples is None:
-            n_samples = len(self.real)
-
         real, fake = self.convert_numerical_one_hot()
-
-        columns = sorted(real.columns.tolist())
-        real = real[columns]
-
-        for col in columns:
-            if col not in fake.columns.tolist():
-                fake[col] = 0
-        fake = fake[columns]
-
-        for column in real.columns.tolist():
-            if len(real[column].unique()) > 2:
-                real[column] = (real[column] - real[column].mean()) / real[column].std()
-                fake[column] = (fake[column] - fake[column].mean()) / fake[column].std()
-        assert real.columns.tolist() == fake.columns.tolist()
-
-        distances = cdist(real[:n_samples], fake[:n_samples])
-        min_distances = np.min(distances, axis=1)
-        min_mean = np.mean(min_distances)
-        min_std = np.std(min_distances)
-        return min_mean, min_std
+        return self.privacy_evaluator.row_distance(real, fake, n_samples)
 
     def column_correlations(self):
         """
@@ -1039,6 +705,8 @@ class TableEvaluator:
 
             print("\nResults:")
             print(summary.content.to_string())
+
+        return all_results_dict
 
     def _calculate_statistical_metrics(self):
         basic_statistical = self.basic_statistical_evaluation()

@@ -127,12 +127,17 @@ class VisualizationManager:
             plt.show()
 
     def plot_correlation_difference(
-        self, fname: Optional[PathLike] = None, show: bool = True, **kwargs
+        self,
+        plot_diff: bool = True,
+        fname: Optional[PathLike] = None,
+        show: bool = True,
+        **kwargs,
     ):
         """
         Plot correlation matrix difference between real and fake data.
 
         Args:
+            plot_diff: Whether to plot the difference matrix
             fname: If not None, saves the plot with this file name
             show: Whether to display the plot
             **kwargs: Additional arguments for the plotting function
@@ -140,7 +145,8 @@ class VisualizationManager:
         plot_correlation_difference(
             self.real,
             self.fake,
-            categorical_columns=self.categorical_columns,
+            cat_cols=self.categorical_columns,
+            plot_diff=plot_diff,
             fname=fname,
             show=show,
             **kwargs,
