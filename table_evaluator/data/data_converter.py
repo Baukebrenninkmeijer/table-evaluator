@@ -125,7 +125,23 @@ class DataConverter:
                 combined_values = pd.concat(
                     [real_converted[column], fake_converted[column]]
                 ).dropna()
-                unique_values = sorted(combined_values.unique())
+
+                # Handle mixed types safely by converting everything to string if needed
+                try:
+                    unique_values = sorted(combined_values.unique())
+                except TypeError:
+                    # If direct sorting fails (mixed types), convert both columns to string first
+                    logger.debug(
+                        f"Mixed types detected in column '{column}', converting all values to string for consistent encoding"
+                    )
+                    real_converted[column] = real_converted[column].astype(str)
+                    fake_converted[column] = fake_converted[column].astype(str)
+
+                    # Recalculate combined values after string conversion
+                    combined_values = pd.concat(
+                        [real_converted[column], fake_converted[column]]
+                    ).dropna()
+                    unique_values = sorted(combined_values.unique())
 
                 # Create mapping for consistent encoding
                 value_map = {val: idx for idx, val in enumerate(unique_values)}
@@ -447,7 +463,33 @@ class DataConverter:
                 result_df = result_df.drop(columns=[col])
                 result_df = pd.concat([result_df, encoded], axis=1)
 
-        return result_df.astype(float)
+        # Convert all columns to float (original behavior for backward compatibility)
+        # But handle problematic columns more gracefully
+        for col in result_df.columns:
+            try:
+                if result_df[col].dtype == "bool":
+                    # Convert boolean columns to float (0.0/1.0)
+                    result_df[col] = result_df[col].astype(float)
+                else:
+                    # Try to convert to numeric
+                    result_df[col] = pd.to_numeric(
+                        result_df[col], errors="coerce"
+                    ).astype(float)
+            except Exception as e:
+                logger.warning(
+                    f"Could not convert column '{col}' to float, trying fallback encoding: {e}"
+                )
+                try:
+                    # Fallback: categorical codes
+                    result_df[col] = pd.Categorical(result_df[col]).codes.astype(float)
+                except Exception:
+                    # Last resort: drop the column
+                    logger.warning(
+                        f"Dropping column '{col}' as it cannot be converted to numeric format"
+                    )
+                    result_df = result_df.drop(columns=[col])
+
+        return result_df
 
 
 # Backward compatibility: create static methods that use default instance

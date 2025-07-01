@@ -40,17 +40,24 @@ dependencies = [
 ]
 
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "build>=1.2.2.post1",
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.7",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
 ]
 polars = [
     "polars>=0.20.0,<2.0.0",
 ]
 all = [
     "polars>=0.20.0,<2.0.0",
+    "build>=1.2.2.post1",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
 ]
 
 

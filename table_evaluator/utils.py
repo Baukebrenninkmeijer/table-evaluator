@@ -344,6 +344,13 @@ def _preprocess_data(
     # Fill missing values
     # Categorical columns: fill with "[NAN]"
     if categorical_columns:
+        # Convert categorical columns back to object type to allow arbitrary fillna values
+        for col in categorical_columns:
+            if col in real_pandas.columns and real_pandas[col].dtype.name == "category":
+                real_pandas[col] = real_pandas[col].astype("object")
+            if col in fake_pandas.columns and fake_pandas[col].dtype.name == "category":
+                fake_pandas[col] = fake_pandas[col].astype("object")
+
         real_pandas.loc[:, categorical_columns] = real_pandas.loc[
             :, categorical_columns
         ].fillna("[NAN]")

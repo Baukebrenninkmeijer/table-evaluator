@@ -135,8 +135,16 @@ class TestFullEvaluationWorkflow:
         assert all(col in cat_cols for col in expected_cat_cols)
 
         # Check for missing values handling
-        assert not real_processed.isnull().any().any()
-        assert not fake_processed.isnull().any().any()
+        # Convert to pandas for isnull check if needed
+        if hasattr(real_processed, "to_pandas"):
+            real_check = real_processed.to_pandas()
+            fake_check = fake_processed.to_pandas()
+        else:
+            real_check = real_processed
+            fake_check = fake_processed
+
+        assert not real_check.isnull().any().any()
+        assert not fake_check.isnull().any().any()
 
     def test_data_conversion_workflow(self, backend, sample_datasets):
         """Test data conversion workflows."""

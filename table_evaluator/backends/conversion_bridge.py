@@ -72,10 +72,28 @@ class DataFrameConverter:
                 return pl.DataFrame()
 
         try:
+            # Handle mixed types before conversion
+            df_to_convert = df.copy()
+
+            # Check for mixed types in object columns and convert them to string
+            for col in df_to_convert.select_dtypes(include=["object"]).columns:
+                # Check if the column has mixed types by attempting type inference
+                sample_values = df_to_convert[col].dropna()
+                if len(sample_values) > 0:
+                    type_set = set(
+                        type(val).__name__
+                        for val in sample_values.iloc[: min(100, len(sample_values))]
+                    )
+                    if len(type_set) > 1:
+                        logger.debug(
+                            f"Converting mixed-type column '{col}' to string for Polars compatibility"
+                        )
+                        df_to_convert[col] = df_to_convert[col].astype(str)
+
             # Validate dtypes if preserve_dtypes is True
             if preserve_dtypes:
                 unsupported = self.dtype_mapper.validate_pandas_dtypes(
-                    {col: dtype for col, dtype in df.dtypes.items()}
+                    {col: dtype for col, dtype in df_to_convert.dtypes.items()}
                 )
 
                 if unsupported:
@@ -84,11 +102,19 @@ class DataFrameConverter:
                     )
 
             # Create Polars DataFrame
-            polars_df = pl.from_pandas(df)
+            polars_df = pl.from_pandas(df_to_convert)
 
-            # Apply dtype conversions if needed
+            # Apply dtype conversions if needed (only if they seem necessary)
             if preserve_dtypes:
-                polars_df = self._apply_polars_dtypes(df, polars_df)
+                try:
+                    polars_df = self._apply_polars_dtypes(df, polars_df)
+                except Exception as e:
+                    # If dtype conversion fails, log and continue without conversion
+                    # Polars often does a good job detecting types automatically
+                    logger.warning(
+                        f"Dtype conversion failed, using polars auto-detected types: {e}"
+                    )
+                    # Continue with the polars-detected types
 
             # Return lazy or eager
             if lazy:
@@ -173,6 +199,18 @@ class DataFrameConverter:
         for column in pandas_df.columns:
             try:
                 pandas_dtype = pandas_df[column].dtype
+                current_polars_dtype = polars_df[column].dtype
+
+                # Smart dtype detection for object columns
+                if pandas_dtype == "object":
+                    # Check if polars already detected a better type
+                    if current_polars_dtype in [pl.Boolean, pl.Int64, pl.Float64]:
+                        # Trust polars' detection and skip conversion
+                        logger.debug(
+                            f"Column '{column}': Skipping conversion, polars detected {current_polars_dtype} for object column"
+                        )
+                        continue
+
                 target_polars_dtype = self.dtype_mapper.pandas_to_polars_dtype(
                     pandas_dtype
                 )
@@ -181,7 +219,12 @@ class DataFrameConverter:
                 polars_dtype_class = self._get_polars_dtype_class(target_polars_dtype)
 
                 if polars_dtype_class is not None:
-                    conversions.append(pl.col(column).cast(polars_dtype_class))
+                    # Only convert if the types are actually different
+                    if str(current_polars_dtype) != target_polars_dtype:
+                        logger.debug(
+                            f"Column '{column}': pandas {pandas_dtype} -> polars {current_polars_dtype} -> target {target_polars_dtype}"
+                        )
+                        conversions.append(pl.col(column).cast(polars_dtype_class))
 
             except (DTypeMappingError, AttributeError) as e:
                 logger.debug(f"Could not convert dtype for column '{column}': {e}")
@@ -306,7 +349,9 @@ class DataFrameConverter:
             if isinstance(df, pd.DataFrame):
                 return df.copy()
             else:
-                return self.polars_to_pandas(df, **kwargs)
+                # Remove 'lazy' parameter as polars_to_pandas doesn't support it
+                pandas_kwargs = {k: v for k, v in kwargs.items() if k != "lazy"}
+                return self.polars_to_pandas(df, **pandas_kwargs)
 
         elif target_backend == "polars":
             if POLARS_AVAILABLE and isinstance(df, (pl.DataFrame, pl.LazyFrame)):

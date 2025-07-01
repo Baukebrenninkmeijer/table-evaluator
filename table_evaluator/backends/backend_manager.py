@@ -48,7 +48,7 @@ class BackendManager:
     def load_data(
         self,
         path: Union[str, PathLike],
-        backend: Optional[BackendType] = None,
+        backend: Optional[Union[BackendType, str]] = None,
         auto_detect: bool = True,
         **kwargs,
     ) -> DataFrameWrapper:
@@ -72,6 +72,10 @@ class BackendManager:
         """
         path_obj = Path(path)
         file_format = path_obj.suffix.lower().lstrip(".")
+
+        # Convert string backend to BackendType if needed
+        if isinstance(backend, str):
+            backend = BackendType.from_string(backend)
 
         # Determine backend to use
         if backend is None and auto_detect:

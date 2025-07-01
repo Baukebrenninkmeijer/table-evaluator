@@ -238,7 +238,7 @@ class SchemaValidator:
                                 "Consider normalizing string lengths or using categorical type",
                             )
                         )
-                except Exception:
+                except Exception:  # nosec B110
                     pass  # Skip if error in string length calculation
 
         elif source_backend == "polars":
@@ -372,17 +372,28 @@ class SchemaValidator:
 
             # Check for complex dtypes
             for column in df.columns:
-                dtype = df[column].dtype
-                if dtype.name.startswith("complex"):
-                    issues.append(
-                        SchemaIssue(
-                            "complex_dtype",
-                            column,
-                            "Polars does not support complex number dtypes",
-                            "error",
-                            "Convert to separate real/imaginary columns or string representation",
+                try:
+                    # Handle case where duplicate columns exist
+                    col_data = df[column]
+                    if hasattr(col_data, "dtype"):
+                        dtype = col_data.dtype
+                    else:
+                        # Skip if this is a DataFrame (duplicate columns)
+                        continue
+
+                    if dtype.name.startswith("complex"):
+                        issues.append(
+                            SchemaIssue(
+                                "complex_dtype",
+                                column,
+                                "Polars does not support complex number dtypes",
+                                "error",
+                                "Convert to separate real/imaginary columns or string representation",
+                            )
                         )
-                    )
+                except (AttributeError, KeyError):
+                    # Skip columns that can't be accessed properly (e.g., duplicates)
+                    continue
 
         elif target_backend == "pandas" and source_backend == "polars":
             # Pandas limitations (fewer than Polars)

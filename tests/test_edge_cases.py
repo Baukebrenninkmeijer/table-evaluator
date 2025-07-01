@@ -69,8 +69,18 @@ class TestEmptyDataFrames:
         empty_fake = pd.DataFrame()
 
         # Should handle empty DataFrames gracefully
-        with pytest.raises((ValueError, Exception)):
-            _preprocess_data(empty_real, empty_fake)
+        result = _preprocess_data(empty_real, empty_fake)
+
+        # Should return tuple of (real, fake, categorical_columns, numerical_columns)
+        assert isinstance(result, tuple)
+        assert len(result) == 4
+        real_processed, fake_processed, categorical_columns, numerical_columns = result
+
+        # All should be empty
+        assert len(real_processed) == 0
+        assert len(fake_processed) == 0
+        assert len(categorical_columns) == 0
+        assert len(numerical_columns) == 0
 
     def test_empty_dataframe_operations(self):
         """Test operations on empty DataFrames."""
@@ -181,7 +191,7 @@ class TestLargeDataFrames:
         for sample_size in [100, 1000, 10000]:
             sampled = wrapper.sample(sample_size, random_state=42)
             assert len(sampled) == sample_size
-            assert sampled.columns.tolist() == large_dataframe.columns.tolist()
+            assert sampled.columns == large_dataframe.columns.tolist()
 
     @pytest.mark.parametrize(
         "backend", ["pandas"] + (["polars"] if POLARS_AVAILABLE else [])
@@ -341,13 +351,11 @@ class TestNaNAndMissingValues:
 
         # The 'all_missing' column should be handled
         validator = SchemaValidator()
-        issues = validator.validate_conversion_compatibility(df, "polars")
+        validator.validate_conversion_compatibility(df, "polars")
 
-        # Should detect issues with all-missing column
-        missing_issues = [
-            issue for issue in issues if "missing" in issue.issue_type.lower()
-        ]
-        # Implementation dependent - may or may not flag this as an issue
+        # Should detect issues with all-missing column (implementation dependent)
+        # May or may not flag this as an issue depending on validation strictness
+        pass
 
 
 class TestUnicodeAndSpecialCharacters:
@@ -404,13 +412,11 @@ class TestUnicodeAndSpecialCharacters:
 
         # Should handle special characters in column names
         validator = SchemaValidator()
-        issues = validator.validate_conversion_compatibility(df_special_cols, "polars")
+        validator.validate_conversion_compatibility(df_special_cols, "polars")
 
-        # Check if special column names cause issues
-        column_issues = [
-            issue for issue in issues if "column" in issue.issue_type.lower()
-        ]
-        # Implementation dependent
+        # Check if special column names cause issues (implementation dependent)
+        # May or may not detect issues depending on validation settings
+        pass
 
 
 class TestColumnNameEdgeCases:
@@ -449,9 +455,9 @@ class TestColumnNameEdgeCases:
         df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
         df.columns = [1, 2, 3]  # Numeric column names
 
-        # Should handle numeric column names
+        # Should handle numeric column names by converting to strings
         wrapper = DataFrameWrapper(df)
-        assert wrapper.columns == ["1", "2", "3"]  # Should convert to strings
+        assert wrapper.columns == ["1", "2", "3"]  # Converts to strings for consistency
 
 
 class TestConcurrencyAndThreadSafety:

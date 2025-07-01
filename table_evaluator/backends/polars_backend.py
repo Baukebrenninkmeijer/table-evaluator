@@ -2,7 +2,7 @@
 
 import logging
 from os import PathLike
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 import pandas as pd
 
@@ -18,10 +18,14 @@ from .base_backend import BaseBackend
 
 logger = logging.getLogger(__name__)
 
-if POLARS_AVAILABLE:
+if TYPE_CHECKING and POLARS_AVAILABLE:
     PolarsDataFrame = Union[pl.DataFrame, pl.LazyFrame]
+    PolarsExpr = pl.Expr
+    PolarsDataFrameConcrete = pl.DataFrame
 else:
-    PolarsDataFrame = None
+    PolarsDataFrame = Any
+    PolarsExpr = Any
+    PolarsDataFrameConcrete = Any
 
 
 class PolarsBackend(BaseBackend):
@@ -43,16 +47,29 @@ class PolarsBackend(BaseBackend):
             )
         self.lazy = lazy
 
+    def _ensure_polars_available(self):
+        """Ensure polars is available for operations."""
+        if not POLARS_AVAILABLE or pl is None:
+            raise ImportError(
+                "Polars backend operation called but polars is not installed. "
+                "Install with: pip install polars"
+            )
+
     def load_csv(
         self, path: Union[str, PathLike], sep: str = ",", **kwargs: Any
     ) -> PolarsDataFrame:
         """Load CSV file using polars.read_csv or scan_csv."""
-        kwargs.setdefault("separator", sep)
+        self._ensure_polars_available()
+
+        # Remove backend-specific parameters that polars doesn't support
+        backend_params = {"lazy"}
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in backend_params}
+        filtered_kwargs.setdefault("separator", sep)
 
         if self.lazy:
-            return pl.scan_csv(path, **kwargs)
+            return pl.scan_csv(path, **filtered_kwargs)
         else:
-            return pl.read_csv(path, **kwargs)
+            return pl.read_csv(path, **filtered_kwargs)
 
     def load_parquet(
         self, path: Union[str, PathLike], **kwargs: Any
@@ -94,7 +111,7 @@ class PolarsBackend(BaseBackend):
         return df.select(columns)
 
     def filter_rows(
-        self, df: PolarsDataFrame, condition: Union[str, pl.Expr]
+        self, df: PolarsDataFrame, condition: Union[str, PolarsExpr]
     ) -> PolarsDataFrame:
         """Filter DataFrame rows using Polars expressions."""
         if isinstance(condition, str):
@@ -112,7 +129,11 @@ class PolarsBackend(BaseBackend):
         if random_state is not None:
             kwargs["seed"] = random_state
 
-        return df.sample(**kwargs)
+        # LazyFrame doesn't have sample method, need to collect first
+        if isinstance(df, pl.LazyFrame):
+            return df.collect().sample(**kwargs)
+        else:
+            return df.sample(**kwargs)
 
     def fillna(
         self, df: PolarsDataFrame, value: Union[str, float, Dict[str, Any]]
@@ -294,7 +315,7 @@ class PolarsBackend(BaseBackend):
         all_columns = self.get_columns(df)
         return [col for col in all_columns if col not in numerical_columns]
 
-    def collect(self, df: PolarsDataFrame) -> pl.DataFrame:
+    def collect(self, df: PolarsDataFrame) -> PolarsDataFrameConcrete:
         """Collect LazyFrame into DataFrame."""
         if isinstance(df, pl.LazyFrame):
             return df.collect()

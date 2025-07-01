@@ -23,12 +23,18 @@ class PandasBackend(BaseBackend):
         self, path: Union[str, PathLike], sep: str = ",", **kwargs: Any
     ) -> pd.DataFrame:
         """Load CSV file using pandas.read_csv."""
-        kwargs.setdefault("low_memory", False)
-        return pd.read_csv(path, sep=sep, **kwargs)
+        # Remove polars-specific parameters that pandas doesn't support
+        polars_params = {"lazy"}
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in polars_params}
+        filtered_kwargs.setdefault("low_memory", False)
+        return pd.read_csv(path, sep=sep, **filtered_kwargs)
 
     def load_parquet(self, path: Union[str, PathLike], **kwargs: Any) -> pd.DataFrame:
         """Load Parquet file using pandas.read_parquet."""
-        return pd.read_parquet(path, **kwargs)
+        # Remove polars-specific parameters that pandas doesn't support
+        polars_params = {"lazy"}
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in polars_params}
+        return pd.read_parquet(path, **filtered_kwargs)
 
     def save_csv(
         self,
@@ -81,7 +87,7 @@ class PandasBackend(BaseBackend):
 
     def get_columns(self, df: pd.DataFrame) -> List[str]:
         """Get column names from DataFrame."""
-        return df.columns.tolist()
+        return [str(col) for col in df.columns]
 
     def get_shape(self, df: pd.DataFrame) -> Tuple[int, int]:
         """Get shape (rows, columns) of DataFrame."""

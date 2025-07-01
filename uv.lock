@@ -1179,6 +1179,15 @@ wheels = [
 ]
 
 [[package]]
+name = "py-cpuinfo"
+version = "9.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "17.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1261,6 +1270,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b4/8c/9862305bdcd6020bc7b45b1b5e7397a6caf1a33d3025b9a003b39075ffb2/pytest-8.3.2.tar.gz", hash = "sha256:c132345d12ce551242c87269de812483f5bcc87cdbb4722e48487ba194f9fdce", size = 1439314, upload-time = "2024-07-25T10:40:00.159Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0f/f9/cf155cf32ca7d6fa3601bc4c5dd19086af4b320b706919d48a4c79081cf9/pytest-8.3.2-py3-none-any.whl", hash = "sha256:4ba08f9ae7dcf84ded419494d229b48d0903ea6407b030eaec46df5e6a73bba5", size = 341802, upload-time = "2024-07-25T10:39:57.834Z" },
+]
+
+[[package]]
+name = "pytest-benchmark"
+version = "5.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "py-cpuinfo" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/d0/a8bd08d641b393db3be3819b03e2d9bb8760ca8479080a26a5f6e540e99c/pytest-benchmark-5.1.0.tar.gz", hash = "sha256:9ea661cdc292e8231f7cd4c10b0319e56a2118e2c09d9f50e1b3d150d2aca105", size = 337810, upload-time = "2024-10-30T11:51:48.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/d6/b41653199ea09d5969d4e385df9bbfd9a100f28ca7e824ce7c0a016e3053/pytest_benchmark-5.1.0-py3-none-any.whl", hash = "sha256:922de2dfa3033c227c96da942d1878191afa135a29485fb942e85dff1c592c89", size = 44259, upload-time = "2024-10-30T11:51:45.94Z" },
 ]
 
 [[package]]
@@ -1683,14 +1705,21 @@ dependencies = [
     { name = "tqdm" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 all = [
+    { name = "build" },
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
     { name = "polars" },
+    { name = "psutil" },
+    { name = "pytest-benchmark" },
 ]
 dev = [
     { name = "build" },
     { name = "ipykernel" },
     { name = "ipywidgets" },
+    { name = "psutil" },
+    { name = "pytest-benchmark" },
 ]
 polars = [
     { name = "polars" },
@@ -1698,14 +1727,26 @@ polars = [
 
 [package.metadata]
 requires-dist = [
+    { name = "build", marker = "extra == 'all'", specifier = ">=1.2.2.post1" },
+    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2.2.post1" },
+    { name = "ipykernel", marker = "extra == 'all'", specifier = ">=6.29.5" },
+    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "ipython", specifier = "==8.28.0" },
+    { name = "ipywidgets", marker = "extra == 'all'", specifier = ">=8.1.7" },
+    { name = "ipywidgets", marker = "extra == 'dev'", specifier = ">=8.1.7" },
     { name = "m2r2", specifier = "==0.3.3.post2" },
     { name = "matplotlib", specifier = "==3.9.2" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pandas", specifier = "==2.2.2" },
+    { name = "polars", marker = "extra == 'all'", specifier = ">=0.20.0,<2.0.0" },
+    { name = "polars", marker = "extra == 'polars'", specifier = ">=0.20.0,<2.0.0" },
     { name = "pre-commit", specifier = "==3.8.0" },
+    { name = "psutil", marker = "extra == 'all'", specifier = ">=5.9.0" },
+    { name = "psutil", marker = "extra == 'dev'", specifier = ">=5.9.0" },
     { name = "pyarrow", specifier = "==17.0.0" },
     { name = "pytest", specifier = "==8.3.2" },
+    { name = "pytest-benchmark", marker = "extra == 'all'", specifier = ">=4.0.0" },
+    { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "pytest-cov", specifier = "==4.0.0" },
     { name = "pytest-mock", specifier = "==3.14.0" },
     { name = "scikit-learn", specifier = "==1.5.1" },
@@ -1716,15 +1757,7 @@ requires-dist = [
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=1.2.0" },
     { name = "tqdm", specifier = "==4.66.5" },
 ]
-
-[package.metadata.requires-dev]
-all = [{ name = "polars", specifier = ">=0.20.0,<2.0.0" }]
-dev = [
-    { name = "build", specifier = ">=1.2.2.post1" },
-    { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "ipywidgets", specifier = ">=8.1.7" },
-]
-polars = [{ name = "polars", specifier = ">=0.20.0,<2.0.0" }]
+provides-extras = ["dev", "polars", "all"]
 
 [[package]]
 name = "threadpoolctl"

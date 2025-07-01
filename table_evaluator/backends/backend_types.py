@@ -44,6 +44,29 @@ class BackendType(Enum):
             raise ValueError(f"Unsupported DataFrame type: {type(df)}")
 
     @classmethod
+    def from_string(cls, backend_str: str) -> "BackendType":
+        """Convert string representation to BackendType.
+
+        Args:
+            backend_str: String representation of backend
+
+        Returns:
+            BackendType corresponding to the string
+
+        Raises:
+            ValueError: If string is not a valid backend type
+        """
+        backend_str = backend_str.lower()
+        if backend_str == "pandas":
+            return cls.PANDAS
+        elif backend_str == "polars":
+            return cls.POLARS
+        elif backend_str == "auto":
+            return cls.AUTO
+        else:
+            raise ValueError(f"Unknown backend string: {backend_str}")
+
+    @classmethod
     def get_optimal_backend(
         cls, data_size: int, file_format: str = "csv", prefer_lazy: bool = False
     ) -> "BackendType":

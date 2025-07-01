@@ -94,17 +94,29 @@ class DataBridge:
             if issues:
                 self._handle_validation_issues(issues, df)
 
-        # Optimize memory if requested
+        # Optimize memory if requested, but skip for same-backend conversions to avoid dtype changes
         if optimize_memory:
-            df = self._optimize_dataframe(df, target_backend)
+            # Determine source backend
+            if isinstance(df, pd.DataFrame):
+                source_backend = "pandas"
+            elif POLARS_AVAILABLE and isinstance(df, (pl.DataFrame, pl.LazyFrame)):
+                source_backend = "polars"
+            else:
+                source_backend = "unknown"
+
+            # Only optimize if converting between different backends
+            if source_backend != target_backend:
+                df = self._optimize_dataframe(df, target_backend)
 
         # Perform conversion
         if lazy and self.enable_lazy_conversion and self.lazy_converter:
             result = self.lazy_converter.convert_when_needed(
-                df, target_backend, **kwargs
+                df, target_backend, lazy=lazy, **kwargs
             )
         else:
-            result = self.converter.convert_with_fallback(df, target_backend, **kwargs)
+            result = self.converter.convert_with_fallback(
+                df, target_backend, lazy=lazy, **kwargs
+            )
 
         logger.info(f"Successfully converted DataFrame to {target_backend}")
         return result
