@@ -83,6 +83,7 @@ include = ["table_evaluator*"]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
+norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
 
 [tool.mypy]
 python_version = "3.10"

@@ -31,9 +31,11 @@ class PandasBackend(BaseBackend):
 
     def load_parquet(self, path: Union[str, PathLike], **kwargs: Any) -> pd.DataFrame:
         """Load Parquet file using pandas.read_parquet."""
-        # Remove polars-specific parameters that pandas doesn't support
-        polars_params = {"lazy"}
-        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in polars_params}
+        # Remove parameters that pandas parquet reader doesn't support
+        unsupported_params = {"lazy", "sep", "delimiter", "header", "skiprows", "nrows"}
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items() if k not in unsupported_params
+        }
         return pd.read_parquet(path, **filtered_kwargs)
 
     def save_csv(
