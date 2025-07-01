@@ -87,7 +87,7 @@ norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
 markers = [
     "data_loading: marks tests as data loading benchmarks",
     "evaluation: marks tests as evaluation benchmarks",
-    "conversion: marks tests as data conversion benchmarks",
+    "data_conversion: marks tests as data conversion benchmarks",
     "association: marks tests as association metric benchmarks"
 ]
 
