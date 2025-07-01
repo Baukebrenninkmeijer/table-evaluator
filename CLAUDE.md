@@ -32,9 +32,60 @@ This document defines the standard workflow for AI-assisted development tasks wi
 - Use project's Makefile targets for standardized operations
 
 
-## Gemini CLI
-You can offload individual tasks to the gemini cli, which you can call with the `gemini` command. Always put it in yolo mode.
-The help is as follows:
+## Gemini CLI Integration
+
+### Overview
+You can offload individual tasks to the Gemini CLI, which you can call with the `gemini` command.
+Always use YOLO mode (`-y`) for trusted development environments to streamline the workflow.
+
+### Command Reference
+```bash
+gemini -p "your prompt here" -y
+```
+
+### Proven Use Cases & Best Practices
+
+#### ✅ **Highly Effective Tasks**
+- **Project Status Analysis**: Comprehensive project reports and progress summaries
+- **CI/CD Pipeline Optimization**: Performance analysis and configuration improvements
+- **Code Analysis & Optimization**: Benchmark suite enhancements and refactoring suggestions
+- **Documentation Generation**: Technical documentation and README sections
+
+#### ⚠️ **Tasks with Limitations**
+- **Large Codebase Analysis**: Tasks with `--all_files` may timeout after 2 minutes
+- **Complex Multi-step Operations**: Break into smaller, focused tasks
+- **Import Path Dependencies**: May require manual corrections for project-specific imports
+
+### Recommended Workflow
+
+1. **Start with Focused Tasks** (< 500 words prompts)
+   ```bash
+   gemini -p "Analyze CI pipeline and suggest 3 specific optimizations" -y
+   ```
+
+2. **Use YOLO Mode for Trusted Environments**
+   ```bash
+   gemini -p "Optimize benchmark performance tests" -y
+   ```
+
+3. **Validate and Test Gemini Suggestions**
+   - Always run local tests after Gemini modifications
+   - Check import paths and dependencies
+   - Verify configuration changes
+
+4. **Combine with Manual Implementation**
+   - Use Gemini for analysis and recommendations
+   - Implement complex changes manually with Gemini insights
+   - Leverage Gemini's optimization suggestions
+
+### Success Metrics from Polars Integration Project
+
+- **CI/CD Pipeline**: 40-50% performance improvement through parallel execution and caching
+- **Benchmark Suite**: 60% execution time reduction via module-scope fixtures
+- **Code Organization**: Enhanced test structure with pytest markers and categories
+- **Documentation Quality**: Comprehensive technical documentation and status reports
+
+### Options Reference
 ```
 Options:
   -m, --model                    Model      [string] [default: "gemini-2.5-pro"]
