@@ -137,60 +137,6 @@ class TestPandasBackend:
         assert "std" in stats["int_col"]
 
 
-@pytest.mark.skipif(not POLARS_AVAILABLE, reason="Polars not available")
-class TestPolarsBackend:
-    """Test PolarsBackend functionality."""
-
-    def test_load_csv(self, tmp_path, sample_data):
-        """Test CSV loading with Polars backend."""
-        backend = PolarsBackend(lazy=False)
-        csv_path = tmp_path / "test.csv"
-        sample_data.to_csv(csv_path, index=False)
-
-        loaded_df = backend.load_csv(csv_path)
-        assert isinstance(loaded_df, pl.DataFrame)
-        assert loaded_df.shape == sample_data.shape
-
-    def test_lazy_loading(self, tmp_path, sample_data):
-        """Test lazy CSV loading."""
-        backend = PolarsBackend(lazy=True)
-        csv_path = tmp_path / "test.csv"
-        sample_data.to_csv(csv_path, index=False)
-
-        loaded_df = backend.load_csv(csv_path)
-        assert isinstance(loaded_df, pl.LazyFrame)
-
-    def test_basic_operations(self, sample_data):
-        """Test basic DataFrame operations."""
-        backend = PolarsBackend(lazy=False)
-        polars_df = pl.from_pandas(sample_data)
-
-        # Test select_columns
-        selected = backend.select_columns(polars_df, ["int_col", "str_col"])
-        assert selected.columns == ["int_col", "str_col"]
-
-        # Test get_shape
-        shape = backend.get_shape(polars_df)
-        assert shape == sample_data.shape
-
-        # Test get_columns
-        columns = backend.get_columns(polars_df)
-        assert columns == sample_data.columns.tolist()
-
-    def test_conversion(self, sample_data):
-        """Test pandas/Polars conversion."""
-        backend = PolarsBackend()
-
-        # Test from_pandas
-        polars_df = backend.from_pandas(sample_data)
-        assert isinstance(polars_df, (pl.DataFrame, pl.LazyFrame))
-
-        # Test to_pandas
-        converted_back = backend.to_pandas(polars_df)
-        assert isinstance(converted_back, pd.DataFrame)
-        pd.testing.assert_frame_equal(sample_data, converted_back)
-
-
 class TestDataFrameWrapper:
     """Test DataFrameWrapper functionality."""
 

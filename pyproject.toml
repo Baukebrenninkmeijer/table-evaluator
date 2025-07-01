@@ -84,6 +84,12 @@ minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
 norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
+markers = [
+    "data_loading: marks tests as data loading benchmarks",
+    "evaluation: marks tests as evaluation benchmarks",
+    "conversion: marks tests as data conversion benchmarks",
+    "association: marks tests as association metric benchmarks"
+]
 
 [tool.mypy]
 python_version = "3.10"
