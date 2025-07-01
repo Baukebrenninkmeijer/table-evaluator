@@ -9,11 +9,16 @@ import pandas as pd
 
 try:
     import polars as pl
+    from polars import DataFrame as PolarsDataFrame, LazyFrame as PolarsLazyFrame
 
     POLARS_AVAILABLE = True
+    PolarsReturnType = Union[PolarsDataFrame, PolarsLazyFrame]
 except ImportError:
     pl = None
+    PolarsDataFrame = None
+    PolarsLazyFrame = None
     POLARS_AVAILABLE = False
+    PolarsReturnType = Any
 
 from .conversion_bridge import DataFrameConverter
 
@@ -181,7 +186,6 @@ class LazyConverter:
             Converted DataFrame
         """
         df_id = id(source_df)
-        cache_key = f"{target_backend}_{hash(frozenset(kwargs.items()))}"
 
         # Check cache first
         cached_result = self.cache.get(df_id)
@@ -346,10 +350,10 @@ class LazyPolarsWrapper:
         self._pandas_df = pandas_df
         self._converter = converter
         self._lazy = lazy
-        self._polars_df: Optional[Union["pl.DataFrame", "pl.LazyFrame"]] = None
+        self._polars_df: Optional[PolarsReturnType] = None
         self._converted = False
 
-    def _ensure_converted(self) -> Union["pl.DataFrame", "pl.LazyFrame"]:
+    def _ensure_converted(self) -> PolarsReturnType:
         """Ensure conversion to Polars has been performed."""
         if not self._converted:
             self._polars_df = self._converter.convert_when_needed(

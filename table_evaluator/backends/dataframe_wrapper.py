@@ -7,10 +7,13 @@ import pandas as pd
 
 try:
     import polars as pl
+    from polars import DataFrame as PolarsDataFrame, LazyFrame as PolarsLazyFrame
 
     POLARS_AVAILABLE = True
 except ImportError:
     pl = None
+    PolarsDataFrame = None
+    PolarsLazyFrame = None
     POLARS_AVAILABLE = False
 
 from .backend_types import BackendType
@@ -20,9 +23,11 @@ from .polars_backend import PolarsBackend
 logger = logging.getLogger(__name__)
 
 if POLARS_AVAILABLE:
-    DataFrameType = Union[pd.DataFrame, pl.DataFrame, pl.LazyFrame]
+    DataFrameType = Union[pd.DataFrame, PolarsDataFrame, PolarsLazyFrame]
+    PolarsReturnType = Union[PolarsDataFrame, PolarsLazyFrame]
 else:
     DataFrameType = pd.DataFrame
+    PolarsReturnType = Any
 
 
 class DataFrameWrapper:
@@ -138,7 +143,7 @@ class DataFrameWrapper:
         """Convert to pandas DataFrame."""
         return self._backend.to_pandas(self._df)
 
-    def to_polars(self, lazy: bool = False) -> Union[pl.DataFrame, pl.LazyFrame]:
+    def to_polars(self, lazy: bool = False) -> PolarsReturnType:
         """Convert to Polars DataFrame.
 
         Args:
@@ -208,7 +213,7 @@ class DataFrameWrapper:
         return cls(df, BackendType.PANDAS)
 
     @classmethod
-    def from_polars(cls, df: Union[pl.DataFrame, pl.LazyFrame]) -> "DataFrameWrapper":
+    def from_polars(cls, df: PolarsReturnType) -> "DataFrameWrapper":
         """Create wrapper from Polars DataFrame."""
         if not POLARS_AVAILABLE:
             raise ImportError("Polars is not available")
