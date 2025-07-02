@@ -27,6 +27,14 @@ jobs:
     - name: Install uv
       run: pip install uv
 
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
     - name: Install Arrow C++ library
       run: |
         sudo apt-get update
@@ -40,7 +48,7 @@ jobs:
       run: uv cache clean
 
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --extra all
 
     - name: Run security scan with bandit
       run: uv run bandit -r table_evaluator/ -f json -o bandit-report.json || true
@@ -67,7 +75,6 @@ jobs:
       matrix:
         python-version: ['3.10', '3.11', '3.12']
     name: Tests on Python ${{ matrix.python-version }}
-    needs: code-quality-security
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -80,7 +87,24 @@ jobs:
     - name: Install uv
       run: pip install uv
 
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ matrix.python-version }}-
+          ${{ runner.os }}-uv-
+
+    - name: Cache Arrow C++ library
+      uses: actions/cache@v4
+      id: cache-arrow
+      with:
+        path: /usr/lib/x86_64-linux-gnu/libarrow*
+        key: ${{ runner.os }}-arrow-cpp
+
     - name: Install Arrow C++ library
+      if: steps.cache-arrow.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
         sudo apt-get install -y -V ca-certificates lsb-release wget
@@ -93,7 +117,7 @@ jobs:
       run: uv cache clean
 
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --extra all
 
     - name: Run tests with coverage
       run: uv run pytest tests/ --cov=table_evaluator --cov-report=xml --cov-report=term

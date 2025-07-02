@@ -1,6 +1,6 @@
 [project]
 name = "table-evaluator"
-version = "1.8.0"
+version = "1.9.0"
 # Alternative: Use setuptools_scm for automatic versioning
 # dynamic = ["version"]
 description = "A package to evaluate how close a synthetic data set is to real data."
@@ -28,7 +28,6 @@ dependencies = [
     "seaborn==0.13.2",
     "pandas==2.2.2",
     "scipy==1.12.0",
-    "dython==0.7.7",
     "pre-commit==3.8.0",
     "ipython==8.28.0",
     "pytest==8.3.2",
@@ -36,16 +35,30 @@ dependencies = [
     "pytest-cov==4.0.0",
     "pytest-mock==3.14.0",
     "m2r2==0.3.3.post2",
+    "setuptools",
     "sphinx-rtd-theme==2.0.0",
     "tomli>=1.2.0;python_version<'3.11'",
 ]
 
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "build>=1.2.2.post1",
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.7",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
+]
+polars = [
+    "polars>=0.20.0,<2.0.0",
+]
+all = [
+    "polars>=0.20.0,<2.0.0",
+    "build>=1.2.2.post1",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
 ]
 
 
@@ -71,6 +84,13 @@ include = ["table_evaluator*"]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
+norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
+markers = [
+    "data_loading: marks tests as data loading benchmarks",
+    "evaluation: marks tests as evaluation benchmarks",
+    "data_conversion: marks tests as data conversion benchmarks",
+    "association: marks tests as association metric benchmarks"
+]
 
 [tool.mypy]
 python_version = "3.10"

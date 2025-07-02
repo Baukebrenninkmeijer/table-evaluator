@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from dython.nominal import associations
+from table_evaluator.association_metrics import associations
 
 
 def plot_correlation_difference(

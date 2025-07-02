@@ -1,17 +1,36 @@
-# Gemini CLI Interaction Notes
+# AI Assistant Development Workflow Guidelines
 
-This document outlines specific considerations and practices for interacting with the Gemini CLI within this project.
+This document defines the standard workflow for AI-assisted development tasks within this project.
 
-## Workflow
-If you are changing code as result of a task, always run the associated tests. If there are no tests, ask the user whether to create tests for the changed code or not.
+## Development Workflow
 
-## Worktree Management
+### Code Changes and Testing
+- **Always run tests** after implementing code changes
+- If no tests exist for modified code, ask whether to create them before proceeding
+- Use `make test` or equivalent project-specific test commands
 
-Ensure you are operating within the `phase1` worktree for all development and tooling improvements. You can verify your current worktree by running `git worktree list`.
+### Branch and Worktree Management
+- Verify you're in the correct worktree: `git worktree list`.
+- Verify you're in the correct branch: `git branch`.
+- If no worktree and branch exists for this task, create them.
+- Operate within the appropriate branch worktree for all development tasks
+- Ensure branch isolation for different features/tasks
+
+### Collaboration and Integration
+1. **Branch Creation**: Check if task branch exists; create if needed
+2. **Code Push**: Push changes to feature branch upon completion
+3. **Pull Request**: Create PR using GitHub CLI (`gh pr create`)
+4. **CI/CD Monitoring**:
+   - Monitor pipeline status: `gh pr checks`
+   - Address failures promptly
+   - Run local equivalents when possible (pre-commit, build, install)
+5. **Quality Gates**: Ensure all checks pass before requesting review
+
+## Local Development Best Practices
+- Run pre-commit hooks before committing
+- Verify builds/installations locally to catch CI/CD issues early
+- Use project's Makefile targets for standardized operations
 
 ## Tooling Interaction
 
 The `replace` tool is currently non-functional. For all file modifications and interactions, utilize the `desktop_commander` tools (e.g., `desktop_commander__read_file`, `desktop_commander__write_file`, `desktop_commander__edit_block`).
-
-## Collaboration
-After you are finished, push to a branch associated with your task. Make sure not branch exists for this task. Create a PR using the github cli. Check the status of the github cicd using the cli, and fix any issues present. If there are any ci/cd problems, evaluate whether they can be checked locally, such as with the pre-commit or by building/installing the package.
