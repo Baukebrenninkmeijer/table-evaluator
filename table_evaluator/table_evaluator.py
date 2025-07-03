@@ -1,3 +1,4 @@
+import importlib.util
 import logging
 import warnings
 from os import PathLike
@@ -5,27 +6,29 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from table_evaluator.association_metrics import associations
-from table_evaluator.data.data_converter import DataConverter
 from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import f1_score, jaccard_score
 
+from table_evaluator.association_metrics import associations
 from table_evaluator.core.evaluation_config import EvaluationConfig
+from table_evaluator.data.data_converter import DataConverter
+from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
+from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
 from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
-from table_evaluator.metrics import (
-    column_correlations,
-    euclidean_distance,
-    js_distance_df,
-    kolmogorov_smirnov_df,
-    mean_absolute_error,
-    rmse,
-)
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
+from table_evaluator.plugins import plugin_manager
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
+
+# Import original metrics module directly to avoid package conflict
+_metrics_spec = importlib.util.spec_from_file_location(
+    "_te_metrics_module", __file__.replace("table_evaluator.py", "metrics.py")
+)
+te_metrics = importlib.util.module_from_spec(_metrics_spec)
+_metrics_spec.loader.exec_module(te_metrics)
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +110,16 @@ class TableEvaluator:
             comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose
         )
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
+
+        # Initialize advanced evaluators
+        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(
+            verbose=verbose
+        )
+        self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
+
+        # Initialize plugin manager and load built-in plugins
+        self._initialize_plugins()
+
         self.visualization_manager = VisualizationManager(
             real=self.real,
             fake=self.fake,
@@ -195,11 +208,11 @@ class TableEvaluator:
         from scipy.spatial.distance import cosine
 
         if how == "euclidean":
-            distance_func = euclidean_distance
+            distance_func = te_metrics.euclidean_distance
         elif how == "mae":
-            distance_func = mean_absolute_error
+            distance_func = te_metrics.mean_absolute_error
         elif how == "rmse":
-            distance_func = rmse
+            distance_func = te_metrics.rmse
         elif how == "cosine":
 
             def custom_cosine(a, b):
@@ -360,21 +373,21 @@ class TableEvaluator:
 
         elif self.target_type == "regr":
             r2r = [
-                rmse(self.real_y_test, clf.predict(self.real_x_test))
+                te_metrics.rmse(self.real_y_test, clf.predict(self.real_x_test))
                 for clf in self.r_estimators
             ]
             f2f = [
-                rmse(self.fake_y_test, clf.predict(self.fake_x_test))
+                te_metrics.rmse(self.fake_y_test, clf.predict(self.fake_x_test))
                 for clf in self.f_estimators
             ]
 
             # Calculate test set accuracies on the other dataset
             r2f = [
-                rmse(self.fake_y_test, clf.predict(self.fake_x_test))
+                te_metrics.rmse(self.fake_y_test, clf.predict(self.fake_x_test))
                 for clf in self.r_estimators
             ]
             f2r = [
-                rmse(self.real_y_test, clf.predict(self.real_x_test))
+                te_metrics.rmse(self.real_y_test, clf.predict(self.real_x_test))
                 for clf in self.f_estimators
             ]
             index = [
@@ -570,7 +583,7 @@ class TableEvaluator:
 
         real, fake = self.convert_numerical()
 
-        return column_correlations(real, fake, self.categorical_columns)
+        return te_metrics.column_correlations(real, fake, self.categorical_columns)
 
     def evaluate(
         self,
@@ -721,7 +734,7 @@ class TableEvaluator:
             index=list(miscellaneous_dict.keys()),
         )
 
-        js_df = js_distance_df(self.real, self.fake, self.numerical_columns)
+        js_df = te_metrics.js_distance_df(self.real, self.fake, self.numerical_columns)
 
         statistical_tab = [
             EvaluationResult(
@@ -731,7 +744,7 @@ class TableEvaluator:
             ),
             EvaluationResult(
                 name="Kolmogorov-Smirnov statistic",
-                content=kolmogorov_smirnov_df(
+                content=te_metrics.kolmogorov_smirnov_df(
                     self.real, self.fake, self.numerical_columns
                 ),
             ),
@@ -777,3 +790,209 @@ class TableEvaluator:
         privacy_tab = [privacy_report]
 
         return {"privacy_report": privacy_report}, privacy_tab
+
+    def _initialize_plugins(self) -> None:
+        """Initialize plugin system and load built-in plugins."""
+        try:
+            # Discover and load built-in plugins
+            loaded_count = plugin_manager.discover_plugins()
+            if self.verbose:
+                print(f"Loaded {loaded_count} built-in plugins")
+        except Exception as e:
+            logger.warning(f"Failed to load plugins: {e}")
+
+    def advanced_statistical_evaluation(
+        self,
+        include_wasserstein: bool = True,
+        include_mmd: bool = True,
+        wasserstein_config: Optional[Dict] = None,
+        mmd_config: Optional[Dict] = None,
+    ) -> Dict:
+        """
+        Run advanced statistical evaluation using Wasserstein distance and MMD.
+
+        Args:
+            include_wasserstein: Whether to include Wasserstein distance analysis
+            include_mmd: Whether to include Maximum Mean Discrepancy analysis
+            wasserstein_config: Configuration for Wasserstein evaluation
+            mmd_config: Configuration for MMD evaluation
+
+        Returns:
+            Dictionary with advanced statistical evaluation results
+        """
+        if wasserstein_config is None:
+            wasserstein_config = {"include_2d": False}
+        if mmd_config is None:
+            mmd_config = {
+                "kernel_types": ["rbf", "polynomial"],
+                "include_multivariate": True,
+            }
+
+        results = {}
+
+        if include_wasserstein:
+            try:
+                results["wasserstein"] = (
+                    self.advanced_statistical_evaluator.wasserstein_evaluation(
+                        self.real,
+                        self.fake,
+                        self.numerical_columns,
+                        **wasserstein_config,
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Wasserstein evaluation failed: {e}")
+                results["wasserstein"] = {"error": str(e)}
+
+        if include_mmd:
+            try:
+                results["mmd"] = self.advanced_statistical_evaluator.mmd_evaluation(
+                    self.real, self.fake, self.numerical_columns, **mmd_config
+                )
+            except Exception as e:
+                logger.error(f"MMD evaluation failed: {e}")
+                results["mmd"] = {"error": str(e)}
+
+        return results
+
+    def advanced_privacy_evaluation(
+        self,
+        include_k_anonymity: bool = True,
+        include_membership_inference: bool = True,
+        quasi_identifiers: Optional[List[str]] = None,
+        sensitive_attributes: Optional[List[str]] = None,
+    ) -> Dict:
+        """
+        Run advanced privacy evaluation including k-anonymity and membership inference.
+
+        Args:
+            include_k_anonymity: Whether to include k-anonymity analysis
+            include_membership_inference: Whether to include membership inference analysis
+            quasi_identifiers: List of quasi-identifier columns
+            sensitive_attributes: List of sensitive attribute columns
+
+        Returns:
+            Dictionary with advanced privacy evaluation results
+        """
+        return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
+            self.real,
+            self.fake,
+            quasi_identifiers=quasi_identifiers,
+            sensitive_attributes=sensitive_attributes,
+            include_k_anonymity=include_k_anonymity,
+            include_membership_inference=include_membership_inference,
+        )
+
+    def plugin_evaluation(
+        self,
+        metric_names: Optional[List[str]] = None,
+        parallel_execution: bool = False,
+        **kwargs,
+    ) -> Dict:
+        """
+        Run evaluation using plugin system.
+
+        Args:
+            metric_names: List of metric names to execute (all available if None)
+            parallel_execution: Whether to execute metrics in parallel
+            **kwargs: Additional parameters for metrics
+
+        Returns:
+            Dictionary mapping metric names to results
+        """
+        if metric_names is None:
+            # Get all available metrics
+            available = plugin_manager.get_available_metrics()
+            metric_names = list(available.keys())
+
+        if parallel_execution:
+            return plugin_manager.execute_metrics_parallel(
+                metric_names, self.real, self.fake, **kwargs
+            )
+        else:
+            results = {}
+            for metric_name in metric_names:
+                results[metric_name] = plugin_manager.execute_metric(
+                    metric_name, self.real, self.fake, **kwargs
+                )
+            return results
+
+    def comprehensive_advanced_evaluation(
+        self,
+        target_col: str,
+        target_type: str = "class",
+        include_basic: bool = True,
+        include_advanced_statistical: bool = True,
+        include_advanced_privacy: bool = True,
+        include_plugins: bool = False,
+        **kwargs,
+    ) -> Dict:
+        """
+        Run comprehensive evaluation including both basic and advanced metrics.
+
+        Args:
+            target_col: Column to use for ML evaluation
+            target_type: Type of ML task ("class" or "regr")
+            include_basic: Whether to include basic evaluation
+            include_advanced_statistical: Whether to include advanced statistical metrics
+            include_advanced_privacy: Whether to include advanced privacy metrics
+            include_plugins: Whether to include plugin-based evaluation
+            **kwargs: Additional parameters
+
+        Returns:
+            Dictionary with comprehensive evaluation results
+        """
+        results = {}
+
+        # Basic evaluation
+        if include_basic:
+            try:
+                results["basic"] = self.evaluate(
+                    target_col, target_type, return_outputs=True, **kwargs
+                )
+            except Exception as e:
+                logger.error(f"Basic evaluation failed: {e}")
+                results["basic"] = {"error": str(e)}
+
+        # Advanced statistical evaluation
+        if include_advanced_statistical:
+            try:
+                results["advanced_statistical"] = self.advanced_statistical_evaluation()
+            except Exception as e:
+                logger.error(f"Advanced statistical evaluation failed: {e}")
+                results["advanced_statistical"] = {"error": str(e)}
+
+        # Advanced privacy evaluation
+        if include_advanced_privacy:
+            try:
+                results["advanced_privacy"] = self.advanced_privacy_evaluation()
+            except Exception as e:
+                logger.error(f"Advanced privacy evaluation failed: {e}")
+                results["advanced_privacy"] = {"error": str(e)}
+
+        # Plugin evaluation
+        if include_plugins:
+            try:
+                results["plugins"] = self.plugin_evaluation()
+            except Exception as e:
+                logger.error(f"Plugin evaluation failed: {e}")
+                results["plugins"] = {"error": str(e)}
+
+        return results
+
+    def get_available_advanced_metrics(self) -> Dict:
+        """
+        Get information about available advanced metrics.
+
+        Returns:
+            Dictionary with information about available metrics
+        """
+        return {
+            "built_in_advanced": {
+                "wasserstein_distance": "Earth Mover's Distance for distribution comparison",
+                "mmd": "Maximum Mean Discrepancy with multiple kernels",
+                "k_anonymity": "K-anonymity analysis for privacy evaluation",
+                "membership_inference": "Membership inference attack simulation",
+            },
+            "plugins": plugin_manager.get_available_metrics(),
+        }

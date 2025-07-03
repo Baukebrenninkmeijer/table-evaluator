@@ -158,7 +158,9 @@ def test_correlation_distance(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch("table_evaluator.table_evaluator.euclidean_distance") as mock_distance:
+    with patch(
+        "table_evaluator.table_evaluator.te_metrics.euclidean_distance"
+    ) as mock_distance:
         mock_distance.return_value = 0.5
         distance = evaluator.correlation_distance(how="euclidean")
         assert distance == 0.5
@@ -301,7 +303,7 @@ def test_column_correlations(sample_data):
     evaluator = TableEvaluator(real, fake)
 
     with patch(
-        "table_evaluator.table_evaluator.column_correlations"
+        "table_evaluator.table_evaluator.te_metrics.column_correlations"
     ) as mock_column_correlations:
         mock_column_correlations.return_value = 0.75
         result = evaluator.column_correlations()
