@@ -2,12 +2,56 @@
 
 This document defines the standard workflow for AI-assisted development tasks within this project.
 
+## Project Overview: Table Evaluator
+
+This is a Python library for evaluating synthetic tabular data quality. It provides comprehensive metrics and analysis tools for comparing real and synthetic datasets.
+
+### Key Features
+- **Multi-backend support**: Pandas and Polars dataframes
+- **Advanced statistical metrics**: Wasserstein Distance, Maximum Mean Discrepancy (MMD)
+- **Privacy analysis**: k-anonymity, l-diversity, membership inference attacks
+- **Plugin architecture**: Extensible framework for custom metrics
+- **Comprehensive visualization**: Statistical plots and comparison charts
+
+### Project Structure
+```
+table_evaluator/
+├── table_evaluator.py       # Main API entry point
+├── metrics/                  # Core mathematical functions
+│   ├── wasserstein.py       # Distribution comparison
+│   ├── mmd.py               # Kernel-based analysis
+│   └── privacy_attacks.py   # Privacy risk assessment
+├── evaluators/              # Business logic layer
+│   ├── advanced_statistical.py
+│   ├── advanced_privacy.py
+│   └── ml_evaluator.py
+├── backends/                # Data backend abstraction
+│   ├── pandas_backend.py
+│   └── polars_backend.py
+└── plugins/                 # Extensibility framework
+```
+
+### Development Environment Setup
+- **Python 3.10+** required
+- **Dependencies**: NumPy, Pandas, Polars, Scikit-learn, Matplotlib, Seaborn
+- **Testing**: pytest with comprehensive test suite
+- **Code Quality**: ruff (linting), black (formatting), bandit (security)
+- **Build System**: pyproject.toml with modern Python packaging
+
 ## Development Workflow
 
 ### Code Changes and Testing
 - **Always run tests** after implementing code changes
 - If no tests exist for modified code, ask whether to create them before proceeding
-- Use `make test` or equivalent project-specific test commands
+- **Test commands**:
+  - Full test suite: `python -m pytest` or `make test`
+  - Specific test file: `python -m pytest tests/test_specific.py`
+  - Coverage report: `python -m pytest --cov=table_evaluator --cov-report=html`
+- **Code quality checks**:
+  - Linting: `python -m ruff check table_evaluator/`
+  - Formatting: `python -m black table_evaluator/ tests/`
+  - Security: `python -m bandit -r table_evaluator/`
+  - All quality checks: `make lint` or `pre-commit run --all-files`
 
 ### Branch and Worktree Management
 - Verify you're in the correct worktree: `git worktree list`.
@@ -27,9 +71,26 @@ This document defines the standard workflow for AI-assisted development tasks wi
 5. **Quality Gates**: Ensure all checks pass before requesting review
 
 ## Local Development Best Practices
-- Run pre-commit hooks before committing
+
+### Python-Specific Guidelines
+- **Type hints**: Use type annotations for all new functions and methods
+- **Docstrings**: Follow NumPy/SciPy docstring conventions
+- **Error handling**: Use appropriate exceptions with descriptive messages
+- **Performance**: Consider memory usage for large datasets (>100k rows)
+- **Compatibility**: Ensure code works with both Pandas and Polars backends
+
+### Code Quality Standards
+- **PEP 8 compliance**: Follow Python style guidelines
+- **Import organization**: Use ruff for sorting and organizing imports
+- **Test coverage**: Aim for >90% coverage on new code
+- **Documentation**: Include usage examples in docstrings
+- **Backward compatibility**: Maintain API compatibility when possible
+
+### Pre-commit Workflow
+- Run pre-commit hooks before committing: `pre-commit run --all-files`
 - Verify builds/installations locally to catch CI/CD issues early
 - Use project's Makefile targets for standardized operations
+- Test with both backends: `BACKEND=pandas pytest` and `BACKEND=polars pytest`
 
 
 ## Gemini CLI Integration
@@ -77,13 +138,6 @@ gemini -p "your prompt here" -y
    - Use Gemini for analysis and recommendations
    - Implement complex changes manually with Gemini insights
    - Leverage Gemini's optimization suggestions
-
-### Success Metrics from Polars Integration Project
-
-- **CI/CD Pipeline**: 40-50% performance improvement through parallel execution and caching
-- **Benchmark Suite**: 60% execution time reduction via module-scope fixtures
-- **Code Organization**: Enhanced test structure with pytest markers and categories
-- **Documentation Quality**: Comprehensive technical documentation and status reports
 
 ### Options Reference
 ```
