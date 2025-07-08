@@ -1,4 +1,3 @@
-import importlib.util
 import logging
 import warnings
 from os import PathLike
@@ -19,16 +18,11 @@ from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.plugins import plugin_manager
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
 
-# Import original metrics module directly to avoid package conflict
-_metrics_spec = importlib.util.spec_from_file_location(
-    "_te_metrics_module", __file__.replace("table_evaluator.py", "metrics.py")
-)
-te_metrics = importlib.util.module_from_spec(_metrics_spec)
-_metrics_spec.loader.exec_module(te_metrics)
+# Import metrics module directly
+from table_evaluator import metrics as te_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +67,66 @@ class TableEvaluator:
             seed (int, optional): Random seed for reproducibility. Defaults to 1337.
             sample (bool, optional): Whether to sample the datasets to n_samples. Defaults to False.
         """
+        # Input validation
+        if not isinstance(real, pd.DataFrame):
+            raise TypeError("real must be a pandas DataFrame")
+        if not isinstance(fake, pd.DataFrame):
+            raise TypeError("fake must be a pandas DataFrame")
+
+        if len(real) == 0:
+            raise ValueError("real DataFrame cannot be empty")
+        if len(fake) == 0:
+            raise ValueError("fake DataFrame cannot be empty")
+
+        if len(real.columns) == 0:
+            raise ValueError("real DataFrame must have at least one column")
+        if len(fake.columns) == 0:
+            raise ValueError("fake DataFrame must have at least one column")
+
+        # Check column alignment
+        if set(real.columns) != set(fake.columns):
+            missing_in_fake = set(real.columns) - set(fake.columns)
+            missing_in_real = set(fake.columns) - set(real.columns)
+            error_msg = "real and fake DataFrames must have the same columns."
+            if missing_in_fake:
+                error_msg += f" Missing in fake: {missing_in_fake}."
+            if missing_in_real:
+                error_msg += f" Missing in real: {missing_in_real}."
+            raise ValueError(error_msg)
+
+        # Validate categorical columns
+        if cat_cols is not None:
+            if not isinstance(cat_cols, list):
+                raise TypeError("cat_cols must be a list of strings or None")
+            invalid_cols = set(cat_cols) - set(real.columns)
+            if invalid_cols:
+                raise ValueError(
+                    f"cat_cols contains columns not in DataFrames: {invalid_cols}"
+                )
+
+        # Validate other parameters
+        if not isinstance(unique_thresh, int) or unique_thresh < 0:
+            raise ValueError("unique_thresh must be a non-negative integer")
+
+        if not isinstance(verbose, bool):
+            raise TypeError("verbose must be a boolean")
+
+        if not isinstance(seed, int):
+            raise TypeError("seed must be an integer")
+
+        if n_samples is not None and (not isinstance(n_samples, int) or n_samples <= 0):
+            raise ValueError("n_samples must be a positive integer or None")
+
+        if sample and n_samples is None:
+            raise ValueError("n_samples must be specified when sample=True")
+
+        # Validate metric
+        if isinstance(metric, str):
+            if not hasattr(stats, metric):
+                raise ValueError(f"metric '{metric}' is not available in scipy.stats")
+        elif not callable(metric):
+            raise TypeError("metric must be a string or callable")
+
         self.name = name
         self.unique_thresh = unique_thresh
         self.real = real.copy()
@@ -116,9 +170,6 @@ class TableEvaluator:
             verbose=verbose
         )
         self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
-
-        # Initialize plugin manager and load built-in plugins
-        self._initialize_plugins()
 
         self.visualization_manager = VisualizationManager(
             real=self.real,
@@ -637,6 +688,40 @@ class TableEvaluator:
             Dict: A dictionary containing evaluation results if return_outputs is True, otherwise None.
 
         """
+        # Input validation
+        if not isinstance(target_col, str):
+            raise TypeError("target_col must be a string")
+        if target_col not in self.real.columns:
+            raise ValueError(
+                f"target_col '{target_col}' not found in DataFrame columns"
+            )
+
+        if target_type not in ["class", "regr"]:
+            raise ValueError("target_type must be either 'class' or 'regr'")
+
+        if metric is not None:
+            if isinstance(metric, str):
+                if not hasattr(stats, metric):
+                    raise ValueError(
+                        f"metric '{metric}' is not available in scipy.stats"
+                    )
+            elif not callable(metric):
+                raise TypeError("metric must be a string, callable, or None")
+
+        if verbose is not None and not isinstance(verbose, bool):
+            raise TypeError("verbose must be a boolean or None")
+
+        if not isinstance(n_samples_distance, int) or n_samples_distance <= 0:
+            raise ValueError("n_samples_distance must be a positive integer")
+
+        if not isinstance(kfold, bool):
+            raise TypeError("kfold must be a boolean")
+
+        if not isinstance(notebook, bool):
+            raise TypeError("notebook must be a boolean")
+
+        if not isinstance(return_outputs, bool):
+            raise TypeError("return_outputs must be a boolean")
 
         self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose
@@ -791,16 +876,6 @@ class TableEvaluator:
 
         return {"privacy_report": privacy_report}, privacy_tab
 
-    def _initialize_plugins(self) -> None:
-        """Initialize plugin system and load built-in plugins."""
-        try:
-            # Discover and load built-in plugins
-            loaded_count = plugin_manager.discover_plugins()
-            if self.verbose:
-                print(f"Loaded {loaded_count} built-in plugins")
-        except Exception as e:
-            logger.warning(f"Failed to load plugins: {e}")
-
     def advanced_statistical_evaluation(
         self,
         include_wasserstein: bool = True,
@@ -820,6 +895,22 @@ class TableEvaluator:
         Returns:
             Dictionary with advanced statistical evaluation results
         """
+        # Input validation
+        if not isinstance(include_wasserstein, bool):
+            raise TypeError("include_wasserstein must be a boolean")
+        if not isinstance(include_mmd, bool):
+            raise TypeError("include_mmd must be a boolean")
+
+        if not include_wasserstein and not include_mmd:
+            raise ValueError(
+                "At least one of include_wasserstein or include_mmd must be True"
+            )
+
+        if wasserstein_config is not None and not isinstance(wasserstein_config, dict):
+            raise TypeError("wasserstein_config must be a dictionary or None")
+        if mmd_config is not None and not isinstance(mmd_config, dict):
+            raise TypeError("mmd_config must be a dictionary or None")
+
         if wasserstein_config is None:
             wasserstein_config = {"include_2d": False}
         if mmd_config is None:
@@ -874,6 +965,35 @@ class TableEvaluator:
         Returns:
             Dictionary with advanced privacy evaluation results
         """
+        # Input validation
+        if not isinstance(include_k_anonymity, bool):
+            raise TypeError("include_k_anonymity must be a boolean")
+        if not isinstance(include_membership_inference, bool):
+            raise TypeError("include_membership_inference must be a boolean")
+
+        if not include_k_anonymity and not include_membership_inference:
+            raise ValueError(
+                "At least one of include_k_anonymity or include_membership_inference must be True"
+            )
+
+        if quasi_identifiers is not None:
+            if not isinstance(quasi_identifiers, list):
+                raise TypeError("quasi_identifiers must be a list or None")
+            invalid_cols = set(quasi_identifiers) - set(self.real.columns)
+            if invalid_cols:
+                raise ValueError(
+                    f"quasi_identifiers contains invalid columns: {invalid_cols}"
+                )
+
+        if sensitive_attributes is not None:
+            if not isinstance(sensitive_attributes, list):
+                raise TypeError("sensitive_attributes must be a list or None")
+            invalid_cols = set(sensitive_attributes) - set(self.real.columns)
+            if invalid_cols:
+                raise ValueError(
+                    f"sensitive_attributes contains invalid columns: {invalid_cols}"
+                )
+
         return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
             self.real,
             self.fake,
@@ -883,40 +1003,6 @@ class TableEvaluator:
             include_membership_inference=include_membership_inference,
         )
 
-    def plugin_evaluation(
-        self,
-        metric_names: Optional[List[str]] = None,
-        parallel_execution: bool = False,
-        **kwargs,
-    ) -> Dict:
-        """
-        Run evaluation using plugin system.
-
-        Args:
-            metric_names: List of metric names to execute (all available if None)
-            parallel_execution: Whether to execute metrics in parallel
-            **kwargs: Additional parameters for metrics
-
-        Returns:
-            Dictionary mapping metric names to results
-        """
-        if metric_names is None:
-            # Get all available metrics
-            available = plugin_manager.get_available_metrics()
-            metric_names = list(available.keys())
-
-        if parallel_execution:
-            return plugin_manager.execute_metrics_parallel(
-                metric_names, self.real, self.fake, **kwargs
-            )
-        else:
-            results = {}
-            for metric_name in metric_names:
-                results[metric_name] = plugin_manager.execute_metric(
-                    metric_name, self.real, self.fake, **kwargs
-                )
-            return results
-
     def comprehensive_advanced_evaluation(
         self,
         target_col: str,
@@ -924,7 +1010,6 @@ class TableEvaluator:
         include_basic: bool = True,
         include_advanced_statistical: bool = True,
         include_advanced_privacy: bool = True,
-        include_plugins: bool = False,
         **kwargs,
     ) -> Dict:
         """
@@ -936,12 +1021,43 @@ class TableEvaluator:
             include_basic: Whether to include basic evaluation
             include_advanced_statistical: Whether to include advanced statistical metrics
             include_advanced_privacy: Whether to include advanced privacy metrics
-            include_plugins: Whether to include plugin-based evaluation
             **kwargs: Additional parameters
 
         Returns:
             Dictionary with comprehensive evaluation results
         """
+        # Input validation
+        if not isinstance(target_col, str):
+            raise TypeError("target_col must be a string")
+        if target_col not in self.real.columns:
+            raise ValueError(
+                f"target_col '{target_col}' not found in DataFrame columns"
+            )
+
+        if target_type not in ["class", "regr"]:
+            raise ValueError("target_type must be either 'class' or 'regr'")
+
+        if not isinstance(include_basic, bool):
+            raise TypeError("include_basic must be a boolean")
+        if not isinstance(include_advanced_statistical, bool):
+            raise TypeError("include_advanced_statistical must be a boolean")
+        if not isinstance(include_advanced_privacy, bool):
+            raise TypeError("include_advanced_privacy must be a boolean")
+
+        if not any(
+            [include_basic, include_advanced_statistical, include_advanced_privacy]
+        ):
+            raise ValueError("At least one evaluation type must be included")
+
+        # Performance warning for large datasets
+        total_rows = len(self.real) + len(self.fake)
+
+        if total_rows > 100000:
+            logger.warning(
+                f"Large dataset detected ({total_rows:,} total rows). "
+                "Performance optimizations will be applied automatically."
+            )
+
         results = {}
 
         # Basic evaluation
@@ -970,14 +1086,6 @@ class TableEvaluator:
                 logger.error(f"Advanced privacy evaluation failed: {e}")
                 results["advanced_privacy"] = {"error": str(e)}
 
-        # Plugin evaluation
-        if include_plugins:
-            try:
-                results["plugins"] = self.plugin_evaluation()
-            except Exception as e:
-                logger.error(f"Plugin evaluation failed: {e}")
-                results["plugins"] = {"error": str(e)}
-
         return results
 
     def get_available_advanced_metrics(self) -> Dict:
@@ -988,11 +1096,12 @@ class TableEvaluator:
             Dictionary with information about available metrics
         """
         return {
-            "built_in_advanced": {
+            "advanced_statistical": {
                 "wasserstein_distance": "Earth Mover's Distance for distribution comparison",
                 "mmd": "Maximum Mean Discrepancy with multiple kernels",
+            },
+            "advanced_privacy": {
                 "k_anonymity": "K-anonymity analysis for privacy evaluation",
                 "membership_inference": "Membership inference attack simulation",
             },
-            "plugins": plugin_manager.get_available_metrics(),
         }

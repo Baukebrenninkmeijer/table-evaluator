@@ -1,11 +1,48 @@
 """Wasserstein Distance (Earth Mover's Distance) implementation for distribution comparison."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.spatial.distance import cdist
+
+
+def _sample_for_performance(
+    real_data: np.ndarray,
+    fake_data: np.ndarray,
+    max_samples: int = 10000,
+    random_state: int = 42,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Sample data for performance optimization while maintaining statistical properties.
+
+    Args:
+        real_data: Real data array
+        fake_data: Fake data array
+        max_samples: Maximum number of samples to keep per dataset
+        random_state: Random seed for reproducibility
+
+    Returns:
+        Tuple of sampled real and fake data
+    """
+    np.random.seed(random_state)
+
+    # Sample real data if needed
+    if len(real_data) > max_samples:
+        indices = np.random.choice(len(real_data), max_samples, replace=False)
+        real_sampled = real_data[indices]
+    else:
+        real_sampled = real_data
+
+    # Sample fake data if needed
+    if len(fake_data) > max_samples:
+        indices = np.random.choice(len(fake_data), max_samples, replace=False)
+        fake_sampled = fake_data[indices]
+    else:
+        fake_sampled = fake_data
+
+    return real_sampled, fake_sampled
 
 
 def wasserstein_distance_1d(
@@ -26,23 +63,43 @@ def wasserstein_distance_1d(
         float: Wasserstein distance between the two distributions
 
     Raises:
-        ValueError: If p is not 1 or 2
+        ValueError: If p is not 1 or 2, or if inputs are invalid
+        TypeError: If inputs are not pandas Series
     """
+    # Input validation
+    if not isinstance(real_col, pd.Series):
+        raise TypeError("real_col must be a pandas Series")
+    if not isinstance(fake_col, pd.Series):
+        raise TypeError("fake_col must be a pandas Series")
     if p not in [1, 2]:
         raise ValueError("p must be 1 or 2")
 
-    # Remove NaN values
+    # Remove NaN values and validate
     real_clean = real_col.dropna().values
     fake_clean = fake_col.dropna().values
 
-    if len(real_clean) == 0 or len(fake_clean) == 0:
-        return np.inf
+    if len(real_clean) == 0:
+        raise ValueError("real_col contains no valid (non-NaN) values")
+    if len(fake_clean) == 0:
+        raise ValueError("fake_col contains no valid (non-NaN) values")
 
-    return stats.wasserstein_distance(real_clean, fake_clean)
+    # Check for infinite values
+    if np.any(np.isinf(real_clean)) or np.any(np.isinf(fake_clean)):
+        raise ValueError("Input data contains infinite values")
+
+    try:
+        return stats.wasserstein_distance(real_clean, fake_clean)
+    except Exception as e:
+        raise ValueError(f"Failed to calculate Wasserstein distance: {str(e)}")
 
 
 def wasserstein_distance_2d(
-    real_data: np.ndarray, fake_data: np.ndarray, reg: float = 0.1, max_iter: int = 1000
+    real_data: np.ndarray,
+    fake_data: np.ndarray,
+    reg: float = 0.1,
+    max_iter: int = 1000,
+    convergence_threshold: float = 1e-6,
+    max_samples: Optional[int] = 5000,
 ) -> float:
     """
     Calculate 2D Wasserstein distance using Sinkhorn algorithm approximation.
@@ -53,41 +110,100 @@ def wasserstein_distance_2d(
     Args:
         real_data: Array of shape (n_samples, 2) with real data points
         fake_data: Array of shape (m_samples, 2) with synthetic data points
-        reg: Regularization parameter for entropy regularization
+        reg: Regularization parameter for entropy regularization (must be > 0)
         max_iter: Maximum number of iterations for Sinkhorn algorithm
+        convergence_threshold: Threshold for convergence check
+        max_samples: Maximum samples per dataset for performance (None for no limit)
 
     Returns:
         float: Approximate 2D Wasserstein distance
+
+    Raises:
+        ValueError: If input data is invalid or algorithm parameters are incorrect
+        TypeError: If inputs are not numpy arrays
     """
+    # Input validation
+    if not isinstance(real_data, np.ndarray):
+        raise TypeError("real_data must be a numpy array")
+    if not isinstance(fake_data, np.ndarray):
+        raise TypeError("fake_data must be a numpy array")
+
+    if real_data.ndim != 2 or fake_data.ndim != 2:
+        raise ValueError("Input data must be 2D arrays")
     if real_data.shape[1] != 2 or fake_data.shape[1] != 2:
-        raise ValueError("Input data must be 2D")
+        raise ValueError("Input data must have exactly 2 features")
+    if len(real_data) == 0 or len(fake_data) == 0:
+        raise ValueError("Input arrays cannot be empty")
+
+    if reg <= 0:
+        raise ValueError("Regularization parameter must be positive")
+    if max_iter <= 0:
+        raise ValueError("Maximum iterations must be positive")
+    if convergence_threshold <= 0:
+        raise ValueError("Convergence threshold must be positive")
+
+    # Check for NaN or infinite values
+    if np.any(np.isnan(real_data)) or np.any(np.isnan(fake_data)):
+        raise ValueError("Input data contains NaN values")
+    if np.any(np.isinf(real_data)) or np.any(np.isinf(fake_data)):
+        raise ValueError("Input data contains infinite values")
+
+    # Performance optimization: sample large datasets
+    if max_samples is not None and (
+        len(real_data) > max_samples or len(fake_data) > max_samples
+    ):
+        real_data, fake_data = _sample_for_performance(
+            real_data, fake_data, max_samples
+        )
 
     n, m = len(real_data), len(fake_data)
 
-    # Uniform distributions
-    a = np.ones(n) / n
-    b = np.ones(m) / m
+    try:
+        # Uniform distributions
+        a = np.ones(n) / n
+        b = np.ones(m) / m
 
-    # Cost matrix (squared Euclidean distance)
-    C = cdist(real_data, fake_data, metric="sqeuclidean")
+        # Cost matrix (squared Euclidean distance)
+        C = cdist(real_data, fake_data, metric="sqeuclidean")
 
-    # Sinkhorn algorithm
-    K = np.exp(-C / reg)
-    u = np.ones(n) / n
+        # Check for numerical issues in cost matrix
+        if np.any(np.isnan(C)) or np.any(np.isinf(C)):
+            raise ValueError("Cost matrix contains invalid values")
 
-    for _ in range(max_iter):
-        v = b / (K.T @ u + 1e-16)
-        u_new = a / (K @ v + 1e-16)
+        # Sinkhorn algorithm with improved numerical stability
+        K = np.exp(-C / reg)
+        u = np.ones(n) / n
 
-        # Check convergence
-        if np.allclose(u, u_new, rtol=1e-6):
-            break
-        u = u_new
+        converged = False
+        for iteration in range(max_iter):
+            # Add small epsilon for numerical stability
+            epsilon = 1e-16
+            v = b / (K.T @ u + epsilon)
+            u_new = a / (K @ v + epsilon)
 
-    # Calculate optimal transport cost
-    transport_cost = np.sum(u[:, None] * K * v[None, :] * C)
+            # Check convergence
+            if np.allclose(u, u_new, rtol=convergence_threshold, atol=1e-12):
+                converged = True
+                break
+            u = u_new
 
-    return transport_cost
+        if not converged:
+            raise ValueError(
+                f"Sinkhorn algorithm did not converge after {max_iter} iterations"
+            )
+
+        # Calculate optimal transport cost
+        transport_cost = np.sum(u[:, None] * K * v[None, :] * C)
+
+        if np.isnan(transport_cost) or np.isinf(transport_cost):
+            raise ValueError("Transport cost calculation resulted in invalid value")
+
+        return float(transport_cost)
+
+    except Exception as e:
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"Failed to calculate 2D Wasserstein distance: {str(e)}")
 
 
 def wasserstein_distance_df(
@@ -96,6 +212,7 @@ def wasserstein_distance_df(
     numerical_columns: List[str],
     p: int = 1,
     method: str = "1d",
+    max_samples_2d: Optional[int] = 5000,
 ) -> pd.DataFrame:
     """
     Calculate Wasserstein distances for all numerical columns.
@@ -106,6 +223,7 @@ def wasserstein_distance_df(
         numerical_columns: List of numerical column names to evaluate
         p: Order of Wasserstein distance (1 or 2)
         method: Method to use ("1d" for column-wise, "2d" for pairwise)
+        max_samples_2d: Maximum samples for 2D calculations (None for no limit)
 
     Returns:
         DataFrame with column names and their Wasserstein distances
@@ -134,7 +252,9 @@ def wasserstein_distance_df(
                 fake_2d = fake[[col1, col2]].dropna().values
 
                 if len(real_2d) > 0 and len(fake_2d) > 0:
-                    distance = wasserstein_distance_2d(real_2d, fake_2d)
+                    distance = wasserstein_distance_2d(
+                        real_2d, fake_2d, max_samples=max_samples_2d
+                    )
                     distances.append(
                         {
                             "column": f"{col1}__{col2}",

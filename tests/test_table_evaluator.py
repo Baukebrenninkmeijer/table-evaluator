@@ -340,7 +340,7 @@ def test_visual_evaluation(sample_data):
 
 def test_error_handling():
     with pytest.raises(
-        ValueError, match="Columns in real and fake dataframe are not the same"
+        ValueError, match="real and fake DataFrames must have the same columns"
     ):
         TableEvaluator(
             pd.DataFrame({"A": [1, 2, 3]}),

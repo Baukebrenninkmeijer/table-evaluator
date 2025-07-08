@@ -7,6 +7,40 @@ import pandas as pd
 from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel, linear_kernel
 
 
+def _sample_for_mmd_performance(
+    X: np.ndarray, Y: np.ndarray, max_samples: int = 5000, random_state: int = 42
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Sample data for MMD performance optimization.
+
+    Args:
+        X: First dataset
+        Y: Second dataset
+        max_samples: Maximum number of samples to keep per dataset
+        random_state: Random seed for reproducibility
+
+    Returns:
+        Tuple of sampled X and Y data
+    """
+    np.random.seed(random_state)
+
+    # Sample X if needed
+    if len(X) > max_samples:
+        indices = np.random.choice(len(X), max_samples, replace=False)
+        X_sampled = X[indices]
+    else:
+        X_sampled = X
+
+    # Sample Y if needed
+    if len(Y) > max_samples:
+        indices = np.random.choice(len(Y), max_samples, replace=False)
+        Y_sampled = Y[indices]
+    else:
+        Y_sampled = Y
+
+    return X_sampled, Y_sampled
+
+
 class MMDKernel:
     """Base class for MMD kernel functions."""
 
@@ -26,16 +60,44 @@ class RBFKernel(MMDKernel):
         self.gamma = gamma
 
     def __call__(self, X: np.ndarray, Y: Optional[np.ndarray] = None) -> np.ndarray:
+        if not isinstance(X, np.ndarray):
+            raise TypeError("X must be a numpy array")
+        if Y is not None and not isinstance(Y, np.ndarray):
+            raise TypeError("Y must be a numpy array or None")
+
         gamma = self.gamma
         if gamma is None:
             # Use median heuristic for bandwidth selection
-            if Y is None:
-                pairwise_dists = np.sqrt(np.sum((X[:, None] - X[None, :]) ** 2, axis=2))
-            else:
-                pairwise_dists = np.sqrt(np.sum((X[:, None] - Y[None, :]) ** 2, axis=2))
-            gamma = 1.0 / (2 * np.median(pairwise_dists[pairwise_dists > 0]) ** 2)
+            try:
+                if Y is None:
+                    pairwise_dists = np.sqrt(
+                        np.sum((X[:, None] - X[None, :]) ** 2, axis=2)
+                    )
+                else:
+                    pairwise_dists = np.sqrt(
+                        np.sum((X[:, None] - Y[None, :]) ** 2, axis=2)
+                    )
 
-        return rbf_kernel(X, Y, gamma=gamma)
+                valid_dists = pairwise_dists[pairwise_dists > 0]
+                if len(valid_dists) == 0:
+                    raise ValueError(
+                        "All pairwise distances are zero - cannot compute gamma"
+                    )
+
+                median_dist = np.median(valid_dists)
+                if median_dist == 0:
+                    raise ValueError("Median distance is zero - cannot compute gamma")
+
+                gamma = 1.0 / (2 * median_dist**2)
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to compute gamma using median heuristic: {str(e)}"
+                )
+
+        try:
+            return rbf_kernel(X, Y, gamma=gamma)
+        except Exception as e:
+            raise ValueError(f"Failed to compute RBF kernel: {str(e)}")
 
 
 class PolynomialKernel(MMDKernel):
@@ -66,7 +128,11 @@ class LinearKernel(MMDKernel):
 
 
 def mmd_squared(
-    X: np.ndarray, Y: np.ndarray, kernel: MMDKernel, unbiased: bool = True
+    X: np.ndarray,
+    Y: np.ndarray,
+    kernel: MMDKernel,
+    unbiased: bool = True,
+    max_samples: Optional[int] = 5000,
 ) -> float:
     """
     Calculate squared Maximum Mean Discrepancy between two samples.
@@ -79,37 +145,87 @@ def mmd_squared(
         Y: Sample from second distribution, shape (m, d)
         kernel: Kernel function to use
         unbiased: Whether to use unbiased estimator
+        max_samples: Maximum samples per dataset for performance (None for no limit)
 
     Returns:
         float: Squared MMD value
+
+    Raises:
+        ValueError: If input data is invalid
+        TypeError: If inputs are not numpy arrays or kernel is invalid
     """
+    # Input validation
+    if not isinstance(X, np.ndarray):
+        raise TypeError("X must be a numpy array")
+    if not isinstance(Y, np.ndarray):
+        raise TypeError("Y must be a numpy array")
+    if not isinstance(kernel, MMDKernel):
+        raise TypeError("kernel must be an instance of MMDKernel")
+
+    if X.ndim != 2 or Y.ndim != 2:
+        raise ValueError("Input arrays must be 2D")
+    if X.shape[1] != Y.shape[1]:
+        raise ValueError("X and Y must have the same number of features")
+    if len(X) == 0 or len(Y) == 0:
+        raise ValueError("Input arrays cannot be empty")
+
+    # Check for NaN or infinite values
+    if np.any(np.isnan(X)) or np.any(np.isnan(Y)):
+        raise ValueError("Input data contains NaN values")
+    if np.any(np.isinf(X)) or np.any(np.isinf(Y)):
+        raise ValueError("Input data contains infinite values")
+
+    # Performance optimization: sample large datasets
+    if max_samples is not None and (len(X) > max_samples or len(Y) > max_samples):
+        X, Y = _sample_for_mmd_performance(X, Y, max_samples)
+
     n, m = len(X), len(Y)
 
-    # Compute kernel matrices
-    Kxx = kernel(X, X)
-    Kyy = kernel(Y, Y)
-    Kxy = kernel(X, Y)
+    # Check minimum sample sizes for unbiased estimator
+    if unbiased and (n < 2 or m < 2):
+        raise ValueError("Unbiased estimator requires at least 2 samples in each group")
 
-    if unbiased:
-        # Unbiased estimator (removes diagonal elements)
-        # E[k(x,x')] for x ≠ x'
-        Kxx_sum = np.sum(Kxx) - np.trace(Kxx)
-        term1 = Kxx_sum / (n * (n - 1))
+    try:
+        # Compute kernel matrices
+        Kxx = kernel(X, X)
+        Kyy = kernel(Y, Y)
+        Kxy = kernel(X, Y)
 
-        # E[k(y,y')] for y ≠ y'
-        Kyy_sum = np.sum(Kyy) - np.trace(Kyy)
-        term3 = Kyy_sum / (m * (m - 1))
-    else:
-        # Biased estimator
-        term1 = np.mean(Kxx)
-        term3 = np.mean(Kyy)
+        # Validate kernel matrices
+        if np.any(np.isnan(Kxx)) or np.any(np.isnan(Kyy)) or np.any(np.isnan(Kxy)):
+            raise ValueError("Kernel computation resulted in NaN values")
+        if np.any(np.isinf(Kxx)) or np.any(np.isinf(Kyy)) or np.any(np.isinf(Kxy)):
+            raise ValueError("Kernel computation resulted in infinite values")
 
-    # E[k(x,y)]
-    term2 = np.mean(Kxy)
+        if unbiased:
+            # Unbiased estimator (removes diagonal elements)
+            # E[k(x,x')] for x ≠ x'
+            Kxx_sum = np.sum(Kxx) - np.trace(Kxx)
+            term1 = Kxx_sum / (n * (n - 1))
 
-    mmd_sq = term1 - 2 * term2 + term3
+            # E[k(y,y')] for y ≠ y'
+            Kyy_sum = np.sum(Kyy) - np.trace(Kyy)
+            term3 = Kyy_sum / (m * (m - 1))
+        else:
+            # Biased estimator
+            term1 = np.mean(Kxx)
+            term3 = np.mean(Kyy)
 
-    return max(0.0, mmd_sq)  # Ensure non-negative
+        # E[k(x,y)]
+        term2 = np.mean(Kxy)
+
+        mmd_sq = term1 - 2 * term2 + term3
+
+        # Validate result
+        if np.isnan(mmd_sq) or np.isinf(mmd_sq):
+            raise ValueError("MMD computation resulted in invalid value")
+
+        return max(0.0, float(mmd_sq))  # Ensure non-negative
+
+    except Exception as e:
+        if isinstance(e, (ValueError, TypeError)):
+            raise
+        raise ValueError(f"Failed to calculate MMD: {str(e)}")
 
 
 def mmd_permutation_test(

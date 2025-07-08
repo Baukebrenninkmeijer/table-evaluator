@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from table_evaluator.metrics.privacy_attacks import (
+from table_evaluator.advanced_metrics.privacy_attacks import (
     identify_quasi_identifiers,
     calculate_k_anonymity,
     simulate_membership_inference_attack,
