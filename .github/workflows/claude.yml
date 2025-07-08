@@ -74,7 +74,7 @@ jobs:
 
             ## Testing Commands:
             - Run tests: `python -m pytest` or `make test`
-            - Run linting: `python -m ruff check` and `python -m black --check`
+            - Run linting: `python -m ruff check`
             - Run security checks: `python -m bandit -r table_evaluator/`
             - Full quality check: `make lint` or `pre-commit run --all-files`
 

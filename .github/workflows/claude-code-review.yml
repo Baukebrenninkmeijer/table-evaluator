@@ -45,6 +45,11 @@ jobs:
           direct_prompt: |
             Please review this Python pull request for the table-evaluator library and provide feedback on:
 
+            ## purpose evaluation:
+            - Does the implementation make sense given the task?
+            - Is this the best way to approach the problem?
+            - Is there any existing solution to this problem that is different from ours?
+
             ## Code Quality & Standards:
             - PEP 8 compliance and Black formatting
             - Type hints usage and accuracy
@@ -83,7 +88,7 @@ jobs:
             Be constructive, specific, and provide actionable feedback with code examples when helpful.
 
           # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
-          # use_sticky_comment: true
+          use_sticky_comment: true
 
           # Optional: Customize review based on file types
           # direct_prompt: |
