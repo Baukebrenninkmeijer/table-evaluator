@@ -178,7 +178,7 @@ class TableEvaluator:
             numerical_columns=self.numerical_columns,
         )
 
-    def plot_mean_std(self, fname=None, show: bool = True):
+    def plot_mean_std(self, fname=None, show: bool = True) -> None:
         """
         Class wrapper function for plotting the mean and std using `plots.plot_mean_std`.
 
@@ -189,7 +189,9 @@ class TableEvaluator:
         """
         return self.visualization_manager.plot_mean_std(fname=fname, show=show)
 
-    def plot_cumsums(self, nr_cols=4, fname: PathLike | None = None, show: bool = True):
+    def plot_cumsums(
+        self, nr_cols=4, fname: PathLike | None = None, show: bool = True
+    ) -> None:
         """
 
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length
@@ -209,7 +211,7 @@ class TableEvaluator:
 
     def plot_distributions(
         self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True
-    ):
+    ) -> None:
         """
 
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales
@@ -229,7 +231,7 @@ class TableEvaluator:
 
     def plot_correlation_difference(
         self, plot_diff=True, fname=None, show: bool = True, **kwargs
-    ):
+    ) -> None:
         """
 
         Plot the association matrices for each table and, if chosen, the difference between them.
@@ -266,7 +268,7 @@ class TableEvaluator:
             distance_func = te_metrics.rmse
         elif how == "cosine":
 
-            def custom_cosine(a, b):
+            def custom_cosine(a: np.ndarray, b: np.ndarray) -> float:
                 return cosine(a.reshape(-1), b.reshape(-1))
 
             distance_func = custom_cosine
@@ -287,7 +289,7 @@ class TableEvaluator:
         )["corr"]  # type: ignore
         return distance_func(real_corr.values, fake_corr.values)  # type: ignore
 
-    def plot_pca(self, fname: PathLike | None = None, show: bool = True):
+    def plot_pca(self, fname: PathLike | None = None, show: bool = True) -> None:
         """
 
         Plot the first two components of a PCA of real and fake data.
@@ -341,7 +343,7 @@ class TableEvaluator:
             self.real, self.fake, return_values
         )
 
-    def pca_correlation(self, lingress: bool = False):
+    def pca_correlation(self, lingress: bool = False) -> float:
         """
 
         Calculate the relation between PCA explained variance values. Due to some very large numbers, in recent
@@ -360,7 +362,7 @@ class TableEvaluator:
         real, fake = self.convert_numerical()
         return self.statistical_evaluator.pca_correlation(real, fake, lingress)
 
-    def fit_estimators(self):
+    def fit_estimators(self) -> None:
         """
 
         Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
@@ -381,7 +383,7 @@ class TableEvaluator:
                 print(f"{i + 1}: {type(c).__name__}")
             c.fit(self.fake_x_train, self.fake_y_train)
 
-    def score_estimators(self):
+    def score_estimators(self) -> None:
         """
 
         Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
@@ -623,7 +625,7 @@ class TableEvaluator:
         real, fake = self.convert_numerical_one_hot()
         return self.privacy_evaluator.row_distance(real, fake, n_samples)
 
-    def column_correlations(self):
+    def column_correlations(self) -> float:
         """
 
         Wrapper function around `metrics.column_correlation`.

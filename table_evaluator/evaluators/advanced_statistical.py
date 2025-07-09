@@ -37,6 +37,8 @@ class AdvancedStatisticalEvaluator:
         fake: pd.DataFrame,
         numerical_columns: List[str],
         include_2d: bool = False,
+        enable_sampling: bool = False,
+        max_samples: int = 5000,
     ) -> Dict:
         """
         Comprehensive Wasserstein distance evaluation.
@@ -46,6 +48,8 @@ class AdvancedStatisticalEvaluator:
             fake: DataFrame containing synthetic data
             numerical_columns: List of numerical column names
             include_2d: Whether to include 2D pairwise analysis
+            enable_sampling: Whether to enable sampling for large datasets
+            max_samples: Maximum samples per dataset when sampling is enabled
 
         Returns:
             Dictionary containing comprehensive Wasserstein analysis results
@@ -73,7 +77,12 @@ class AdvancedStatisticalEvaluator:
                     print("Computing 2D Wasserstein distances...")
 
                 distances_2d = wasserstein_distance_df(
-                    real, fake, numerical_columns, method="2d"
+                    real,
+                    fake,
+                    numerical_columns,
+                    method="2d",
+                    enable_sampling=enable_sampling,
+                    max_samples_2d=max_samples,
                 )
                 results["distances_2d"] = distances_2d
 
@@ -117,6 +126,8 @@ class AdvancedStatisticalEvaluator:
         numerical_columns: List[str],
         kernel_types: Optional[List[str]] = None,
         include_multivariate: bool = True,
+        enable_sampling: bool = False,
+        max_samples: int = 5000,
     ) -> Dict:
         """
         Comprehensive Maximum Mean Discrepancy evaluation.
@@ -127,6 +138,8 @@ class AdvancedStatisticalEvaluator:
             numerical_columns: List of numerical column names
             kernel_types: List of kernels to use (default: ["rbf", "polynomial", "linear"])
             include_multivariate: Whether to include multivariate MMD analysis
+            enable_sampling: Whether to enable sampling for large datasets
+            max_samples: Maximum samples per dataset when sampling is enabled
 
         Returns:
             Dictionary containing comprehensive MMD analysis results
@@ -182,6 +195,8 @@ class AdvancedStatisticalEvaluator:
         numerical_columns: List[str],
         wasserstein_config: Optional[Dict] = None,
         mmd_config: Optional[Dict] = None,
+        enable_sampling: bool = False,
+        max_samples: int = 5000,
     ) -> Dict:
         """
         Run comprehensive advanced statistical evaluation.
@@ -192,18 +207,32 @@ class AdvancedStatisticalEvaluator:
             numerical_columns: List of numerical column names
             wasserstein_config: Configuration for Wasserstein evaluation
             mmd_config: Configuration for MMD evaluation
+            enable_sampling: Whether to enable sampling for large datasets
+            max_samples: Maximum samples per dataset when sampling is enabled
 
         Returns:
             Dictionary with complete advanced statistical analysis
         """
         if wasserstein_config is None:
-            wasserstein_config = {"include_2d": False}
+            wasserstein_config = {
+                "include_2d": False,
+                "enable_sampling": enable_sampling,
+                "max_samples": max_samples,
+            }
+        else:
+            wasserstein_config.setdefault("enable_sampling", enable_sampling)
+            wasserstein_config.setdefault("max_samples", max_samples)
 
         if mmd_config is None:
             mmd_config = {
                 "kernel_types": ["rbf", "polynomial"],
                 "include_multivariate": True,
+                "enable_sampling": enable_sampling,
+                "max_samples": max_samples,
             }
+        else:
+            mmd_config.setdefault("enable_sampling", enable_sampling)
+            mmd_config.setdefault("max_samples", max_samples)
 
         if self.verbose:
             print("Running comprehensive advanced statistical evaluation...")

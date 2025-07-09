@@ -1,10 +1,13 @@
 """Maximum Mean Discrepancy (MMD) implementation for two-sample testing."""
 
-from typing import Dict, List, Optional, Tuple
+import logging
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel, linear_kernel
+
+logger = logging.getLogger(__name__)
 
 
 def _sample_for_mmd_performance(
@@ -28,6 +31,7 @@ def _sample_for_mmd_performance(
     if len(X) > max_samples:
         indices = np.random.choice(len(X), max_samples, replace=False)
         X_sampled = X[indices]
+        logger.info(f"Sampled X data from {len(X)} to {max_samples} rows")
     else:
         X_sampled = X
 
@@ -35,10 +39,36 @@ def _sample_for_mmd_performance(
     if len(Y) > max_samples:
         indices = np.random.choice(len(Y), max_samples, replace=False)
         Y_sampled = Y[indices]
+        logger.info(f"Sampled Y data from {len(Y)} to {max_samples} rows")
     else:
         Y_sampled = Y
 
     return X_sampled, Y_sampled
+
+
+def _check_large_dataset_and_warn_mmd(
+    X: np.ndarray,
+    Y: np.ndarray,
+    threshold: int = 250000,
+    operation_name: str = "MMD calculation",
+) -> None:
+    """
+    Check for large datasets and provide sampling recommendations for MMD.
+
+    Args:
+        X: First dataset
+        Y: Second dataset
+        threshold: Row count threshold for large dataset warning
+        operation_name: Name of the operation being performed for context
+    """
+    total_rows = len(X) + len(Y)
+
+    if total_rows > threshold:
+        logger.warning(
+            f"Large dataset detected for {operation_name} ({total_rows:,} total rows). "
+            f"This may be slow and memory-intensive. Consider enabling sampling by setting "
+            f"'enable_sampling=True' and 'max_samples=5000' parameters to improve performance."
+        )
 
 
 class MMDKernel:
@@ -47,7 +77,7 @@ class MMDKernel:
     def __init__(self, name: str):
         self.name = name
 
-    def __call__(self, X: np.ndarray, Y: Optional[np.ndarray] = None) -> np.ndarray:
+    def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
         """Compute kernel matrix."""
         raise NotImplementedError
 
@@ -55,11 +85,11 @@ class MMDKernel:
 class RBFKernel(MMDKernel):
     """Radial Basis Function (Gaussian) kernel."""
 
-    def __init__(self, gamma: Optional[float] = None):
+    def __init__(self, gamma: float | None = None):
         super().__init__("rbf")
         self.gamma = gamma
 
-    def __call__(self, X: np.ndarray, Y: Optional[np.ndarray] = None) -> np.ndarray:
+    def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
         if not isinstance(X, np.ndarray):
             raise TypeError("X must be a numpy array")
         if Y is not None and not isinstance(Y, np.ndarray):
@@ -103,15 +133,13 @@ class RBFKernel(MMDKernel):
 class PolynomialKernel(MMDKernel):
     """Polynomial kernel."""
 
-    def __init__(
-        self, degree: int = 3, gamma: Optional[float] = None, coef0: float = 1.0
-    ):
+    def __init__(self, degree: int = 3, gamma: float | None = None, coef0: float = 1.0):
         super().__init__("polynomial")
         self.degree = degree
         self.gamma = gamma
         self.coef0 = coef0
 
-    def __call__(self, X: np.ndarray, Y: Optional[np.ndarray] = None) -> np.ndarray:
+    def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
         return polynomial_kernel(
             X, Y, degree=self.degree, gamma=self.gamma, coef0=self.coef0
         )
@@ -123,7 +151,7 @@ class LinearKernel(MMDKernel):
     def __init__(self):
         super().__init__("linear")
 
-    def __call__(self, X: np.ndarray, Y: Optional[np.ndarray] = None) -> np.ndarray:
+    def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
         return linear_kernel(X, Y)
 
 
@@ -132,7 +160,8 @@ def mmd_squared(
     Y: np.ndarray,
     kernel: MMDKernel,
     unbiased: bool = True,
-    max_samples: Optional[int] = 5000,
+    enable_sampling: bool = False,
+    max_samples: int = 5000,
 ) -> float:
     """
     Calculate squared Maximum Mean Discrepancy between two samples.
@@ -145,7 +174,8 @@ def mmd_squared(
         Y: Sample from second distribution, shape (m, d)
         kernel: Kernel function to use
         unbiased: Whether to use unbiased estimator
-        max_samples: Maximum samples per dataset for performance (None for no limit)
+        enable_sampling: Whether to enable sampling for large datasets
+        max_samples: Maximum samples per dataset when sampling is enabled
 
     Returns:
         float: Squared MMD value
@@ -175,8 +205,11 @@ def mmd_squared(
     if np.any(np.isinf(X)) or np.any(np.isinf(Y)):
         raise ValueError("Input data contains infinite values")
 
-    # Performance optimization: sample large datasets
-    if max_samples is not None and (len(X) > max_samples or len(Y) > max_samples):
+    # Check for large datasets and warn user
+    _check_large_dataset_and_warn_mmd(X, Y, operation_name="MMD calculation")
+
+    # Performance optimization: sample large datasets only if enabled
+    if enable_sampling and (len(X) > max_samples or len(Y) > max_samples):
         X, Y = _sample_for_mmd_performance(X, Y, max_samples)
 
     n, m = len(X), len(Y)
@@ -233,7 +266,7 @@ def mmd_permutation_test(
     Y: np.ndarray,
     kernel: MMDKernel,
     n_permutations: int = 1000,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> Tuple[float, float, np.ndarray]:
     """
     Perform permutation test for MMD significance.
@@ -287,7 +320,7 @@ def mmd_bootstrap_test(
     Y: np.ndarray,
     kernel: MMDKernel,
     n_bootstrap: int = 1000,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> Tuple[float, float, np.ndarray]:
     """
     Bootstrap-based MMD test for distribution differences.
@@ -339,7 +372,7 @@ def mmd_column_wise(
     fake: pd.DataFrame,
     numerical_columns: List[str],
     kernel_type: str = "rbf",
-    kernel_params: Optional[Dict] = None,
+    kernel_params: Dict | None = None,
 ) -> pd.DataFrame:
     """
     Calculate MMD for each numerical column independently.
@@ -402,7 +435,8 @@ def mmd_multivariate(
     fake: pd.DataFrame,
     numerical_columns: List[str],
     kernel_type: str = "rbf",
-    kernel_params: Optional[Dict] = None,
+    kernel_params: Dict | None = None,
+    enable_sampling: bool = False,
     max_samples: int = 5000,
 ) -> Dict:
     """
@@ -414,7 +448,8 @@ def mmd_multivariate(
         numerical_columns: Columns to include in analysis
         kernel_type: Type of kernel to use
         kernel_params: Kernel parameters
-        max_samples: Maximum samples to use (for computational efficiency)
+        enable_sampling: Whether to enable sampling for large datasets
+        max_samples: Maximum samples to use when sampling is enabled
 
     Returns:
         Dictionary with multivariate MMD results
@@ -436,14 +471,26 @@ def mmd_multivariate(
     real_data = real[numerical_columns].dropna().values
     fake_data = fake[numerical_columns].dropna().values
 
-    # Subsample if datasets are too large
-    if len(real_data) > max_samples:
-        idx = np.random.choice(len(real_data), max_samples, replace=False)
-        real_data = real_data[idx]
+    # Check for large datasets and warn user
+    _check_large_dataset_and_warn_mmd(
+        real_data, fake_data, operation_name="multivariate MMD"
+    )
 
-    if len(fake_data) > max_samples:
-        idx = np.random.choice(len(fake_data), max_samples, replace=False)
-        fake_data = fake_data[idx]
+    # Subsample if datasets are too large and sampling is enabled
+    if enable_sampling:
+        if len(real_data) > max_samples:
+            idx = np.random.choice(len(real_data), max_samples, replace=False)
+            real_data = real_data[idx]
+            logger.info(
+                f"Sampled real data from {len(real_data)} to {max_samples} rows"
+            )
+
+        if len(fake_data) > max_samples:
+            idx = np.random.choice(len(fake_data), max_samples, replace=False)
+            fake_data = fake_data[idx]
+            logger.info(
+                f"Sampled fake data from {len(fake_data)} to {max_samples} rows"
+            )
 
     # Calculate MMD
     mmd_val = mmd_squared(real_data, fake_data, kernel, unbiased=True)

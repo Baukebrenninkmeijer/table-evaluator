@@ -1,11 +1,14 @@
 """Wasserstein Distance (Earth Mover's Distance) implementation for distribution comparison."""
 
-from typing import List, Tuple, Optional
+import logging
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.spatial.distance import cdist
+
+logger = logging.getLogger(__name__)
 
 
 def _sample_for_performance(
@@ -32,6 +35,7 @@ def _sample_for_performance(
     if len(real_data) > max_samples:
         indices = np.random.choice(len(real_data), max_samples, replace=False)
         real_sampled = real_data[indices]
+        logger.info(f"Sampled real data from {len(real_data)} to {max_samples} rows")
     else:
         real_sampled = real_data
 
@@ -39,10 +43,36 @@ def _sample_for_performance(
     if len(fake_data) > max_samples:
         indices = np.random.choice(len(fake_data), max_samples, replace=False)
         fake_sampled = fake_data[indices]
+        logger.info(f"Sampled fake data from {len(fake_data)} to {max_samples} rows")
     else:
         fake_sampled = fake_data
 
     return real_sampled, fake_sampled
+
+
+def _check_large_dataset_and_warn(
+    real_data: Union[np.ndarray, pd.DataFrame],
+    fake_data: Union[np.ndarray, pd.DataFrame],
+    threshold: int = 250000,
+    operation_name: str = "calculation",
+) -> None:
+    """
+    Check for large datasets and provide sampling recommendations.
+
+    Args:
+        real_data: Real data array or DataFrame
+        fake_data: Fake data array or DataFrame
+        threshold: Row count threshold for large dataset warning
+        operation_name: Name of the operation being performed for context
+    """
+    total_rows = len(real_data) + len(fake_data)
+
+    if total_rows > threshold:
+        logger.warning(
+            f"Large dataset detected for {operation_name} ({total_rows:,} total rows). "
+            f"This may be slow and memory-intensive. Consider enabling sampling by setting "
+            f"'enable_sampling=True' and 'max_samples=5000' parameters to improve performance."
+        )
 
 
 def wasserstein_distance_1d(
@@ -99,7 +129,8 @@ def wasserstein_distance_2d(
     reg: float = 0.1,
     max_iter: int = 1000,
     convergence_threshold: float = 1e-6,
-    max_samples: Optional[int] = 5000,
+    enable_sampling: bool = False,
+    max_samples: int = 5000,
 ) -> float:
     """
     Calculate 2D Wasserstein distance using Sinkhorn algorithm approximation.
@@ -113,7 +144,8 @@ def wasserstein_distance_2d(
         reg: Regularization parameter for entropy regularization (must be > 0)
         max_iter: Maximum number of iterations for Sinkhorn algorithm
         convergence_threshold: Threshold for convergence check
-        max_samples: Maximum samples per dataset for performance (None for no limit)
+        enable_sampling: Whether to enable sampling for large datasets
+        max_samples: Maximum samples per dataset when sampling is enabled
 
     Returns:
         float: Approximate 2D Wasserstein distance
@@ -148,8 +180,13 @@ def wasserstein_distance_2d(
     if np.any(np.isinf(real_data)) or np.any(np.isinf(fake_data)):
         raise ValueError("Input data contains infinite values")
 
-    # Performance optimization: sample large datasets
-    if max_samples is not None and (
+    # Check for large datasets and warn user
+    _check_large_dataset_and_warn(
+        real_data, fake_data, operation_name="2D Wasserstein distance"
+    )
+
+    # Performance optimization: sample large datasets only if enabled
+    if enable_sampling and (
         len(real_data) > max_samples or len(fake_data) > max_samples
     ):
         real_data, fake_data = _sample_for_performance(
@@ -212,7 +249,8 @@ def wasserstein_distance_df(
     numerical_columns: List[str],
     p: int = 1,
     method: str = "1d",
-    max_samples_2d: Optional[int] = 5000,
+    enable_sampling: bool = False,
+    max_samples_2d: int = 5000,
 ) -> pd.DataFrame:
     """
     Calculate Wasserstein distances for all numerical columns.
@@ -223,7 +261,8 @@ def wasserstein_distance_df(
         numerical_columns: List of numerical column names to evaluate
         p: Order of Wasserstein distance (1 or 2)
         method: Method to use ("1d" for column-wise, "2d" for pairwise)
-        max_samples_2d: Maximum samples for 2D calculations (None for no limit)
+        enable_sampling: Whether to enable sampling for large datasets in 2D calculations
+        max_samples_2d: Maximum samples for 2D calculations when sampling is enabled
 
     Returns:
         DataFrame with column names and their Wasserstein distances
@@ -253,7 +292,10 @@ def wasserstein_distance_df(
 
                 if len(real_2d) > 0 and len(fake_2d) > 0:
                     distance = wasserstein_distance_2d(
-                        real_2d, fake_2d, max_samples=max_samples_2d
+                        real_2d,
+                        fake_2d,
+                        enable_sampling=enable_sampling,
+                        max_samples=max_samples_2d,
                     )
                     distances.append(
                         {
