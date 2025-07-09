@@ -1,14 +1,24 @@
 """Statistical evaluation functionality extracted from TableEvaluator."""
 
+import importlib.util
+import os
 from typing import Callable, List
 
 import numpy as np
 import pandas as pd
-from table_evaluator.association_metrics import associations
 from scipy import stats
 from sklearn.decomposition import PCA
 
-from table_evaluator.metrics import mean_absolute_percentage_error
+from table_evaluator.association_metrics import associations
+
+# Import original metrics module directly to avoid package conflict
+_current_dir = os.path.dirname(__file__)
+_metrics_path = os.path.join(_current_dir, "..", "metrics.py")
+_metrics_spec = importlib.util.spec_from_file_location(
+    "_te_metrics_module", _metrics_path
+)
+te_metrics = importlib.util.module_from_spec(_metrics_spec)
+_metrics_spec.loader.exec_module(te_metrics)
 
 
 class StatisticalEvaluator:
@@ -144,7 +154,7 @@ class StatisticalEvaluator:
             )
             return corr
         else:
-            pca_error = mean_absolute_percentage_error(
+            pca_error = te_metrics.mean_absolute_percentage_error(
                 pca_real.explained_variance_, pca_fake.explained_variance_
             )
             return 1 - pca_error

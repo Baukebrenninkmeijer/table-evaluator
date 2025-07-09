@@ -158,7 +158,9 @@ def test_correlation_distance(sample_data):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    with patch("table_evaluator.table_evaluator.euclidean_distance") as mock_distance:
+    with patch(
+        "table_evaluator.table_evaluator.te_metrics.euclidean_distance"
+    ) as mock_distance:
         mock_distance.return_value = 0.5
         distance = evaluator.correlation_distance(how="euclidean")
         assert distance == 0.5
@@ -301,7 +303,7 @@ def test_column_correlations(sample_data):
     evaluator = TableEvaluator(real, fake)
 
     with patch(
-        "table_evaluator.table_evaluator.column_correlations"
+        "table_evaluator.table_evaluator.te_metrics.column_correlations"
     ) as mock_column_correlations:
         mock_column_correlations.return_value = 0.75
         result = evaluator.column_correlations()
@@ -338,7 +340,7 @@ def test_visual_evaluation(sample_data):
 
 def test_error_handling():
     with pytest.raises(
-        ValueError, match="Columns in real and fake dataframe are not the same"
+        ValueError, match="real and fake DataFrames must have the same columns"
     ):
         TableEvaluator(
             pd.DataFrame({"A": [1, 2, 3]}),
