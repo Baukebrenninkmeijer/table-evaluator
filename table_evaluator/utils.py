@@ -185,7 +185,7 @@ def load_data_with_backend(
     return manager.load_data(path, backend=backend, auto_detect=auto_detect, **kwargs)
 
 
-def dict_to_df(data: Dict[str, Any]):
+def dict_to_df(data: Dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame({"result": list(data.values())}, index=list(data.keys()))
 
 

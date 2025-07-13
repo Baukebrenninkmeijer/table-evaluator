@@ -36,7 +36,9 @@ class VisualizationManager:
         self.categorical_columns = categorical_columns
         self.numerical_columns = numerical_columns
 
-    def plot_mean_std(self, fname: Optional[PathLike] = None, show: bool = True):
+    def plot_mean_std(
+        self, fname: Optional[PathLike] = None, show: bool = True
+    ) -> None:
         """
         Plot mean and standard deviation comparison between real and fake data.
 
@@ -152,7 +154,7 @@ class VisualizationManager:
             **kwargs,
         )
 
-    def plot_pca(self, fname: Optional[PathLike] = None, show: bool = True):
+    def plot_pca(self, fname: Optional[PathLike] = None, show: bool = True) -> None:
         """
         Plot PCA comparison between real and fake data.
 

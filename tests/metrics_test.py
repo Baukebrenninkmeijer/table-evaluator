@@ -1,19 +1,20 @@
+import importlib.util
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from table_evaluator.association_metrics import associations
 from table_evaluator.data.data_converter import DataConverter
-
-from table_evaluator.metrics import (
-    column_correlations,
-    euclidean_distance,
-    jensenshannon_distance,
-    mean_absolute_error,
-    mean_absolute_percentage_error,
-    rmse,
-)
 from table_evaluator.utils import load_data
+
+# Import from the original metrics.py file, not the metrics package
+spec = importlib.util.spec_from_file_location(
+    "te_metrics", "table_evaluator/metrics.py"
+)
+te_metrics = importlib.util.module_from_spec(spec)
+sys.modules["te_metrics"] = te_metrics
+spec.loader.exec_module(te_metrics)
 
 data_folder = Path("data")
 test_data_folder = Path("data/tests")
@@ -24,23 +25,25 @@ cat_cols = ["trans_type", "trans_operation", "trans_k_symbol"]
 
 
 def test_mape():
-    assert mean_absolute_percentage_error([1], [2]) == 1.0
+    assert te_metrics.mean_absolute_percentage_error([1], [2]) == 1.0
 
 
 def test_mean_absolute_error():
-    assert mean_absolute_error([1, 1], [2, 2]) == 1.0
+    assert te_metrics.mean_absolute_error([1, 1], [2, 2]) == 1.0
 
 
 def test_euclidean_distance():
-    np.testing.assert_almost_equal(euclidean_distance([0, 0], [1, 1]), 1.41421356)
+    np.testing.assert_almost_equal(
+        te_metrics.euclidean_distance([0, 0], [1, 1]), 1.41421356
+    )
 
 
 def test_rmse():
-    assert rmse([0, 0], [2, 2]) == 2.0
+    assert te_metrics.rmse([0, 0], [2, 2]) == 2.0
 
 
 def test_column_correlation():
-    column_correlations(real, fake, cat_cols)
+    te_metrics.column_correlations(real, fake, cat_cols)
 
 
 def test_associations():
@@ -127,7 +130,7 @@ def test_jensenshannon_distance():
     fake_col = pd.Series([22, 27, 32, 37, 42])
 
     # call the function and get the result
-    result = jensenshannon_distance(colname, real_col, fake_col)
+    result = te_metrics.jensenshannon_distance(colname, real_col, fake_col)
 
     # check that the result is a dictionary with the correct keys and values
     assert isinstance(result, dict)
