@@ -142,6 +142,55 @@ table_evaluator.evaluate(target_col='trans_type')
 
  The similarity score is an aggregate metric of the five other metrics in the section with results. Additionally, the F1/RMSE scores are printed since they give valuable insights into the strengths and weaknesses of some of these models. Lastly, some miscellaneous results are printed, like the nearest neighbor distance between each row in the fake dataset and the closest row in the real dataset. This provides insight into the privacy retention capability of the model. Note that the mean and standard deviation of nearest neighbor is limited to 20k rows, due to time and hardware limitations.
 
+## Advanced Statistical Analysis
+
+TableEvaluator now includes advanced statistical methods for more sophisticated distribution comparison:
+
+### Wasserstein Distance (Earth Mover's Distance)
+The Wasserstein distance provides a robust measure of the distance between two probability distributions.
+
+### Maximum Mean Discrepancy (MMD)
+MMD is a powerful kernel-based method for detecting distribution differences using different kernel functions (RBF, Polynomial, Linear).
+
+### Usage Example
+
+```python
+from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
+
+# Create advanced evaluator
+advanced_evaluator = AdvancedStatisticalEvaluator(verbose=True)
+
+# Run comprehensive analysis
+results = advanced_evaluator.comprehensive_evaluation(
+    real, fake, table_evaluator.numerical_columns
+)
+
+print(f"Overall similarity: {results['combined_metrics']['overall_similarity']:.4f}")
+print(f"Quality consensus: {results['combined_metrics']['quality_consensus']}")
+```
+
+### Performance Optimization for Large Datasets
+
+For datasets with more than 250,000 rows, the system automatically warns users and provides sampling options:
+
+```python
+# Enable sampling for large datasets
+results = advanced_evaluator.comprehensive_evaluation(
+    real, fake, numerical_columns,
+    enable_sampling=True,  # Enable sampling for performance
+    max_samples=5000       # Maximum samples per dataset
+)
+```
+
+### Key Features
+
+- **Automatic Warnings**: Alerts when datasets are large (>250,000 rows)
+- **Sampling Support**: Optional sampling with configurable limits
+- **Multiple Kernels**: RBF, Polynomial, and Linear kernels for MMD
+- **Quality Ratings**: Automated quality assessment with interpretable ratings
+- **Comprehensive Reporting**: Combined metrics with actionable recommendations
+- **Type Safety**: Full type hints for better development experience
+
 
 ## Full Documentation
 Please see the full documentation on [https://baukebrenninkmeijer.github.io/table-evaluator/](https://baukebrenninkmeijer.github.io/table-evaluator/).
