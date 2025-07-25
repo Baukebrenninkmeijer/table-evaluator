@@ -65,7 +65,7 @@ class MLEvaluator:
             Correlation value (for regression) or 1 - MAPE (for classification)
         """
         if target_type not in ['class', 'regr']:
-            raise ValueError("target_type must be 'regr' or 'class'")
+            raise ValueError('target_type must be "regr" or "class"')
 
         # Split features and target
         real_x = real.drop([target_col], axis=1)

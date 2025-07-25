@@ -11,6 +11,7 @@ from sklearn.exceptions import ConvergenceWarning
 from table_evaluator import metrics as te_metrics
 from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.core.evaluation_config import EvaluationConfig
+from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
 from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
@@ -439,7 +440,7 @@ class TableEvaluator:
 
         return real, fake
 
-    def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
+    def estimator_evaluation(self, target_col: str, target_type: str = 'class', *, kfold: bool = False) -> float:
         """
 
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
@@ -466,7 +467,13 @@ class TableEvaluator:
 
         """
         real, fake = self.convert_numerical()
-        result = self.ml_evaluator.estimator_evaluation(real, fake, target_col, target_type, kfold)
+        result = self.ml_evaluator.estimator_evaluation(
+            real=real,
+            fake=fake,
+            target_col=target_col,
+            target_type=target_type,
+            kfold=kfold,
+        )
 
         # Store the scores for backward compatibility with evaluate() method
         # We need to get the scores from the MLEvaluator but it doesn't expose them
@@ -508,6 +515,7 @@ class TableEvaluator:
         metric: str | None = None,
         verbose: bool | None = None,
         n_samples_distance: int = 20000,
+        *,
         kfold: bool = False,
         notebook: bool = False,
         return_outputs: bool = False,
