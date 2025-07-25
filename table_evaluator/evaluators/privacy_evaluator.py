@@ -1,7 +1,5 @@
 """Unified privacy evaluation functionality combining basic and advanced privacy analysis."""
 
-import logging
-
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
@@ -46,20 +44,16 @@ class PrivacyEvaluator:
         Returns:
             DataFrame with copies found or count if return_len is True
         """
-        try:
-            # Convert to string for exact matching
-            real_str = real.astype(str)
-            fake_str = fake.astype(str)
+        # Create hashes of each row to efficiently find exact matches
+        real_hashes = real.apply(lambda x: hash(tuple(x)), axis=1)
+        fake_hashes = fake.apply(lambda x: hash(tuple(x)), axis=1)
 
-            # Find exact matches row-wise
-            real_tuples = [tuple(row) for row in real_str.values]
-            fake_tuples = [tuple(row) for row in fake_str.values]
+        # Find fake rows that match real rows
+        duplicate_indices = fake_hashes.isin(real_hashes.values)
+        duplicate_indices = duplicate_indices[duplicate_indices].sort_index().index.tolist()
 
-            real_set = set(real_tuples)
-            copies = [fake.iloc[i] for i, fake_tuple in enumerate(fake_tuples) if fake_tuple in real_set]
-
-            if return_len:
-                return len(copies)
+        if self.verbose:
+            print(f'Number of copied rows: {len(duplicate_indices)}')
 
             return pd.DataFrame(copies) if copies else pd.DataFrame()
 
@@ -91,22 +85,7 @@ class PrivacyEvaluator:
                 return real_duplicates, fake_duplicates
             return len(real_duplicates), len(fake_duplicates)
 
-        except Exception as e:
-            logger.error(f'Error finding duplicates: {e}')
-            if return_values:
-                return pd.DataFrame(), pd.DataFrame()
-            return 0, 0
-
-    def row_distance(self, real: pd.DataFrame, synthetic: pd.DataFrame) -> tuple[float, float]:
-        """
-        Calculate mean and std of row-wise distances between real and synthetic data.
-
-        Args:
-            real: DataFrame containing real data
-            synthetic: DataFrame containing synthetic data
-
-        Returns:
-            Tuple of (mean_distance, std_distance)
+    def row_distance(self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None) -> tuple[float, float]:
         """
         try:
             # Select only numerical columns

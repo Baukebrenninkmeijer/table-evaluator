@@ -34,7 +34,7 @@ table_evaluator/
 - **Code Quality**: ruff (linting), black (formatting), bandit (security)
 - **Build System**: pyproject.toml with modern Python packaging
 - **Package Management**: uv for dependency management
-- **Version Control**: semantic versioning with pre-commit hooks
+- **Version Control**: Automated semantic versioning with setuptools_scm and conventional commits
 
 ## Development Workflow
 
@@ -62,11 +62,13 @@ table_evaluator/
 1. **Branch Creation**: Check if task branch exists; create if needed
 2. **Code Push**: Push changes to feature branch upon completion
 3. **Pull Request**: Create PR using GitHub CLI (`gh pr create`)
-4. **CI/CD Monitoring**:
+4. **Conventional Commits**: Use semantic commit messages (feat:, fix:, docs:, etc.)
+5. **CI/CD Monitoring**:
    - Monitor pipeline status: `gh pr checks`
    - Address failures promptly
    - Run local equivalents when possible (pre-commit, build, install)
-5. **Quality Gates**: Ensure all checks pass before requesting review
+6. **Quality Gates**: Ensure all checks pass before requesting review
+7. **Automated Versioning**: Merges to master trigger semantic versioning and PyPI release
 
 ## Local Development Best Practices
 
@@ -88,6 +90,43 @@ table_evaluator/
 - Run pre-commit hooks before committing: `pre-commit run --all-files`
 - Verify builds/installations locally to catch CI/CD issues early
 - Use project's Makefile targets for standardized operations
+
+## Automated Semantic Versioning System
+
+### Overview
+The project uses automated semantic versioning with setuptools_scm and conventional commits for streamlined releases.
+
+### Workflow
+1. **Development**: Work on feature branches with conventional commit messages
+2. **Pull Request**: Create PR - commits are validated for conventional format
+3. **Merge to Master**: Successful CI/CD completion triggers versioning workflow
+4. **Version Calculation**: Analyzes commits since last tag:
+   - `feat:` → Minor version bump (1.9.0 → 1.10.0)
+   - `fix:` → Patch version bump (1.9.0 → 1.9.1)
+   - `BREAKING CHANGE:` → Major version bump (1.9.0 → 2.0.0)
+5. **Tagging**: Creates git tag automatically (e.g., `1.10.0`)
+6. **Release**: Tag triggers PyPI publication with setuptools_scm version
+
+### Conventional Commit Format
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types**: feat, fix, docs, style, refactor, test, chore, ci, build, perf
+
+**Examples**:
+- `feat: add advanced privacy metrics`
+- `fix: handle edge case in data conversion`
+- `docs: update API documentation`
+
+### Version Detection
+- **Runtime**: Version automatically read from git tags via setuptools_scm
+- **Development**: Versions include commit info (e.g., `1.9.1.dev47+g0d2dfbd`)
+- **Releases**: Clean semantic versions (e.g., `1.10.0`)
 
 ## Recent Major Achievement: Dython Dependency Replacement (v1.9.0)
 

@@ -2,4 +2,4 @@
 
 from .evaluation_config import EvaluationConfig
 
-__all__ = ["EvaluationConfig"]
+__all__ = ['EvaluationConfig']
