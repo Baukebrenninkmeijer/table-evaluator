@@ -11,6 +11,8 @@ Welcome to table evaluator's documentation!
    :caption: Contents:
 
    table_evaluator
+   advanced_metrics
+   performance_optimization
    plots
    metrics
    utils
