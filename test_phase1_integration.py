@@ -13,13 +13,11 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from table_evaluator.table_evaluator import TableEvaluator
-from table_evaluator.advanced_metrics.mmd import (
+from table_evaluator.metrics.statistical import (
     mmd_squared,
     RBFKernel,
     mmd_column_wise,
     mmd_multivariate,
-)
-from table_evaluator.advanced_metrics.wasserstein import (
     wasserstein_distance_1d,
     wasserstein_distance_df,
     earth_movers_distance_summary,

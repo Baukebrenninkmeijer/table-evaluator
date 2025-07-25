@@ -2,10 +2,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from dython.nominal import associations, numerical_encoding
 
 import table_evaluator.metrics as te_metrics
-from table_evaluator.utils import load_data
+from table_evaluator.metrics.statistical import associations
+from table_evaluator.utils import load_data, numerical_encoding
 
 data_folder = Path("data")
 test_data_folder = Path("data/tests")

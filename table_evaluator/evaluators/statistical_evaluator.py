@@ -1,7 +1,5 @@
 """Statistical evaluation functionality extracted from TableEvaluator."""
 
-import importlib.util
-import os
 from typing import Callable, List
 
 import numpy as np
@@ -9,16 +7,8 @@ import pandas as pd
 from scipy import stats
 from sklearn.decomposition import PCA
 
-from table_evaluator.association_metrics import associations
-
-# Import original metrics module directly to avoid package conflict
-_current_dir = os.path.dirname(__file__)
-_metrics_path = os.path.join(_current_dir, "..", "metrics.py")
-_metrics_spec = importlib.util.spec_from_file_location(
-    "_te_metrics_module", _metrics_path
-)
-te_metrics = importlib.util.module_from_spec(_metrics_spec)
-_metrics_spec.loader.exec_module(te_metrics)
+from table_evaluator.metrics.statistical import associations
+from table_evaluator import metrics as te_metrics
 
 
 class StatisticalEvaluator:

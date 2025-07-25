@@ -1,8 +1,6 @@
 """Machine Learning evaluation functionality extracted from TableEvaluator."""
 
 import copy
-import importlib.util
-import os
 from typing import Callable, List
 
 import numpy as np
@@ -14,14 +12,7 @@ from sklearn.model_selection import KFold
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-# Import original metrics module directly to avoid package conflict
-_current_dir = os.path.dirname(__file__)
-_metrics_path = os.path.join(_current_dir, "..", "metrics.py")
-_metrics_spec = importlib.util.spec_from_file_location(
-    "_te_metrics_module", _metrics_path
-)
-te_metrics = importlib.util.module_from_spec(_metrics_spec)
-_metrics_spec.loader.exec_module(te_metrics)
+from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
 
 
 class MLEvaluator:
@@ -76,9 +67,9 @@ class MLEvaluator:
         real_x = real.drop([target_col], axis=1)
         fake_x = fake.drop([target_col], axis=1)
 
-        assert (
-            real_x.columns.tolist() == fake_x.columns.tolist()
-        ), f"Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}"
+        assert real_x.columns.tolist() == fake_x.columns.tolist(), (
+            f"Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}"
+        )
 
         real_y = real[target_col]
         fake_y = fake[target_col]
@@ -155,7 +146,7 @@ class MLEvaluator:
             )
             return corr
         else:  # target_type == "class"
-            mape = te_metrics.mean_absolute_percentage_error(
+            mape = mean_absolute_percentage_error(
                 estimators_scores["f1_real"], estimators_scores["f1_fake"]
             )
             return 1 - mape
@@ -284,22 +275,22 @@ class MLEvaluator:
         """Score regression estimators."""
         # Real estimators on real data
         r2r = [
-            te_metrics.rmse(real_y_test, clf.predict(real_x_test))
+            rmse(real_y_test, clf.predict(real_x_test))
             for clf in r_estimators
         ]
         # Fake estimators on fake data
         f2f = [
-            te_metrics.rmse(fake_y_test, clf.predict(fake_x_test))
+            rmse(fake_y_test, clf.predict(fake_x_test))
             for clf in f_estimators
         ]
         # Real estimators on fake data
         r2f = [
-            te_metrics.rmse(fake_y_test, clf.predict(fake_x_test))
+            rmse(fake_y_test, clf.predict(fake_x_test))
             for clf in r_estimators
         ]
         # Fake estimators on real data
         f2r = [
-            te_metrics.rmse(real_y_test, clf.predict(real_x_test))
+            rmse(real_y_test, clf.predict(real_x_test))
             for clf in f_estimators
         ]
 

@@ -6,14 +6,12 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from table_evaluator.advanced_metrics.wasserstein import (
+from table_evaluator.metrics.statistical import (
     earth_movers_distance_summary,
     wasserstein_distance_df,
-    optimal_transport_cost,
-)
-from table_evaluator.advanced_metrics.mmd import (
-    mmd_comprehensive_analysis,
     mmd_column_wise,
+    optimal_transport_cost,
+    mmd_comprehensive_analysis,
 )
 
 logger = logging.getLogger(__name__)
