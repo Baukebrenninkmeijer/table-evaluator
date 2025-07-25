@@ -3,11 +3,12 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from table_evaluator.association_metrics import cramers_v, theils_u
 from joblib import Parallel, delayed
 from scipy.spatial.distance import jensenshannon
 from scipy.stats import ks_2samp
-from sklearn.metrics import root_mean_squared_error
+from sklearn.metrics import mean_squared_error
+
+from table_evaluator.association_metrics import cramers_v, theils_u
 
 
 def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> np.floating[Any]:
@@ -65,7 +66,7 @@ def rmse(
     :param y_pred: NumPy.ndarray with the ground predicted values.
     :return: root mean squared error (float).
     """
-    return root_mean_squared_error(y_true, y_pred)  # type: ignore
+    return np.sqrt(mean_squared_error(y_true, y_pred))  # type: ignore
 
 
 def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray) -> float:

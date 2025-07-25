@@ -1,11 +1,6 @@
 Advanced Metrics
 ================
 
-.. automodule:: table_evaluator.advanced_metrics
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Overview
 --------
 
@@ -45,11 +40,6 @@ Basic usage of advanced statistical evaluation:
 Wasserstein Distance
 --------------------
 
-.. automodule:: table_evaluator.advanced_metrics.wasserstein
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 The Wasserstein distance, also known as Earth Mover's Distance, provides a robust measure of the distance between two probability distributions. It can be interpreted as the minimum cost to transform one distribution into another.
 
 **Key Functions:**
@@ -80,11 +70,6 @@ The Wasserstein distance, also known as Earth Mover's Distance, provides a robus
 
 Maximum Mean Discrepancy (MMD)
 -------------------------------
-
-.. automodule:: table_evaluator.advanced_metrics.mmd
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Maximum Mean Discrepancy is a kernel-based method for detecting differences between distributions. It uses kernel functions to map data into a reproducing kernel Hilbert space (RKHS) where mean differences can be computed.
 
@@ -129,11 +114,6 @@ Maximum Mean Discrepancy is a kernel-based method for detecting differences betw
 
 Advanced Statistical Evaluator
 -------------------------------
-
-.. automodule:: table_evaluator.evaluators.advanced_statistical
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 The ``AdvancedStatisticalEvaluator`` class provides a high-level interface for running comprehensive statistical analysis using both Wasserstein distance and MMD.
 
@@ -288,8 +268,33 @@ The advanced metrics include comprehensive error handling and input validation:
 API Reference
 -------------
 
-For detailed API documentation, see the individual module documentation:
+Detailed API documentation for all classes and functions:
 
-* :py:mod:`table_evaluator.advanced_metrics.wasserstein`
-* :py:mod:`table_evaluator.advanced_metrics.mmd`
-* :py:mod:`table_evaluator.evaluators.advanced_statistical`
+.. automodule:: table_evaluator.advanced_metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Wasserstein Distance Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: table_evaluator.advanced_metrics.wasserstein
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Maximum Mean Discrepancy Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: table_evaluator.advanced_metrics.mmd
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Advanced Statistical Evaluator Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: table_evaluator.evaluators.advanced_statistical
+   :members:
+   :undoc-members:
+   :show-inheritance:
