@@ -1,6 +1,5 @@
 """Privacy evaluation functionality extracted from TableEvaluator."""
 
-
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
@@ -18,9 +17,7 @@ class PrivacyEvaluator:
         """
         self.verbose = verbose
 
-    def get_copies(
-        self, real: pd.DataFrame, fake: pd.DataFrame, return_len: bool = False
-    ) -> pd.DataFrame | int:
+    def get_copies(self, real: pd.DataFrame, fake: pd.DataFrame, return_len: bool = False) -> pd.DataFrame | int:
         """
         Check whether any real values occur in the fake data (exact matches).
 
@@ -38,12 +35,10 @@ class PrivacyEvaluator:
 
         # Find fake rows that match real rows
         duplicate_indices = fake_hashes.isin(real_hashes.values)
-        duplicate_indices = (
-            duplicate_indices[duplicate_indices].sort_index().index.tolist()
-        )
+        duplicate_indices = duplicate_indices[duplicate_indices].sort_index().index.tolist()
 
         if self.verbose:
-            print(f"Number of copied rows: {len(duplicate_indices)}")
+            print(f'Number of copied rows: {len(duplicate_indices)}')
 
         copies = fake.loc[duplicate_indices, :]
 
@@ -71,9 +66,7 @@ class PrivacyEvaluator:
             return real_duplicates, fake_duplicates
         return len(real_duplicates), len(fake_duplicates)
 
-    def row_distance(
-        self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None
-    ) -> tuple[float, float]:
+    def row_distance(self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None) -> tuple[float, float]:
         """
         Calculate mean and standard deviation of minimum distances between fake and real rows.
 

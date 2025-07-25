@@ -19,23 +19,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 100  # Usually sufficient for version analysis
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get latest tag
         id: get_latest_tag
         run: |
-          LATEST_TAG=$(git tag --sort=-version:refname | head -n 1)
+          set -euo pipefail  # Enable strict error handling
+
+          LATEST_TAG=$(git tag --sort=-version:refname | head -n 1 || echo "")
           if [ -z "$LATEST_TAG" ]; then
             LATEST_TAG="0.0.0"
+            echo "No previous tags found, starting from 0.0.0"
+          else
+            echo "Found latest tag: $LATEST_TAG"
+            # Validate tag format
+            if ! [[ $LATEST_TAG =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Warning: Latest tag '$LATEST_TAG' doesn't match semantic version format"
+              echo "Falling back to 0.0.0"
+              LATEST_TAG="0.0.0"
+            fi
           fi
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag: $LATEST_TAG"
 
       - name: Get commits since last tag
         id: get_commits
         run: |
-          COMMITS=$(git log ${{ steps.get_latest_tag.outputs.latest_tag }}..HEAD --oneline --pretty=format:"%s")
+          set -euo pipefail  # Enable strict error handling
+
+          LATEST_TAG="${{ steps.get_latest_tag.outputs.latest_tag }}"
+
+          # Get commits since last tag, handle case where tag doesn't exist
+          if [ "$LATEST_TAG" = "0.0.0" ]; then
+            # No previous tags, get all commits
+            COMMITS=$(git log --oneline --pretty=format:"%s" || echo "")
+          else
+            # Get commits since the tag
+            COMMITS=$(git log "${LATEST_TAG}..HEAD" --oneline --pretty=format:"%s" || echo "")
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            echo "No commits found since last tag"
+            COMMITS="No new commits"
+          fi
+
           echo "commits<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -84,39 +111,65 @@ jobs:
         id: new_version
         if: steps.version_bump.outputs.bump_type != 'none'
         run: |
+          set -euo pipefail  # Enable strict error handling
+
           CURRENT_VERSION="${{ steps.get_latest_tag.outputs.latest_tag }}"
           BUMP_TYPE="${{ steps.version_bump.outputs.bump_type }}"
 
-          # Parse current version
-          if [[ $CURRENT_VERSION =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+          echo "Current version: $CURRENT_VERSION"
+          echo "Bump type: $BUMP_TYPE"
+
+          # Parse current version with validation
+          if [[ $CURRENT_VERSION =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             MAJOR=${BASH_REMATCH[1]}
             MINOR=${BASH_REMATCH[2]}
             PATCH=${BASH_REMATCH[3]}
+
+            # Validate version components are numeric and reasonable
+            if [ "$MAJOR" -gt 999 ] || [ "$MINOR" -gt 999 ] || [ "$PATCH" -gt 999 ]; then
+              echo "Error: Version components are too large"
+              exit 1
+            fi
           else
-            MAJOR=0
-            MINOR=0
-            PATCH=0
+            echo "Error: Current version '$CURRENT_VERSION' is not in semantic version format"
+            exit 1
           fi
 
-          # Increment version based on bump type
+          # Calculate new version with overflow protection
           case $BUMP_TYPE in
             major)
               MAJOR=$((MAJOR + 1))
+              if [ "$MAJOR" -gt 999 ]; then
+                echo "Error: Major version would exceed maximum (999)"
+                exit 1
+              fi
               MINOR=0
               PATCH=0
               ;;
             minor)
               MINOR=$((MINOR + 1))
+              if [ "$MINOR" -gt 999 ]; then
+                echo "Error: Minor version would exceed maximum (999)"
+                exit 1
+              fi
               PATCH=0
               ;;
             patch)
               PATCH=$((PATCH + 1))
+              if [ "$PATCH" -gt 999 ]; then
+                echo "Error: Patch version would exceed maximum (999)"
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Error: Unknown bump type '$BUMP_TYPE'"
+              exit 1
               ;;
           esac
 
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "Calculated new version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
 
       - name: Create and push tag
         if: steps.version_bump.outputs.bump_type != 'none'

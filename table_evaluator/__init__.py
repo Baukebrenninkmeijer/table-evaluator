@@ -12,9 +12,17 @@ __all__ = ['TableEvaluator', 'load_data']
 
 
 def _get_version() -> str:
-    """Get version from setuptools_scm"""
+    """Get version from setuptools_scm.
+
+    Returns:
+        str: The package version string, or 'unknown' if unable to determine.
+
+    Note:
+        Uses importlib.metadata for Python 3.8+ with pkg_resources fallback.
+        Version is dynamically determined from git tags via setuptools_scm.
+    """
     try:
-        from importlib.metadata import version
+        from importlib.metadata import PackageNotFoundError, version
 
         return version('table-evaluator')
     except ImportError:
@@ -23,8 +31,10 @@ def _get_version() -> str:
             import pkg_resources
 
             return pkg_resources.get_distribution('table-evaluator').version
-        except Exception:
+        except (pkg_resources.DistributionNotFound, AttributeError):
             return 'unknown'
+    except PackageNotFoundError:
+        return 'unknown'
 
 
 __version__ = _get_version()
