@@ -1,28 +1,27 @@
-import logging
 import warnings
 from os import PathLike
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import f1_score, jaccard_score
 
 # Import metrics module directly
 from table_evaluator import metrics as te_metrics
-from table_evaluator.metrics.statistical import associations
+from table_evaluator.association_metrics import associations
 from table_evaluator.core.evaluation_config import EvaluationConfig
+from table_evaluator.data.data_converter import numerical_encoding
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
 from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
-from table_evaluator.metrics.ml import MLEvaluator
+from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.utils import _preprocess_data, dict_to_df, numerical_encoding
+from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
-
-logger = logging.getLogger(__name__)
 
 
 class TableEvaluator:

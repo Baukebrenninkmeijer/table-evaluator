@@ -1,17 +1,15 @@
-"""Privacy attack simulation and analysis for synthetic data evaluation."""
+"""Privacy attack simulations and privacy metrics implementation."""
 
-import logging
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-
-logger = logging.getLogger(__name__)
 
 
 def identify_quasi_identifiers(

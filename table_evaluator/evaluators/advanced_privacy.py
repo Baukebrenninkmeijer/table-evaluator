@@ -1,17 +1,15 @@
-"""Advanced privacy evaluation with k-anonymity and membership inference attack analysis."""
+"""Advanced privacy evaluation functionality."""
 
-import logging
 from typing import Dict, List, Optional
 
 import pandas as pd
+from loguru import logger
 
 from table_evaluator.advanced_metrics.privacy_attacks import (
-    identify_quasi_identifiers,
     calculate_k_anonymity,
+    identify_quasi_identifiers,
     simulate_membership_inference_attack,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class AdvancedPrivacyEvaluator:

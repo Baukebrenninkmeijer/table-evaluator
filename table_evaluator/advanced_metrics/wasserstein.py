@@ -1,14 +1,12 @@
-"""Wasserstein Distance (Earth Mover's Distance) implementation for distribution comparison."""
+"""Wasserstein distance calculations for synthetic data evaluation."""
 
-import logging
 from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy import stats
-from scipy.spatial.distance import cdist
-
-logger = logging.getLogger(__name__)
+from scipy.spatial.distance import pdist, squareform
 
 
 def _sample_for_performance(
@@ -201,7 +199,8 @@ def wasserstein_distance_2d(
         b = np.ones(m) / m
 
         # Cost matrix (squared Euclidean distance)
-        C = cdist(real_data, fake_data, metric="sqeuclidean")
+        C = pdist(real_data, metric="sqeuclidean")
+        C = squareform(C)
 
         # Check for numerical issues in cost matrix
         if np.any(np.isnan(C)) or np.any(np.isinf(C)):

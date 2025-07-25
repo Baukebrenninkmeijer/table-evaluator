@@ -1,13 +1,11 @@
-"""Maximum Mean Discrepancy (MMD) implementation for two-sample testing."""
+"""Maximum Mean Discrepancy (MMD) implementation for distribution comparison."""
 
-import logging
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel, linear_kernel
-
-logger = logging.getLogger(__name__)
+from loguru import logger
+from sklearn.metrics.pairwise import linear_kernel, polynomial_kernel, rbf_kernel
 
 
 def _sample_for_mmd_performance(

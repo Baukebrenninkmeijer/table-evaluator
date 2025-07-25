@@ -1,12 +1,9 @@
-"""Data conversion utilities for table evaluation."""
+"""Data conversion utilities for table evaluator."""
 
-import logging
 from typing import List, Tuple
 
 import pandas as pd
-from dython.nominal import numerical_encoding
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class DataConverter:
