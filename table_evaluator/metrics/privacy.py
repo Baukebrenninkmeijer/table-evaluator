@@ -1,9 +1,8 @@
-"""Privacy attack simulation and analysis for synthetic data evaluation."""
-
-import logging
+"""Privacy attack simulations and privacy metrics implementation."""
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
@@ -11,8 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from table_evaluator.constants import RANDOM_SEED
-
-logger = logging.getLogger(__name__)
 
 
 def identify_quasi_identifiers(df: pd.DataFrame, max_unique_ratio: float = 0.9, min_unique_count: int = 2) -> list[str]:
