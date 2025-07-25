@@ -1,9 +1,8 @@
-"""Privacy attack simulation and analysis for synthetic data evaluation."""
-
-import logging
+"""Privacy attack simulations and privacy metrics implementation."""
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
@@ -18,8 +17,6 @@ from table_evaluator.models.privacy_models import (
     MembershipInferenceAnalysis,
     StatisticalDistribution,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def _convert_statistical_distribution(describe_dict: dict) -> StatisticalDistribution:

@@ -7,7 +7,6 @@ This document defines the standard workflow for AI-assisted development tasks wi
 This is a Python package called "table-evaluator" (v1.9.0) for evaluating synthetic tabular data quality against real data. It provides comprehensive metrics and analysis tools for comparing real and synthetic datasets.
 
 ### Key Features
-- **Multi-backend support**: Pandas and Polars dataframes
 - **Advanced statistical metrics**: Wasserstein Distance, Maximum Mean Discrepancy (MMD)
 - **Privacy analysis**: k-anonymity, l-diversity, membership inference attacks
 - **Plugin architecture**: Extensible framework for custom metrics
@@ -25,15 +24,12 @@ table_evaluator/
 │   ├── advanced_statistical.py
 │   ├── advanced_privacy.py
 │   └── ml_evaluator.py
-├── backends/                # Data backend abstraction
-│   ├── pandas_backend.py
-│   └── polars_backend.py
 └── plugins/                 # Extensibility framework
 ```
 
 ### Development Environment Setup
 - **Python 3.10+** required
-- **Dependencies**: NumPy, Pandas, Polars, Scikit-learn, Matplotlib, Seaborn
+- **Dependencies**: NumPy, Pandas, Scikit-learn, Matplotlib, Seaborn
 - **Testing**: pytest with comprehensive test suite
 - **Code Quality**: ruff (linting), black (formatting), bandit (security)
 - **Build System**: pyproject.toml with modern Python packaging
@@ -49,7 +45,6 @@ table_evaluator/
   - Full test suite: `python -m pytest` or `make test`
   - Specific test file: `python -m pytest tests/test_specific.py`
   - Coverage report: `python -m pytest --cov=table_evaluator --cov-report=html`
-  - Backend-specific testing: `BACKEND=pandas pytest` and `BACKEND=polars pytest`
 - **Code quality checks**:
   - Linting: `python -m ruff check table_evaluator/`
   - Formatting: `python -m black table_evaluator/ tests/`
@@ -80,7 +75,7 @@ table_evaluator/
 - **Docstrings**: Follow NumPy/SciPy docstring conventions
 - **Error handling**: Use appropriate exceptions with descriptive messages
 - **Performance**: Consider memory usage for large datasets (>100k rows)
-- **Compatibility**: Ensure code works with both Pandas and Polars backends
+- **Compatibility**: Ensure code works with pandas backend
 
 ### Code Quality Standards
 - **PEP 8 compliance**: Follow Python style guidelines
