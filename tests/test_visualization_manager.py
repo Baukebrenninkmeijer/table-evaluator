@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-
 from table_evaluator.visualization.visualization_manager import VisualizationManager
 
 
@@ -13,28 +12,28 @@ def sample_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Sample data for testing."""
     real_data = pd.DataFrame(
         {
-            "A": [1, 2, 3, 4, 5],
-            "B": ["a", "b", "c", "d", "e"],
-            "C": [0.1, 0.2, 0.3, 0.4, 0.5],
-            "D": [True, False, True, False, True],
+            'A': [1, 2, 3, 4, 5],
+            'B': ['a', 'b', 'c', 'd', 'e'],
+            'C': [0.1, 0.2, 0.3, 0.4, 0.5],
+            'D': [True, False, True, False, True],
         }
     )
     fake_data = pd.DataFrame(
         {
-            "A": [1, 2, 3, 4, 5],
-            "B": ["a", "b", "c", "d", "f"],
-            "C": [0.15, 0.25, 0.35, 0.45, 0.55],
-            "D": [True, True, False, False, True],
+            'A': [1, 2, 3, 4, 5],
+            'B': ['a', 'b', 'c', 'd', 'f'],
+            'C': [0.15, 0.25, 0.35, 0.45, 0.55],
+            'D': [True, True, False, False, True],
         }
     )
     return real_data, fake_data
 
 
-def test_visualization_manager_initialization(sample_data):
+def test_visualization_manager_initialization(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test VisualizationManager initialization."""
     real, fake = sample_data
-    categorical_columns = ["B", "D"]
-    numerical_columns = ["A", "C"]
+    categorical_columns = ['B', 'D']
+    numerical_columns = ['A', 'C']
 
     manager = VisualizationManager(real, fake, categorical_columns, numerical_columns)
 
@@ -44,29 +43,26 @@ def test_visualization_manager_initialization(sample_data):
     assert manager.numerical_columns == numerical_columns
 
 
-def test_plot_mean_std(sample_data):
+def test_plot_mean_std(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test plot_mean_std method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    with patch(
-        "table_evaluator.visualization.visualization_manager.plot_mean_std"
-    ) as mock_plot:
+    with patch('table_evaluator.visualization.visualization_manager.plot_mean_std') as mock_plot:
         manager.plot_mean_std(show=False)
         mock_plot.assert_called_once_with(real, fake, fname=None, show=False)
 
 
-def test_plot_cumsums(sample_data):
+def test_plot_cumsums(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test plot_cumsums method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
     # Just test that the method exists and can be called without error in a mocked environment
-    with patch(
-        "table_evaluator.visualization.visualization_manager.plt"
-    ) as mock_plt, patch(
-        "table_evaluator.visualization.visualization_manager.cdf"
-    ) as mock_cdf:
+    with (
+        patch('table_evaluator.visualization.visualization_manager.plt') as mock_plt,
+        patch('table_evaluator.visualization.visualization_manager.cdf') as mock_cdf,
+    ):
         # Mock plt.subplots to return proper mock objects
         mock_fig = MagicMock()
         mock_axes = MagicMock()
@@ -81,15 +77,16 @@ def test_plot_cumsums(sample_data):
         assert mock_cdf.call_count == len(real.columns)
 
 
-def test_plot_distributions(sample_data):
+def test_plot_distributions(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test plot_distributions method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
     # Test that the method exists and can be called without error in a mocked environment
-    with patch(
-        "table_evaluator.visualization.visualization_manager.plt"
-    ) as mock_plt, patch("table_evaluator.visualization.visualization_manager.sns"):
+    with (
+        patch('table_evaluator.visualization.visualization_manager.plt') as mock_plt,
+        patch('table_evaluator.visualization.visualization_manager.sns'),
+    ):
         # Mock plt.subplots to return proper mock objects
         mock_fig = MagicMock()
         mock_axes = MagicMock()
@@ -103,30 +100,28 @@ def test_plot_distributions(sample_data):
         mock_plt.subplots.assert_called_once()
 
 
-def test_plot_correlation_difference(sample_data):
+def test_plot_correlation_difference(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test plot_correlation_difference method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    with patch(
-        "table_evaluator.visualization.visualization_manager.plot_correlation_difference"
-    ) as mock_plot:
+    with patch('table_evaluator.visualization.visualization_manager.plot_correlation_difference') as mock_plot:
         manager.plot_correlation_difference(show=False)
-        mock_plot.assert_called_once_with(
-            real, fake, cat_cols=["B", "D"], plot_diff=True, fname=None, show=False
-        )
+        mock_plot.assert_called_once_with(real, fake, cat_cols=['B', 'D'], plot_diff=True, fname=None, show=False)
 
 
-def test_plot_pca(sample_data):
+def test_plot_pca(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test plot_pca method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    with patch("matplotlib.pyplot.subplots") as mock_subplots, patch(
-        "matplotlib.pyplot.tight_layout"
-    ), patch("matplotlib.pyplot.show"), patch("seaborn.scatterplot"), patch(
-        "sklearn.decomposition.PCA"
-    ) as mock_pca:
+    with (
+        patch('matplotlib.pyplot.subplots') as mock_subplots,
+        patch('matplotlib.pyplot.tight_layout'),
+        patch('matplotlib.pyplot.show'),
+        patch('seaborn.scatterplot'),
+        patch('sklearn.decomposition.PCA') as mock_pca,
+    ):
         # Mock the subplots return value
         from unittest.mock import MagicMock
 
@@ -149,18 +144,18 @@ def test_plot_pca(sample_data):
         manager.plot_pca(show=False)
 
 
-def test_visual_evaluation_without_save_dir(sample_data):
+def test_visual_evaluation_without_save_dir(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test visual_evaluation method without save directory."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    with patch.object(manager, "plot_mean_std") as mock_mean_std, patch.object(
-        manager, "plot_cumsums"
-    ) as mock_cumsums, patch.object(
-        manager, "plot_distributions"
-    ) as mock_distributions, patch.object(
-        manager, "plot_correlation_difference"
-    ) as mock_corr, patch.object(manager, "plot_pca") as mock_pca:
+    with (
+        patch.object(manager, 'plot_mean_std') as mock_mean_std,
+        patch.object(manager, 'plot_cumsums') as mock_cumsums,
+        patch.object(manager, 'plot_distributions') as mock_distributions,
+        patch.object(manager, 'plot_correlation_difference') as mock_corr,
+        patch.object(manager, 'plot_pca') as mock_pca,
+    ):
         manager.visual_evaluation(show=False)
 
         mock_mean_std.assert_called_once_with(show=False)
@@ -170,41 +165,41 @@ def test_visual_evaluation_without_save_dir(sample_data):
         mock_pca.assert_called_once_with(show=False)
 
 
-def test_calculate_label_based_height(sample_data):
+def test_calculate_label_based_height(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test _calculate_label_based_height method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    height = manager._calculate_label_based_height()
+    height = manager._calculate_label_based_height()  # noqa: SLF001
     assert isinstance(height, int)
     assert height >= 6  # Base height
 
 
-def test_plot_numerical_distribution(sample_data):
+def test_plot_numerical_distribution(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test _plot_numerical_distribution method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    with patch("seaborn.histplot") as mock_hist:
+    with patch('seaborn.histplot') as mock_hist:
         from unittest.mock import MagicMock
 
         ax = MagicMock()
 
-        manager._plot_numerical_distribution("A", ax)
+        manager._plot_numerical_distribution('A', ax)  # noqa: SLF001
 
         assert mock_hist.call_count == 2  # Called for both real and fake data
 
 
-def test_plot_categorical_distribution(sample_data):
+def test_plot_categorical_distribution(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test _plot_categorical_distribution method."""
     real, fake = sample_data
-    manager = VisualizationManager(real, fake, ["B", "D"], ["A", "C"])
+    manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
     from unittest.mock import MagicMock
 
     ax = MagicMock()
 
-    manager._plot_categorical_distribution("B", ax)
+    manager._plot_categorical_distribution('B', ax)  # noqa: SLF001
 
     # Verify that bar plotting methods were called
     assert ax.bar.call_count == 2  # Called for both real and fake data

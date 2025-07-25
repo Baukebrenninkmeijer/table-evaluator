@@ -1,5 +1,4 @@
 import pandas as pd
-
 from table_evaluator.utils import dict_to_df, load_data
 
 

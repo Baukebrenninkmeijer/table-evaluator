@@ -1,6 +1,5 @@
 """Privacy evaluation functionality extracted from TableEvaluator."""
 
-from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ class PrivacyEvaluator:
 
     def get_copies(
         self, real: pd.DataFrame, fake: pd.DataFrame, return_len: bool = False
-    ) -> Union[pd.DataFrame, int]:
+    ) -> pd.DataFrame | int:
         """
         Check whether any real values occur in the fake data (exact matches).
 
@@ -52,7 +51,7 @@ class PrivacyEvaluator:
 
     def get_duplicates(
         self, real: pd.DataFrame, fake: pd.DataFrame, return_values: bool = False
-    ) -> Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame] | tuple[int, int]:
         """
         Find duplicates within each dataset separately.
 
@@ -70,12 +69,11 @@ class PrivacyEvaluator:
 
         if return_values:
             return real_duplicates, fake_duplicates
-        else:
-            return len(real_duplicates), len(fake_duplicates)
+        return len(real_duplicates), len(fake_duplicates)
 
     def row_distance(
-        self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int = None
-    ) -> Tuple[float, float]:
+        self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None
+    ) -> tuple[float, float]:
         """
         Calculate mean and standard deviation of minimum distances between fake and real rows.
 
