@@ -62,7 +62,6 @@ class DataConverter:
 
         # Apply simple one-hot encoding
         real_encoded: pd.DataFrame = pd.get_dummies(real, columns=categorical_cols).astype(float)
-        real_encoded = real_encoded.sort_index(axis=1)
 
         fake_encoded: pd.DataFrame = pd.get_dummies(fake, columns=categorical_cols).astype(float)
 
@@ -87,6 +86,7 @@ class DataConverter:
         real: pd.DataFrame,
         fake: pd.DataFrame,
         categorical_columns: list[str] | None = None,
+        *,
         drop_single_label: bool = False,
         nan_strategy: str = 'replace',
         nan_replace_value: Any = 0.0,
@@ -119,14 +119,14 @@ class DataConverter:
 
         # Handle missing values
         if nan_strategy == 'replace':
-            real_df.fillna(nan_replace_value, inplace=True)
-            fake_df.fillna(nan_replace_value, inplace=True)
+            real_df = real_df.fillna(nan_replace_value)
+            fake_df = fake_df.fillna(nan_replace_value)
         elif nan_strategy == 'drop_samples':
-            real_df.dropna(axis=0, inplace=True)
-            fake_df.dropna(axis=0, inplace=True)
+            real_df = real_df.dropna(axis=0)
+            fake_df = fake_df.dropna(axis=0)
         elif nan_strategy == 'drop_features':
-            real_df.dropna(axis=1, inplace=True)
-            fake_df.dropna(axis=1, inplace=True)
+            real_df = real_df.dropna(axis=1)
+            fake_df = fake_df.dropna(axis=1)
 
         # Auto-detect categorical columns if not provided
         if categorical_columns is None:

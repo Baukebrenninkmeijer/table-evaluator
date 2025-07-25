@@ -9,6 +9,7 @@ from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 
 from table_evaluator import metrics as te_metrics
+from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.core.evaluation_config import EvaluationConfig
 from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
@@ -43,7 +44,7 @@ class TableEvaluator:
         verbose: bool = False,
         n_samples: int | None = None,
         name: str | None = None,
-        seed: int = 1337,
+        seed: int = RANDOM_SEED,
         sample: bool = False,
         infer_types: bool = True,
     ):
@@ -61,7 +62,7 @@ class TableEvaluator:
             n_samples (Optional[int], optional): Number of samples to evaluate. If None, takes the minimum length of
                 both datasets. Defaults to None.
             name (Optional[str], optional): Name of the TableEvaluator, used in plotting functions. Defaults to None.
-            seed (int, optional): Random seed for reproducibility. Defaults to 1337.
+            seed (int, optional): Random seed for reproducibility. Defaults to RANDOM_SEED.
             sample (bool, optional): Whether to sample the datasets to n_samples. Defaults to False.
         """
         # Input validation

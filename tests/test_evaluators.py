@@ -3,6 +3,7 @@
 import pandas as pd
 import pytest
 from scipy import stats
+from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
@@ -31,7 +32,7 @@ def sample_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     return real_data, fake_data
 
 
-def test_statistical_evaluator_basic_evaluation(sample_data):
+def test_statistical_evaluator_basic_evaluation(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test StatisticalEvaluator basic statistical evaluation."""
     real, fake = sample_data
     evaluator = StatisticalEvaluator(stats.pearsonr, verbose=False)
@@ -43,7 +44,7 @@ def test_statistical_evaluator_basic_evaluation(sample_data):
     assert -1 <= result <= 1  # Correlation should be between -1 and 1
 
 
-def test_statistical_evaluator_correlation_correlation(sample_data):
+def test_statistical_evaluator_correlation_correlation(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test StatisticalEvaluator correlation analysis."""
     real, fake = sample_data
     evaluator = StatisticalEvaluator(stats.pearsonr, verbose=False)
@@ -55,7 +56,7 @@ def test_statistical_evaluator_correlation_correlation(sample_data):
     assert -1 <= result <= 1  # Correlation should be between -1 and 1
 
 
-def test_statistical_evaluator_pca_correlation(sample_data):
+def test_statistical_evaluator_pca_correlation(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test StatisticalEvaluator PCA correlation."""
     real, fake = sample_data
     evaluator = StatisticalEvaluator(stats.pearsonr, verbose=False)
@@ -71,7 +72,7 @@ def test_statistical_evaluator_pca_correlation(sample_data):
     assert isinstance(result_mape, float)
 
 
-def test_privacy_evaluator_get_copies(sample_data):
+def test_privacy_evaluator_get_copies(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test PrivacyEvaluator copy detection."""
     real, fake = sample_data
     evaluator = PrivacyEvaluator(verbose=False)
@@ -85,7 +86,7 @@ def test_privacy_evaluator_get_copies(sample_data):
     assert copy_count >= 0
 
 
-def test_privacy_evaluator_get_duplicates(sample_data):
+def test_privacy_evaluator_get_duplicates(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test PrivacyEvaluator duplicate detection."""
     real, fake = sample_data
     evaluator = PrivacyEvaluator(verbose=False)
@@ -101,7 +102,7 @@ def test_privacy_evaluator_get_duplicates(sample_data):
     assert isinstance(fake_count, int)
 
 
-def test_privacy_evaluator_row_distance(sample_data):
+def test_privacy_evaluator_row_distance(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test PrivacyEvaluator row distance calculation."""
     real, fake = sample_data
     evaluator = PrivacyEvaluator(verbose=False)
@@ -118,10 +119,10 @@ def test_privacy_evaluator_row_distance(sample_data):
     assert std_dist >= 0
 
 
-def test_ml_evaluator_classification(sample_data):
+def test_ml_evaluator_classification(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test MLEvaluator for classification task."""
     real, fake = sample_data
-    evaluator = MLEvaluator(stats.pearsonr, random_seed=42, verbose=False)
+    evaluator = MLEvaluator(stats.pearsonr, random_seed=RANDOM_SEED, verbose=False)
 
     # Convert to numerical for ML evaluation
     converter = DataConverter()
@@ -136,10 +137,10 @@ def test_ml_evaluator_classification(sample_data):
         assert 0 <= result <= 1  # Should be between 0 and 1 for classification when valid
 
 
-def test_ml_evaluator_regression(sample_data):
+def test_ml_evaluator_regression(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test MLEvaluator for regression task."""
     real, fake = sample_data
-    evaluator = MLEvaluator(stats.pearsonr, random_seed=42, verbose=False)
+    evaluator = MLEvaluator(stats.pearsonr, random_seed=RANDOM_SEED, verbose=False)
 
     # Convert to numerical for ML evaluation
     converter = DataConverter()
@@ -151,7 +152,7 @@ def test_ml_evaluator_regression(sample_data):
     assert -1 <= result <= 1  # Correlation should be between -1 and 1
 
 
-def test_data_converter_factorize(sample_data):
+def test_data_converter_factorize(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test DataConverter factorize conversion."""
     real, fake = sample_data
     converter = DataConverter()
@@ -164,7 +165,7 @@ def test_data_converter_factorize(sample_data):
     assert fake_num.columns.tolist() == fake.columns.tolist()
 
 
-def test_data_converter_to_one_hot(sample_data):
+def test_data_converter_to_one_hot(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     """Test DataConverter one-hot encoding."""
     real, fake = sample_data
     converter = DataConverter()

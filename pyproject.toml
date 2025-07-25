@@ -142,7 +142,7 @@ src = ["projects", "shared"]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
-lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT', 'ISC', 'LOG', 'ICN', 'G', 'INP', 'PIE', 'T20', 'PYI', 'PT', 'Q', 'RSE', 'RET', 'SLF', 'SIM', 'TID', 'TC', 'ARG', 'PTH', 'FLY', 'I', 'C90', 'NPY', 'PD', 'N', 'PERF', 'DOC', 'UP', 'FURB', 'RUF', 'TRY']
+lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT', 'ISC', 'LOG', 'ICN', 'G', 'INP', 'PIE', 'T20', 'PYI', 'PT', 'Q', 'RSE', 'RET', 'SLF', 'SIM', 'TID', 'TC', 'ARG', 'PTH', 'FLY', 'I', 'C90', 'NPY', 'PD', 'PERF', 'DOC', 'UP', 'FURB', 'RUF', 'TRY']
 lint.ignore = ['G001', 'G002', 'Q000', 'TRY003']
 
 # Allow unused variables when underscore-prefixed.

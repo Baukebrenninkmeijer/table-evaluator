@@ -1,7 +1,9 @@
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
+from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.types import PathLike
 
 
@@ -28,7 +30,7 @@ def load_data(
     if set(fake.columns.tolist()).issubset(set(real.columns.tolist())):
         real = real[fake.columns]
     elif drop_columns is not None:
-        real = real.drop(column=drop_columns)
+        real = real.drop(columns=drop_columns)
         try:
             fake = fake.drop(columns=drop_columns)
         except KeyError:
@@ -53,10 +55,10 @@ def dict_to_df(data: dict[str, Any]) -> pd.DataFrame:
 def _preprocess_data(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    cat_cols=None,
-    unique_thresh=0,
-    n_samples=None,
-    seed=1337,
+    cat_cols: list[str] | None = None,
+    unique_thresh: int = 0,
+    n_samples: int | None = None,
+    seed: int = RANDOM_SEED,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     # Make sure columns and their order are the same.
     if set(real.columns.tolist()) != set(fake.columns.tolist()):
@@ -83,7 +85,7 @@ def _preprocess_data(
     elif len(fake) >= n_samples and len(real) >= n_samples:
         n_samples = n_samples
     else:
-        raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
+        raise ValueError(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
 
     real = real.sample(n_samples, random_state=seed).reset_index(drop=True)
     fake = fake.sample(n_samples, random_state=seed).reset_index(drop=True)
@@ -95,3 +97,7 @@ def _preprocess_data(
     real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(real[numerical_columns].mean())
     fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(fake[numerical_columns].mean())
     return real, fake, numerical_columns, categorical_columns
+
+
+def set_random_seed(seed: int = RANDOM_SEED) -> None:
+    np.random.seed(seed)
