@@ -11,12 +11,11 @@ from sklearn.exceptions import ConvergenceWarning
 from table_evaluator import metrics as te_metrics
 from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.core.evaluation_config import EvaluationConfig
-from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
 from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
-from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
+from table_evaluator.metrics.ml import MLEvaluator
 from table_evaluator.metrics.statistical import associations
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
