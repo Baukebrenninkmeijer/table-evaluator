@@ -39,7 +39,7 @@ class TableEvaluator:
         fake: pd.DataFrame,
         cat_cols: list[str] | None = None,
         unique_thresh: int = 0,
-        metric: str | Callable = "pearsonr",
+        metric: str | Callable = 'pearsonr',
         verbose: bool = False,
         n_samples: int | None = None,
         name: str | None = None,
@@ -66,61 +66,61 @@ class TableEvaluator:
         """
         # Input validation
         if not isinstance(real, pd.DataFrame):
-            raise TypeError("real must be a pandas DataFrame")
+            raise TypeError('real must be a pandas DataFrame')
         if not isinstance(fake, pd.DataFrame):
-            raise TypeError("fake must be a pandas DataFrame")
+            raise TypeError('fake must be a pandas DataFrame')
 
         if len(real) == 0:
-            raise ValueError("real DataFrame cannot be empty")
+            raise ValueError('real DataFrame cannot be empty')
         if len(fake) == 0:
-            raise ValueError("fake DataFrame cannot be empty")
+            raise ValueError('fake DataFrame cannot be empty')
 
         if len(real.columns) == 0:
-            raise ValueError("real DataFrame must have at least one column")
+            raise ValueError('real DataFrame must have at least one column')
         if len(fake.columns) == 0:
-            raise ValueError("fake DataFrame must have at least one column")
+            raise ValueError('fake DataFrame must have at least one column')
 
         # Check column alignment
         if set(real.columns) != set(fake.columns):
             missing_in_fake = set(real.columns) - set(fake.columns)
             missing_in_real = set(fake.columns) - set(real.columns)
-            error_msg = "real and fake DataFrames must have the same columns."
+            error_msg = 'real and fake DataFrames must have the same columns.'
             if missing_in_fake:
-                error_msg += f" Missing in fake: {missing_in_fake}."
+                error_msg += f' Missing in fake: {missing_in_fake}.'
             if missing_in_real:
-                error_msg += f" Missing in real: {missing_in_real}."
+                error_msg += f' Missing in real: {missing_in_real}.'
             raise ValueError(error_msg)
 
         # Validate categorical columns
         if cat_cols is not None:
             if not isinstance(cat_cols, list):
-                raise TypeError("cat_cols must be a list of strings or None")
+                raise TypeError('cat_cols must be a list of strings or None')
             invalid_cols = set(cat_cols) - set(real.columns)
             if invalid_cols:
-                raise ValueError(f"cat_cols contains columns not in DataFrames: {invalid_cols}")
+                raise ValueError(f'cat_cols contains columns not in DataFrames: {invalid_cols}')
 
         # Validate other parameters
         if not isinstance(unique_thresh, int) or unique_thresh < 0:
-            raise ValueError("unique_thresh must be a non-negative integer")
+            raise ValueError('unique_thresh must be a non-negative integer')
 
         if not isinstance(verbose, bool):
-            raise TypeError("verbose must be a boolean")
+            raise TypeError('verbose must be a boolean')
 
         if not isinstance(seed, int):
-            raise TypeError("seed must be an integer")
+            raise TypeError('seed must be an integer')
 
         if n_samples is not None and (not isinstance(n_samples, int) or n_samples <= 0):
-            raise ValueError("n_samples must be a positive integer or None")
+            raise ValueError('n_samples must be a positive integer or None')
 
         if sample and n_samples is None:
-            raise ValueError("n_samples must be specified when sample=True")
+            raise ValueError('n_samples must be specified when sample=True')
 
         # Validate metric
         if isinstance(metric, str):
             if not hasattr(stats, metric):
                 raise ValueError(f"metric '{metric}' is not available in scipy.stats")
         elif not callable(metric):
-            raise TypeError("metric must be a string or callable")
+            raise TypeError('metric must be a string or callable')
 
         self.name = name
         self.unique_thresh = unique_thresh
@@ -220,7 +220,7 @@ class TableEvaluator:
             plot_diff=plot_diff, fname=fname, show=show, **kwargs
         )
 
-    def correlation_distance(self, how: str = "euclidean") -> float:
+    def correlation_distance(self, how: str = 'euclidean') -> float:
         """
 
         Calculate distance between correlation matrices with certain metric.
@@ -233,33 +233,31 @@ class TableEvaluator:
 
         from scipy.spatial.distance import cosine
 
-        if how == "euclidean":
+        if how == 'euclidean':
             distance_func = te_metrics.euclidean_distance
-        elif how == "mae":
+        elif how == 'mae':
             distance_func = te_metrics.mean_absolute_error
-        elif how == "rmse":
+        elif how == 'rmse':
             distance_func = te_metrics.rmse
-        elif how == "cosine":
+        elif how == 'cosine':
 
             def custom_cosine(a: np.ndarray, b: np.ndarray) -> float:
                 return cosine(a.reshape(-1), b.reshape(-1))
 
             distance_func = custom_cosine
         else:
-            raise ValueError("`how` parameter must be in [euclidean, mae, rmse]")
+            raise ValueError('`how` parameter must be in [euclidean, mae, rmse]')
 
         real_corr = associations(
             self.real,
             nominal_columns=self.categorical_columns,
-            nom_nom_assoc="theil",
-            compute_only=True,
-        )["corr"]  # type: ignore
+            nom_nom_assoc='theil',
+        )['corr']  # type: ignore
         fake_corr = associations(
             self.fake,
             nominal_columns=self.categorical_columns,
-            nom_nom_assoc="theil",
-            compute_only=True,
-        )["corr"]  # type: ignore
+            nom_nom_assoc='theil',
+        )['corr']  # type: ignore
         return distance_func(real_corr.values, fake_corr.values)  # type: ignore
 
     def plot_pca(self, fname: PathLike | None = None, show: bool = True) -> None:
@@ -399,7 +397,7 @@ class TableEvaluator:
         real = self.real
         fake = self.fake
         for c in self.categorical_columns:
-            if real[c].dtype == "object":
+            if real[c].dtype == 'object':
                 real[c] = pd.factorize(real[c], sort=True)[0]
                 fake[c] = pd.factorize(fake[c], sort=True)[0]
 
@@ -422,15 +420,15 @@ class TableEvaluator:
 
         cat_cols = (
             self.categorical_columns
-            + self.real.select_dtypes("bool").columns.tolist()
-            + self.fake.select_dtypes("bool").columns.tolist()
+            + self.real.select_dtypes('bool').columns.tolist()
+            + self.fake.select_dtypes('bool').columns.tolist()
         )
-        real: pd.DataFrame = DataConverter.numeric_encoding(self.real, categorical_columns=cat_cols).astype(float)  # type: ignore
-        real = real.sort_index(axis=1)
-        fake: pd.DataFrame = DataConverter.numeric_encoding(self.fake, categorical_columns=cat_cols).astype(float)  # type: ignore
+        real, fake, _ = DataConverter.numeric_encoding(real=self.real, fake=self.fake, categorical_columns=cat_cols)
+        real = real.astype(float).sort_index(axis=1)
+        fake = fake.astype(float)
         for col in real.columns:
             if col not in fake:
-                logger.warning(f"Adding column {col} with all 0s")
+                logger.warning(f'Adding column {col} with all 0s')
                 fake[col] = 0.0
         fake = fake.sort_index(axis=1)
 
@@ -441,7 +439,7 @@ class TableEvaluator:
 
         return real, fake
 
-    def estimator_evaluation(self, target_col: str, target_type: str = "class", kfold: bool = False) -> float:
+    def estimator_evaluation(self, target_col: str, target_type: str = 'class', kfold: bool = False) -> float:
         """
 
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
@@ -473,7 +471,7 @@ class TableEvaluator:
         # Store the scores for backward compatibility with evaluate() method
         # We need to get the scores from the MLEvaluator but it doesn't expose them
         # Let's temporarily set a placeholder
-        self.estimators_scores = pd.DataFrame({"real": [result], "fake": [result]})
+        self.estimators_scores = pd.DataFrame({'real': [result], 'fake': [result]})
 
         return result
 
@@ -506,7 +504,7 @@ class TableEvaluator:
     def evaluate(
         self,
         target_col: str,
-        target_type: str = "class",
+        target_type: str = 'class',
         metric: str | None = None,
         verbose: bool | None = None,
         n_samples_distance: int = 20000,
@@ -557,11 +555,11 @@ class TableEvaluator:
         """
         # Input validation
         if not isinstance(target_col, str):
-            raise TypeError("target_col must be a string")
+            raise TypeError('target_col must be a string')
         if target_col not in self.real.columns:
             raise ValueError(f"target_col '{target_col}' not found in DataFrame columns")
 
-        if target_type not in ["class", "regr"]:
+        if target_type not in ['class', 'regr']:
             raise ValueError("target_type must be either 'class' or 'regr'")
 
         if metric is not None:
@@ -569,22 +567,22 @@ class TableEvaluator:
                 if not hasattr(stats, metric):
                     raise ValueError(f"metric '{metric}' is not available in scipy.stats")
             elif not callable(metric):
-                raise TypeError("metric must be a string, callable, or None")
+                raise TypeError('metric must be a string, callable, or None')
 
         if verbose is not None and not isinstance(verbose, bool):
-            raise TypeError("verbose must be a boolean or None")
+            raise TypeError('verbose must be a boolean or None')
 
         if not isinstance(n_samples_distance, int) or n_samples_distance <= 0:
-            raise ValueError("n_samples_distance must be a positive integer")
+            raise ValueError('n_samples_distance must be a positive integer')
 
         if not isinstance(kfold, bool):
-            raise TypeError("kfold must be a boolean")
+            raise TypeError('kfold must be a boolean')
 
         if not isinstance(notebook, bool):
-            raise TypeError("notebook must be a boolean")
+            raise TypeError('notebook must be a boolean')
 
         if not isinstance(return_outputs, bool):
-            raise TypeError("return_outputs must be a boolean")
+            raise TypeError('return_outputs must be a boolean')
 
         self.target_type = target_type
         self.verbose = verbose if verbose is not None else self.verbose
@@ -596,24 +594,24 @@ class TableEvaluator:
             else self.comparison_metric
         )
 
-        warnings.filterwarnings(action="ignore", category=ConvergenceWarning)
-        pd.options.display.float_format = "{:,.4f}".format
+        warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
+        pd.options.display.float_format = '{:,.4f}'.format
 
         statistical_results, statistical_tab = self._calculate_statistical_metrics()
         ml_efficacy_results, ml_efficacy_tab = self._calculate_ml_efficacy(target_col, target_type, kfold)
         privacy_results, privacy_tab = self._calculate_privacy_metrics(n_samples_distance)
 
         all_results_dict = {
-            "Basic statistics": statistical_results["basic_statistical"],
-            "Correlation column correlations": statistical_results["correlation_correlation"],
-            "Mean Correlation between fake and real columns": statistical_results["column_correlation"],
-            f"{'1 - MAPE Estimator results' if target_type == 'class' else 'Correlation RMSE'}": ml_efficacy_results[
-                "estimators"
+            'Basic statistics': statistical_results['basic_statistical'],
+            'Correlation column correlations': statistical_results['correlation_correlation'],
+            'Mean Correlation between fake and real columns': statistical_results['column_correlation'],
+            f'{"1 - MAPE Estimator results" if target_type == "class" else "Correlation RMSE"}': ml_efficacy_results[
+                'estimators'
             ],
         }
-        all_results_dict["Similarity Score"] = np.mean(list(all_results_dict.values()))
+        all_results_dict['Similarity Score'] = np.mean(list(all_results_dict.values()))
 
-        summary = EvaluationResult(name="Overview Results", content=dict_to_df(all_results_dict))
+        summary = EvaluationResult(name='Overview Results', content=dict_to_df(all_results_dict))
 
         overview_tab = [
             summary,
@@ -627,7 +625,7 @@ class TableEvaluator:
                 *statistical_tab,
             ]
 
-            all_results = {x.name: x.content.to_dict(orient="index") for x in all_results}
+            all_results = {x.name: x.content.to_dict(orient='index') for x in all_results}
 
             return all_results
 
@@ -641,16 +639,16 @@ class TableEvaluator:
             )
 
         else:
-            print(f"\n{ml_efficacy_results['efficacy_title']}:")
+            print(f'\n{ml_efficacy_results["efficacy_title"]}:')
             print(self.estimators_scores.to_string())
 
-            print("\nPrivacy results:")
-            print(privacy_results["privacy_report"].content.to_string())
+            print('\nPrivacy results:')
+            print(privacy_results['privacy_report'].content.to_string())
 
-            print("\nMiscellaneous results:")
-            print(statistical_results["miscellaneous"].to_string())
+            print('\nMiscellaneous results:')
+            print(statistical_results['miscellaneous'].to_string())
 
-            print("\nResults:")
+            print('\nResults:')
             print(summary.content.to_string())
 
         return all_results_dict
@@ -661,12 +659,12 @@ class TableEvaluator:
         column_correlation = self.column_correlations()
 
         miscellaneous_dict = {
-            "Column Correlation Distance RMSE": self.correlation_distance(how="rmse"),
-            "Column Correlation distance MAE": self.correlation_distance(how="mae"),
+            'Column Correlation Distance RMSE': self.correlation_distance(how='rmse'),
+            'Column Correlation distance MAE': self.correlation_distance(how='mae'),
         }
 
         miscellaneous = pd.DataFrame(
-            {"Result": list(miscellaneous_dict.values())},
+            {'Result': list(miscellaneous_dict.values())},
             index=list(miscellaneous_dict.keys()),
         )
 
@@ -674,50 +672,50 @@ class TableEvaluator:
 
         statistical_tab = [
             EvaluationResult(
-                name="Jensen-Shannon distance",
+                name='Jensen-Shannon distance',
                 content=js_df,
-                appendix=f"### Mean: {js_df.js_distance.mean(): .3f}",
+                appendix=f'### Mean: {js_df.js_distance.mean(): .3f}',
             ),
             EvaluationResult(
-                name="Kolmogorov-Smirnov statistic",
+                name='Kolmogorov-Smirnov statistic',
                 content=te_metrics.kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns),
             ),
         ]
         return {
-            "basic_statistical": basic_statistical,
-            "correlation_correlation": correlation_correlation,
-            "column_correlation": column_correlation,
-            "miscellaneous": miscellaneous,
+            'basic_statistical': basic_statistical,
+            'correlation_correlation': correlation_correlation,
+            'column_correlation': column_correlation,
+            'miscellaneous': miscellaneous,
         }, statistical_tab
 
     def _calculate_ml_efficacy(self, target_col: str, target_type: str, kfold: bool):
         estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
         efficacy_title = (
-            "Classifier F1-scores and their Jaccard similarities:" if target_type == "class" else "Regressor MSE-scores"
+            'Classifier F1-scores and their Jaccard similarities:' if target_type == 'class' else 'Regressor MSE-scores'
         )
 
         ml_efficacy_tab = [EvaluationResult(name=efficacy_title, content=self.estimators_scores)]
         return {
-            "estimators": estimators,
-            "efficacy_title": efficacy_title,
+            'estimators': estimators,
+            'efficacy_title': efficacy_title,
         }, ml_efficacy_tab
 
     def _calculate_privacy_metrics(self, n_samples_distance: int):
         nearest_neighbor = self.row_distance(n_samples=n_samples_distance)
         privacy_metrics_dict = {
-            "Duplicate rows between sets (real/fake)": self.get_duplicates(),
-            "nearest neighbor mean": nearest_neighbor[0],
-            "nearest neighbor std": nearest_neighbor[1],
+            'Duplicate rows between sets (real/fake)': self.get_duplicates(),
+            'nearest neighbor mean': nearest_neighbor[0],
+            'nearest neighbor std': nearest_neighbor[1],
         }
 
         privacy_report = EvaluationResult(
-            name="Privacy Results",
+            name='Privacy Results',
             content=dict_to_df(privacy_metrics_dict),
         )
 
         privacy_tab = [privacy_report]
 
-        return {"privacy_report": privacy_report}, privacy_tab
+        return {'privacy_report': privacy_report}, privacy_tab
 
     def advanced_statistical_evaluation(
         self,
@@ -740,48 +738,48 @@ class TableEvaluator:
         """
         # Input validation
         if not isinstance(include_wasserstein, bool):
-            raise TypeError("include_wasserstein must be a boolean")
+            raise TypeError('include_wasserstein must be a boolean')
         if not isinstance(include_mmd, bool):
-            raise TypeError("include_mmd must be a boolean")
+            raise TypeError('include_mmd must be a boolean')
 
         if not include_wasserstein and not include_mmd:
-            raise ValueError("At least one of include_wasserstein or include_mmd must be True")
+            raise ValueError('At least one of include_wasserstein or include_mmd must be True')
 
         if wasserstein_config is not None and not isinstance(wasserstein_config, dict):
-            raise TypeError("wasserstein_config must be a dictionary or None")
+            raise TypeError('wasserstein_config must be a dictionary or None')
         if mmd_config is not None and not isinstance(mmd_config, dict):
-            raise TypeError("mmd_config must be a dictionary or None")
+            raise TypeError('mmd_config must be a dictionary or None')
 
         if wasserstein_config is None:
-            wasserstein_config = {"include_2d": False}
+            wasserstein_config = {'include_2d': False}
         if mmd_config is None:
             mmd_config = {
-                "kernel_types": ["rbf", "polynomial"],
-                "include_multivariate": True,
+                'kernel_types': ['rbf', 'polynomial'],
+                'include_multivariate': True,
             }
 
         results = {}
 
         if include_wasserstein:
             try:
-                results["wasserstein"] = self.advanced_statistical_evaluator.wasserstein_evaluation(
+                results['wasserstein'] = self.advanced_statistical_evaluator.wasserstein_evaluation(
                     self.real,
                     self.fake,
                     self.numerical_columns,
                     **wasserstein_config,
                 )
             except Exception as e:
-                logger.error(f"Wasserstein evaluation failed: {e}")
-                results["wasserstein"] = {"error": str(e)}
+                logger.error(f'Wasserstein evaluation failed: {e}')
+                results['wasserstein'] = {'error': str(e)}
 
         if include_mmd:
             try:
-                results["mmd"] = self.advanced_statistical_evaluator.mmd_evaluation(
+                results['mmd'] = self.advanced_statistical_evaluator.mmd_evaluation(
                     self.real, self.fake, self.numerical_columns, **mmd_config
                 )
             except Exception as e:
-                logger.error(f"MMD evaluation failed: {e}")
-                results["mmd"] = {"error": str(e)}
+                logger.error(f'MMD evaluation failed: {e}')
+                results['mmd'] = {'error': str(e)}
 
         return results
 
@@ -806,26 +804,26 @@ class TableEvaluator:
         """
         # Input validation
         if not isinstance(include_k_anonymity, bool):
-            raise TypeError("include_k_anonymity must be a boolean")
+            raise TypeError('include_k_anonymity must be a boolean')
         if not isinstance(include_membership_inference, bool):
-            raise TypeError("include_membership_inference must be a boolean")
+            raise TypeError('include_membership_inference must be a boolean')
 
         if not include_k_anonymity and not include_membership_inference:
-            raise ValueError("At least one of include_k_anonymity or include_membership_inference must be True")
+            raise ValueError('At least one of include_k_anonymity or include_membership_inference must be True')
 
         if quasi_identifiers is not None:
             if not isinstance(quasi_identifiers, list):
-                raise TypeError("quasi_identifiers must be a list or None")
+                raise TypeError('quasi_identifiers must be a list or None')
             invalid_cols = set(quasi_identifiers) - set(self.real.columns)
             if invalid_cols:
-                raise ValueError(f"quasi_identifiers contains invalid columns: {invalid_cols}")
+                raise ValueError(f'quasi_identifiers contains invalid columns: {invalid_cols}')
 
         if sensitive_attributes is not None:
             if not isinstance(sensitive_attributes, list):
-                raise TypeError("sensitive_attributes must be a list or None")
+                raise TypeError('sensitive_attributes must be a list or None')
             invalid_cols = set(sensitive_attributes) - set(self.real.columns)
             if invalid_cols:
-                raise ValueError(f"sensitive_attributes contains invalid columns: {invalid_cols}")
+                raise ValueError(f'sensitive_attributes contains invalid columns: {invalid_cols}')
 
         return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
             self.real,
@@ -839,7 +837,7 @@ class TableEvaluator:
     def comprehensive_advanced_evaluation(
         self,
         target_col: str,
-        target_type: str = "class",
+        target_type: str = 'class',
         include_basic: bool = True,
         include_advanced_statistical: bool = True,
         include_advanced_privacy: bool = True,
@@ -861,30 +859,30 @@ class TableEvaluator:
         """
         # Input validation
         if not isinstance(target_col, str):
-            raise TypeError("target_col must be a string")
+            raise TypeError('target_col must be a string')
         if target_col not in self.real.columns:
             raise ValueError(f"target_col '{target_col}' not found in DataFrame columns")
 
-        if target_type not in ["class", "regr"]:
+        if target_type not in ['class', 'regr']:
             raise ValueError("target_type must be either 'class' or 'regr'")
 
         if not isinstance(include_basic, bool):
-            raise TypeError("include_basic must be a boolean")
+            raise TypeError('include_basic must be a boolean')
         if not isinstance(include_advanced_statistical, bool):
-            raise TypeError("include_advanced_statistical must be a boolean")
+            raise TypeError('include_advanced_statistical must be a boolean')
         if not isinstance(include_advanced_privacy, bool):
-            raise TypeError("include_advanced_privacy must be a boolean")
+            raise TypeError('include_advanced_privacy must be a boolean')
 
         if not any([include_basic, include_advanced_statistical, include_advanced_privacy]):
-            raise ValueError("At least one evaluation type must be included")
+            raise ValueError('At least one evaluation type must be included')
 
         # Performance warning for large datasets
         total_rows = len(self.real) + len(self.fake)
 
         if total_rows > 100000:
             logger.warning(
-                f"Large dataset detected ({total_rows:,} total rows). "
-                "Performance optimizations will be applied automatically."
+                f'Large dataset detected ({total_rows:,} total rows). '
+                'Performance optimizations will be applied automatically.'
             )
 
         results = {}
@@ -892,26 +890,26 @@ class TableEvaluator:
         # Basic evaluation
         if include_basic:
             try:
-                results["basic"] = self.evaluate(target_col, target_type, return_outputs=True, **kwargs)
+                results['basic'] = self.evaluate(target_col, target_type, return_outputs=True, **kwargs)
             except Exception as e:
-                logger.error(f"Basic evaluation failed: {e}")
-                results["basic"] = {"error": str(e)}
+                logger.error(f'Basic evaluation failed: {e}')
+                results['basic'] = {'error': str(e)}
 
         # Advanced statistical evaluation
         if include_advanced_statistical:
             try:
-                results["advanced_statistical"] = self.advanced_statistical_evaluation()
+                results['advanced_statistical'] = self.advanced_statistical_evaluation()
             except Exception as e:
-                logger.error(f"Advanced statistical evaluation failed: {e}")
-                results["advanced_statistical"] = {"error": str(e)}
+                logger.error(f'Advanced statistical evaluation failed: {e}')
+                results['advanced_statistical'] = {'error': str(e)}
 
         # Advanced privacy evaluation
         if include_advanced_privacy:
             try:
-                results["advanced_privacy"] = self.advanced_privacy_evaluation()
+                results['advanced_privacy'] = self.advanced_privacy_evaluation()
             except Exception as e:
-                logger.error(f"Advanced privacy evaluation failed: {e}")
-                results["advanced_privacy"] = {"error": str(e)}
+                logger.error(f'Advanced privacy evaluation failed: {e}')
+                results['advanced_privacy'] = {'error': str(e)}
 
         return results
 
@@ -923,12 +921,12 @@ class TableEvaluator:
             Dictionary with information about available metrics
         """
         return {
-            "advanced_statistical": {
-                "wasserstein_distance": "Earth Mover's Distance for distribution comparison",
-                "mmd": "Maximum Mean Discrepancy with multiple kernels",
+            'advanced_statistical': {
+                'wasserstein_distance': "Earth Mover's Distance for distribution comparison",
+                'mmd': 'Maximum Mean Discrepancy with multiple kernels',
             },
-            "advanced_privacy": {
-                "k_anonymity": "K-anonymity analysis for privacy evaluation",
-                "membership_inference": "Membership inference attack simulation",
+            'advanced_privacy': {
+                'k_anonymity': 'K-anonymity analysis for privacy evaluation',
+                'membership_inference': 'Membership inference attack simulation',
             },
         }

@@ -33,13 +33,9 @@ class DataConverter:
         fake_converted = fake.copy()
 
         for column in categorical_columns:
-            if real_converted[column].dtype in ["object", "category", "bool"]:
-                real_converted[column] = pd.factorize(
-                    real_converted[column], sort=True
-                )[0]
-                fake_converted[column] = pd.factorize(
-                    fake_converted[column], sort=True
-                )[0]
+            if real_converted[column].dtype in ['object', 'category', 'bool']:
+                real_converted[column] = pd.factorize(real_converted[column], sort=True)[0]
+                fake_converted[column] = pd.factorize(fake_converted[column], sort=True)[0]
 
         return real_converted, fake_converted
 
@@ -65,28 +61,20 @@ class DataConverter:
         categorical_cols = list(dict.fromkeys(categorical_columns))
 
         # Apply simple one-hot encoding
-        real_encoded: pd.DataFrame = pd.get_dummies(
-            real, columns=categorical_cols
-        ).astype(float)
+        real_encoded: pd.DataFrame = pd.get_dummies(real, columns=categorical_cols).astype(float)
         real_encoded = real_encoded.sort_index(axis=1)
 
-        fake_encoded: pd.DataFrame = pd.get_dummies(
-            fake, columns=categorical_cols
-        ).astype(float)
+        fake_encoded: pd.DataFrame = pd.get_dummies(fake, columns=categorical_cols).astype(float)
 
         # Ensure both datasets have the same columns
         all_columns = sorted(set(real_encoded.columns) | set(fake_encoded.columns))
 
         for col in all_columns:
             if col not in real_encoded.columns:
-                logger.warning(
-                    f"Adding missing column {col} with all 0s to real dataset"
-                )
+                logger.warning(f'Adding missing column {col} with all 0s to real dataset')
                 real_encoded[col] = 0.0
             if col not in fake_encoded.columns:
-                logger.warning(
-                    f"Adding missing column {col} with all 0s to fake dataset"
-                )
+                logger.warning(f'Adding missing column {col} with all 0s to fake dataset')
                 fake_encoded[col] = 0.0
 
         real_encoded = real_encoded[all_columns]
@@ -100,7 +88,7 @@ class DataConverter:
         fake: pd.DataFrame,
         categorical_columns: list[str] | None = None,
         drop_single_label: bool = False,
-        nan_strategy: str = "replace",
+        nan_strategy: str = 'replace',
         nan_replace_value: Any = 0.0,
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
         """
@@ -130,13 +118,13 @@ class DataConverter:
         fake_df = fake.copy()
 
         # Handle missing values
-        if nan_strategy == "replace":
+        if nan_strategy == 'replace':
             real_df.fillna(nan_replace_value, inplace=True)
             fake_df.fillna(nan_replace_value, inplace=True)
-        elif nan_strategy == "drop_samples":
+        elif nan_strategy == 'drop_samples':
             real_df.dropna(axis=0, inplace=True)
             fake_df.dropna(axis=0, inplace=True)
-        elif nan_strategy == "drop_features":
+        elif nan_strategy == 'drop_features':
             real_df.dropna(axis=1, inplace=True)
             fake_df.dropna(axis=1, inplace=True)
 
@@ -144,7 +132,7 @@ class DataConverter:
         if categorical_columns is None:
             categorical_columns = []
             for col in real_df.columns:
-                if real_df[col].dtype in ["object", "category", "bool"]:
+                if real_df[col].dtype in ['object', 'category', 'bool']:
                     categorical_columns.append(col)
 
         # Remove duplicates while preserving order
@@ -172,18 +160,18 @@ class DataConverter:
             if num_unique <= 1:
                 single_value_cols.append(col)
                 encoding_info[col] = {
-                    "strategy": "single_value",
-                    "unique_count": num_unique,
+                    'strategy': 'single_value',
+                    'unique_count': num_unique,
                 }
             elif num_unique == 2:
                 binary_cols.append(col)
                 encoding_info[col] = {
-                    "strategy": "factorize",
-                    "unique_count": num_unique,
+                    'strategy': 'factorize',
+                    'unique_count': num_unique,
                 }
             else:
                 multi_value_cols.append(col)
-                encoding_info[col] = {"strategy": "one_hot", "unique_count": num_unique}
+                encoding_info[col] = {'strategy': 'one_hot', 'unique_count': num_unique}
 
         # Apply encoding strategies
         real_encoded = real_df.copy()
@@ -194,38 +182,34 @@ class DataConverter:
             if drop_single_label:
                 real_encoded = real_encoded.drop(columns=[col])
                 fake_encoded = fake_encoded.drop(columns=[col])
-                logger.info(f"Dropped single-value column: {col}")
+                logger.info(f'Dropped single-value column: {col}')
             else:
                 real_encoded[col] = 0
                 fake_encoded[col] = 0
-                logger.info(f"Set single-value column {col} to 0")
+                logger.info(f'Set single-value column {col} to 0')
 
         # Handle binary columns using factorization (similar to to_numerical)
         if binary_cols:
             real_binary, fake_binary = DataConverter.factorize(
-                real_encoded, fake_encoded, binary_cols
+                real=real_encoded, fake=fake_encoded, categorical_columns=binary_cols
             )
             real_encoded = real_binary
             fake_encoded = fake_binary
-            logger.info(f"Applied factorization to binary columns: {binary_cols}")
+            logger.info(f'Applied factorization to binary columns: {binary_cols}')
 
         # Handle multi-value columns using one-hot encoding
         if multi_value_cols:
             real_onehot, fake_onehot = DataConverter.to_one_hot(
-                real_encoded, fake_encoded, multi_value_cols
+                real=real_encoded, fake=fake_encoded, categorical_columns=multi_value_cols
             )
             real_encoded = real_onehot
             fake_encoded = fake_onehot
-            logger.info(
-                f"Applied one-hot encoding to multi-value columns: {multi_value_cols}"
-            )
+            logger.info(f'Applied one-hot encoding to multi-value columns: {multi_value_cols}')
 
         return real_encoded, fake_encoded, encoding_info
 
     @staticmethod
-    def ensure_compatible_columns(
-        real: pd.DataFrame, fake: pd.DataFrame
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def ensure_compatible_columns(real: pd.DataFrame, fake: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Ensure both datasets have exactly the same columns in the same order.
 
@@ -239,10 +223,8 @@ class DataConverter:
         # Get intersection of columns
         common_columns = list(set(real.columns) & set(fake.columns))
 
-        if len(common_columns) != len(real.columns) or len(common_columns) != len(
-            fake.columns
-        ):
-            logger.warning("Datasets have different columns. Using intersection.")
+        if len(common_columns) != len(real.columns) or len(common_columns) != len(fake.columns):
+            logger.warning('Datasets have different columns. Using intersection.')
 
         # Sort columns for consistency
         common_columns.sort()
