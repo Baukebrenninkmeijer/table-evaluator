@@ -1,15 +1,19 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import numpy as np
 import pandas as pd
+
+from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.types import PathLike
 
 
 def load_data(
-    path_real: str,
-    path_fake: str,
-    real_sep: str = ",",
-    fake_sep: str = ",",
-    drop_columns: Optional[List] = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    path_real: PathLike,
+    path_fake: PathLike,
+    real_sep: str = ',',
+    fake_sep: str = ',',
+    drop_columns: list | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
     with the same data types.
@@ -26,14 +30,14 @@ def load_data(
     if set(fake.columns.tolist()).issubset(set(real.columns.tolist())):
         real = real[fake.columns]
     elif drop_columns is not None:
-        real = real.drop(column=drop_columns)
+        real = real.drop(columns=drop_columns)
         try:
             fake = fake.drop(columns=drop_columns)
         except KeyError:
-            ValueError(f"Some of {drop_columns} were not found on fake.index.")
+            ValueError(f'Some of {drop_columns} were not found on fake.index.')
         if len(fake.columns.tolist()) != len(real.columns.tolist()):
             raise ValueError(
-                f"Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}"
+                f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
             )
         fake.columns = real.columns
     else:
@@ -44,21 +48,21 @@ def load_data(
     return real, fake
 
 
-def dict_to_df(data: Dict[str, Any]) -> pd.DataFrame:
-    return pd.DataFrame({"result": list(data.values())}, index=list(data.keys()))
+def dict_to_df(data: dict[str, Any]) -> pd.DataFrame:
+    return pd.DataFrame({'result': list(data.values())}, index=list(data.keys()))
 
 
 def _preprocess_data(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    cat_cols=None,
-    unique_thresh=0,
-    n_samples=None,
-    seed=1337,
-) -> Tuple[pd.DataFrame, pd.DataFrame, List[str], List[str]]:
+    cat_cols: list[str] | None = None,
+    unique_thresh: int = 0,
+    n_samples: int | None = None,
+    seed: int = RANDOM_SEED,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     # Make sure columns and their order are the same.
     if set(real.columns.tolist()) != set(fake.columns.tolist()):
-        raise ValueError("Columns in real and fake dataframe are not the same")
+        raise ValueError('Columns in real and fake dataframe are not the same')
     if len(real.columns) == len(fake.columns):  # Apply identical ordering.
         fake = fake[real.columns.tolist()]
 
@@ -67,17 +71,13 @@ def _preprocess_data(
         fake = fake.infer_objects()
         numerical_columns = [
             column
-            for column in real.select_dtypes(include="number").columns
+            for column in real.select_dtypes(include='number').columns
             if len(real[column].unique()) > unique_thresh
         ]
-        categorical_columns = [
-            column for column in real.columns if column not in numerical_columns
-        ]
+        categorical_columns = [column for column in real.columns if column not in numerical_columns]
     else:
         categorical_columns = cat_cols
-        numerical_columns = [
-            column for column in real.columns if column not in cat_cols
-        ]
+        numerical_columns = [column for column in real.columns if column not in cat_cols]
 
     # Make sure the number of samples is equal in both datasets.
     if n_samples is None:
@@ -85,21 +85,19 @@ def _preprocess_data(
     elif len(fake) >= n_samples and len(real) >= n_samples:
         n_samples = n_samples
     else:
-        raise Exception(
-            f"Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}"
-        )
+        raise ValueError(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
 
     real = real.sample(n_samples, random_state=seed).reset_index(drop=True)
     fake = fake.sample(n_samples, random_state=seed).reset_index(drop=True)
-    assert len(real) == len(fake), "len(real) != len(fake)"
+    assert len(real) == len(fake), 'len(real) != len(fake)'
 
-    real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna("[NAN]")
-    fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna("[NAN]")
+    real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna('[NAN]')
+    fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna('[NAN]')
 
-    real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(
-        real[numerical_columns].mean()
-    )
-    fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(
-        fake[numerical_columns].mean()
-    )
+    real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(real[numerical_columns].mean())
+    fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(fake[numerical_columns].mean())
     return real, fake, numerical_columns, categorical_columns
+
+
+def set_random_seed(seed: int = RANDOM_SEED) -> None:
+    np.random.seed(seed)

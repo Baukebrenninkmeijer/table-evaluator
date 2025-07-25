@@ -6,6 +6,7 @@
 
 # -- Path setup --------------------------------------------------------------
 
+import importlib.metadata
 import sys
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -14,9 +15,6 @@ import sys
 #
 from datetime import datetime
 from pathlib import Path
-
-
-import importlib.metadata
 
 # sys.path.insert(0, os.path.abspath('.'))
 project_base_path = Path(__file__).parents[2]

@@ -1,14 +1,14 @@
 """Statistical evaluation functionality extracted from TableEvaluator."""
 
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.decomposition import PCA
+from sklearn.metrics import mean_absolute_percentage_error
 
-from table_evaluator import metrics
-from table_evaluator.association_metrics import associations
+from table_evaluator.metrics.statistical import associations
 
 
 class StatisticalEvaluator:
@@ -26,7 +26,7 @@ class StatisticalEvaluator:
         self.verbose = verbose
 
     def basic_statistical_evaluation(
-        self, real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]
+        self, real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]
     ) -> float:
         """
         Calculate the correlation coefficient between the basic properties of real and fake data.
@@ -43,34 +43,32 @@ class StatisticalEvaluator:
         """
         total_metrics = pd.DataFrame()
 
-        for ds_name, ds in [("real", real), ("fake", fake)]:
+        for ds_name, ds in [('real', real), ('fake', fake)]:
             metrics = {}
             num_ds = ds[numerical_columns]
 
             # Calculate basic statistics
             for idx, value in num_ds.mean().items():
-                metrics[f"mean_{idx}"] = value
+                metrics[f'mean_{idx}'] = value
             for idx, value in num_ds.median().items():
-                metrics[f"median_{idx}"] = value
+                metrics[f'median_{idx}'] = value
             for idx, value in num_ds.std().items():
-                metrics[f"std_{idx}"] = value
+                metrics[f'std_{idx}'] = value
             for idx, value in num_ds.var().items():
-                metrics[f"variance_{idx}"] = value
+                metrics[f'variance_{idx}'] = value
 
             total_metrics[ds_name] = metrics.values()
 
         total_metrics.index = list(metrics.keys())
 
         if self.verbose:
-            print("\nBasic statistical attributes:")
+            print('\nBasic statistical attributes:')
             print(total_metrics.to_string())
 
-        corr, p = stats.spearmanr(total_metrics["real"], total_metrics["fake"])
+        corr, p = stats.spearmanr(total_metrics['real'], total_metrics['fake'])
         return corr
 
-    def correlation_correlation(
-        self, real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: List[str]
-    ) -> float:
+    def correlation_correlation(self, real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: list[str]) -> float:
         """
         Calculate correlation coefficient between association matrices of real and fake data.
 
@@ -84,31 +82,26 @@ class StatisticalEvaluator:
         """
         total_metrics = pd.DataFrame()
 
-        for ds_name, ds in [("real", real), ("fake", fake)]:
+        for ds_name, ds in [('real', real), ('fake', fake)]:
             corr_df: pd.DataFrame = associations(
                 ds,
                 nominal_columns=categorical_columns,
-                nom_nom_assoc="theil",
-                compute_only=True,
-            )["corr"]
+                nom_nom_assoc='theil',
+            )['corr']
 
             values = corr_df.values
             # Remove diagonal elements (self-correlations)
-            values = values[~np.eye(values.shape[0], dtype=bool)].reshape(
-                values.shape[0], -1
-            )
+            values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
 
         if self.verbose:
-            print("\nColumn correlation between datasets:")
+            print('\nColumn correlation between datasets:')
             print(total_metrics.to_string())
 
-        corr, p = self.comparison_metric(total_metrics["real"], total_metrics["fake"])
+        corr, p = self.comparison_metric(total_metrics['real'], total_metrics['fake'])
         return corr
 
-    def pca_correlation(
-        self, real: pd.DataFrame, fake: pd.DataFrame, lingress: bool = False
-    ) -> float:
+    def pca_correlation(self, real: pd.DataFrame, fake: pd.DataFrame, lingress: bool = False) -> float:
         """
         Calculate the relation between PCA explained variance values.
 
@@ -131,20 +124,15 @@ class StatisticalEvaluator:
         if self.verbose:
             results = pd.DataFrame(
                 {
-                    "real": pca_real.explained_variance_,
-                    "fake": pca_fake.explained_variance_,
+                    'real': pca_real.explained_variance_,
+                    'fake': pca_fake.explained_variance_,
                 }
             )
-            print("\nTop 5 PCA components:")
+            print('\nTop 5 PCA components:')
             print(results.to_string())
 
         if lingress:
-            corr, p = self.comparison_metric(
-                pca_real.explained_variance_, pca_fake.explained_variance_
-            )
+            corr, p = self.comparison_metric(pca_real.explained_variance_, pca_fake.explained_variance_)
             return corr
-        else:
-            pca_error = metrics.mean_absolute_percentage_error(
-                pca_real.explained_variance_, pca_fake.explained_variance_
-            )
-            return 1 - pca_error
+        pca_error = mean_absolute_percentage_error(pca_real.explained_variance_, pca_fake.explained_variance_)
+        return float(1 - pca_error)

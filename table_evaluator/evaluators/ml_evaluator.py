@@ -1,9 +1,7 @@
 """Machine Learning evaluation functionality extracted from TableEvaluator."""
 
 import copy
-import importlib.util
-import os
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -14,14 +12,8 @@ from sklearn.model_selection import KFold
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-# Import original metrics module directly to avoid package conflict
-_current_dir = os.path.dirname(__file__)
-_metrics_path = os.path.join(_current_dir, "..", "metrics.py")
-_metrics_spec = importlib.util.spec_from_file_location(
-    "_te_metrics_module", _metrics_path
-)
-te_metrics = importlib.util.module_from_spec(_metrics_spec)
-_metrics_spec.loader.exec_module(te_metrics)
+from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
 
 
 class MLEvaluator:
@@ -30,7 +22,8 @@ class MLEvaluator:
     def __init__(
         self,
         comparison_metric: Callable,
-        random_seed: int = 1337,
+        random_seed: int = RANDOM_SEED,
+        *,
         verbose: bool = False,
     ):
         """
@@ -50,7 +43,7 @@ class MLEvaluator:
         real: pd.DataFrame,
         fake: pd.DataFrame,
         target_col: str,
-        target_type: str = "class",
+        target_type: str = 'class',
         kfold: bool = False,
     ) -> float:
         """
@@ -69,16 +62,16 @@ class MLEvaluator:
         Returns:
             float: Correlation value (for regression) or 1 - MAPE (for classification)
         """
-        if target_type not in ["class", "regr"]:
+        if target_type not in ['class', 'regr']:
             raise ValueError("target_type must be 'regr' or 'class'")
 
         # Split features and target
         real_x = real.drop([target_col], axis=1)
         fake_x = fake.drop([target_col], axis=1)
 
-        assert (
-            real_x.columns.tolist() == fake_x.columns.tolist()
-        ), f"Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}"
+        assert real_x.columns.tolist() == fake_x.columns.tolist(), (
+            f'Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}'
+        )
 
         real_y = real[target_col]
         fake_y = fake[target_col]
@@ -118,8 +111,8 @@ class MLEvaluator:
             f_estimators = copy.deepcopy(estimators)
 
             # Fit estimators
-            self._fit_estimators(r_estimators, real_x_train, real_y_train, "real")
-            self._fit_estimators(f_estimators, fake_x_train, fake_y_train, "fake")
+            self._fit_estimators(r_estimators, real_x_train, real_y_train, 'real')
+            self._fit_estimators(f_estimators, fake_x_train, fake_y_train, 'fake')
 
             # Score estimators
             fold_results = self._score_estimators(
@@ -142,70 +135,64 @@ class MLEvaluator:
         estimators_scores = pd.concat(results).groupby(level=0).mean()
 
         if self.verbose:
-            if target_type == "class":
-                print("\nClassifier F1-scores and their Jaccard similarities:")
+            if target_type == 'class':
+                print('\nClassifier F1-scores and their Jaccard similarities:')
             else:
-                print("\nRegressor MSE-scores and their Jaccard similarities:")
+                print('\nRegressor MSE-scores and their Jaccard similarities:')
             print(estimators_scores.to_string())
 
         # Calculate final metric
-        if target_type == "regr":
-            corr, p = self.comparison_metric(
-                estimators_scores["real"], estimators_scores["fake"]
-            )
+        if target_type == 'regr':
+            corr, p = self.comparison_metric(estimators_scores['real'], estimators_scores['fake'])
             return corr
-        else:  # target_type == "class"
-            mape = te_metrics.mean_absolute_percentage_error(
-                estimators_scores["f1_real"], estimators_scores["f1_fake"]
-            )
-            return 1 - mape
+        # target_type == "class"
+        mape = mean_absolute_percentage_error(estimators_scores['f1_real'], estimators_scores['f1_fake'])
+        return 1 - mape
 
-    def _get_estimators(self, target_type: str) -> List:
+    def _get_estimators(self, target_type: str) -> list:
         """Get appropriate estimators for the task type."""
-        if target_type == "regr":
+        if target_type == 'regr':
             return [
-                RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42),
-                Lasso(random_state=42),
-                Ridge(alpha=1.0, random_state=42),
-                ElasticNet(random_state=42),
+                RandomForestRegressor(n_estimators=20, max_depth=5, random_state=RANDOM_SEED),
+                Lasso(random_state=RANDOM_SEED),
+                Ridge(alpha=1.0, random_state=RANDOM_SEED),
+                ElasticNet(random_state=RANDOM_SEED),
             ]
-        else:  # target_type == "class"
-            return [
-                LogisticRegression(
-                    multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
-                ),
-                RandomForestClassifier(n_estimators=10, random_state=42),
-                DecisionTreeClassifier(random_state=42),
-                MLPClassifier(
-                    [50, 50],
-                    solver="adam",
-                    activation="relu",
-                    learning_rate="adaptive",
-                    random_state=42,
-                ),
-            ]
+        # target_type == "class"
+        return [
+            LogisticRegression(multi_class='auto', solver='lbfgs', max_iter=500, random_state=RANDOM_SEED),
+            RandomForestClassifier(n_estimators=10, random_state=RANDOM_SEED),
+            DecisionTreeClassifier(random_state=RANDOM_SEED),
+            MLPClassifier(
+                [50, 50],
+                solver='adam',
+                activation='relu',
+                learning_rate='adaptive',
+                random_state=RANDOM_SEED,
+            ),
+        ]
 
     def _fit_estimators(
         self,
-        estimators: List,
+        estimators: list,
         x_train: pd.DataFrame,
         y_train: pd.Series,
         data_type: str,
     ):
         """Fit estimators to training data."""
         if self.verbose:
-            print(f"\nFitting {data_type}")
+            print(f'\nFitting {data_type}')
 
         for i, estimator in enumerate(estimators):
             if self.verbose:
-                print(f"{i + 1}: {type(estimator).__name__}")
+                print(f'{i + 1}: {type(estimator).__name__}')
             estimator.fit(x_train, y_train)
 
     def _score_estimators(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -213,7 +200,7 @@ class MLEvaluator:
         target_type: str,
     ) -> pd.DataFrame:
         """Score estimators on test data."""
-        if target_type == "class":
+        if target_type == 'class':
             return self._score_classification(
                 r_estimators,
                 f_estimators,
@@ -223,22 +210,21 @@ class MLEvaluator:
                 fake_x_test,
                 fake_y_test,
             )
-        else:
-            return self._score_regression(
-                r_estimators,
-                f_estimators,
-                estimator_names,
-                real_x_test,
-                real_y_test,
-                fake_x_test,
-                fake_y_test,
-            )
+        return self._score_regression(
+            r_estimators,
+            f_estimators,
+            estimator_names,
+            real_x_test,
+            real_y_test,
+            fake_x_test,
+            fake_y_test,
+        )
 
     def _score_classification(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -248,34 +234,34 @@ class MLEvaluator:
         rows = []
 
         for r_classifier, f_classifier, estimator_name in zip(
-            r_estimators, f_estimators, estimator_names
+            r_estimators, f_estimators, estimator_names, strict=False
         ):
             for x_test, y_test, dataset_name in [
-                (real_x_test, real_y_test, "real"),
-                (fake_x_test, fake_y_test, "fake"),
+                (real_x_test, real_y_test, 'real'),
+                (fake_x_test, fake_y_test, 'fake'),
             ]:
                 pred_real = r_classifier.predict(x_test)
                 pred_fake = f_classifier.predict(x_test)
 
-                f1_real = f1_score(y_test, pred_real, average="micro")
-                f1_fake = f1_score(y_test, pred_fake, average="micro")
-                jaccard_sim = jaccard_score(pred_real, pred_fake, average="micro")
+                f1_real = f1_score(y_test, pred_real, average='micro')
+                f1_fake = f1_score(y_test, pred_fake, average='micro')
+                jaccard_sim = jaccard_score(pred_real, pred_fake, average='micro')
 
                 row = {
-                    "index": f"{estimator_name}_{dataset_name}",
-                    "f1_real": f1_real,
-                    "f1_fake": f1_fake,
-                    "jaccard_similarity": jaccard_sim,
+                    'index': f'{estimator_name}_{dataset_name}',
+                    'f1_real': f1_real,
+                    'f1_fake': f1_fake,
+                    'jaccard_similarity': jaccard_sim,
                 }
                 rows.append(row)
 
-        return pd.DataFrame(rows).set_index("index")
+        return pd.DataFrame(rows).set_index('index')
 
     def _score_regression(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -283,28 +269,16 @@ class MLEvaluator:
     ) -> pd.DataFrame:
         """Score regression estimators."""
         # Real estimators on real data
-        r2r = [
-            te_metrics.rmse(real_y_test, clf.predict(real_x_test))
-            for clf in r_estimators
-        ]
+        r2r = [rmse(real_y_test, clf.predict(real_x_test)) for clf in r_estimators]
         # Fake estimators on fake data
-        f2f = [
-            te_metrics.rmse(fake_y_test, clf.predict(fake_x_test))
-            for clf in f_estimators
-        ]
+        f2f = [rmse(fake_y_test, clf.predict(fake_x_test)) for clf in f_estimators]
         # Real estimators on fake data
-        r2f = [
-            te_metrics.rmse(fake_y_test, clf.predict(fake_x_test))
-            for clf in r_estimators
-        ]
+        r2f = [rmse(fake_y_test, clf.predict(fake_x_test)) for clf in r_estimators]
         # Fake estimators on real data
-        f2r = [
-            te_metrics.rmse(real_y_test, clf.predict(real_x_test))
-            for clf in f_estimators
+        f2r = [rmse(real_y_test, clf.predict(real_x_test)) for clf in f_estimators]
+
+        index = [f'real_data_{classifier}' for classifier in estimator_names] + [
+            f'fake_data_{classifier}' for classifier in estimator_names
         ]
 
-        index = [f"real_data_{classifier}" for classifier in estimator_names] + [
-            f"fake_data_{classifier}" for classifier in estimator_names
-        ]
-
-        return pd.DataFrame({"real": r2r + f2r, "fake": r2f + f2f}, index=index)
+        return pd.DataFrame({'real': r2r + f2r, 'fake': r2f + f2f}, index=index)

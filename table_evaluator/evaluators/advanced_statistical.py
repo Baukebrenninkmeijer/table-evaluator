@@ -1,19 +1,16 @@
 """Advanced statistical evaluation using Wasserstein distance and Maximum Mean Discrepancy."""
 
 import logging
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
-from table_evaluator.advanced_metrics.wasserstein import (
+from table_evaluator.metrics.statistical import (
     earth_movers_distance_summary,
-    wasserstein_distance_df,
-    optimal_transport_cost,
-)
-from table_evaluator.advanced_metrics.mmd import (
-    mmd_comprehensive_analysis,
     mmd_column_wise,
+    mmd_comprehensive_analysis,
+    optimal_transport_cost,
+    wasserstein_distance_df,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,11 +32,11 @@ class AdvancedStatisticalEvaluator:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        numerical_columns: List[str],
+        numerical_columns: list[str],
         include_2d: bool = False,
         enable_sampling: bool = False,
         max_samples: int = 5000,
-    ) -> Dict:
+    ) -> dict:
         """
         Comprehensive Wasserstein distance evaluation.
 
@@ -123,12 +120,12 @@ class AdvancedStatisticalEvaluator:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        numerical_columns: List[str],
-        kernel_types: Optional[List[str]] = None,
+        numerical_columns: list[str],
+        kernel_types: list[str] | None = None,
         include_multivariate: bool = True,
         enable_sampling: bool = False,
         max_samples: int = 5000,
-    ) -> Dict:
+    ) -> dict:
         """
         Comprehensive Maximum Mean Discrepancy evaluation.
 
@@ -192,12 +189,12 @@ class AdvancedStatisticalEvaluator:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        numerical_columns: List[str],
-        wasserstein_config: Optional[Dict] = None,
-        mmd_config: Optional[Dict] = None,
+        numerical_columns: list[str],
+        wasserstein_config: dict | None = None,
+        mmd_config: dict | None = None,
         enable_sampling: bool = False,
         max_samples: int = 5000,
-    ) -> Dict:
+    ) -> dict:
         """
         Run comprehensive advanced statistical evaluation.
 
@@ -278,14 +275,13 @@ class AdvancedStatisticalEvaluator:
         """Rate the quality based on mean Wasserstein distance."""
         if mean_distance < 0.1:
             return "Excellent"
-        elif mean_distance < 0.25:
+        if mean_distance < 0.25:
             return "Good"
-        elif mean_distance < 0.5:
+        if mean_distance < 0.5:
             return "Fair"
-        elif mean_distance < 1.0:
+        if mean_distance < 1.0:
             return "Poor"
-        else:
-            return "Very Poor"
+        return "Very Poor"
 
     def _rate_mmd_quality(self, mean_mmd: float) -> str:
         """Rate the quality based on mean MMD."""
@@ -294,16 +290,15 @@ class AdvancedStatisticalEvaluator:
 
         if mean_mmd < 0.01:
             return "Excellent"
-        elif mean_mmd < 0.05:
+        if mean_mmd < 0.05:
             return "Good"
-        elif mean_mmd < 0.1:
+        if mean_mmd < 0.1:
             return "Fair"
-        elif mean_mmd < 0.2:
+        if mean_mmd < 0.2:
             return "Poor"
-        else:
-            return "Very Poor"
+        return "Very Poor"
 
-    def _find_best_kernel(self, multivariate_results: Dict) -> Dict:
+    def _find_best_kernel(self, multivariate_results: dict) -> dict:
         """Find the kernel that gives the most discriminative results."""
         best_kernel = None
         best_score = -1
@@ -326,7 +321,7 @@ class AdvancedStatisticalEvaluator:
             else "Low",
         }
 
-    def _combine_metrics(self, wasserstein_results: Dict, mmd_results: Dict) -> Dict:
+    def _combine_metrics(self, wasserstein_results: dict, mmd_results: dict) -> dict:
         """Combine Wasserstein and MMD results into unified metrics."""
         combined = {}
 
@@ -365,7 +360,7 @@ class AdvancedStatisticalEvaluator:
 
         return combined
 
-    def _generate_recommendations(self, results: Dict) -> List[str]:
+    def _generate_recommendations(self, results: dict) -> list[str]:
         """Generate actionable recommendations based on results."""
         recommendations = []
 

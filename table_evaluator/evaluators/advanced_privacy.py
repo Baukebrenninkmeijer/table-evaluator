@@ -1,13 +1,12 @@
 """Advanced privacy evaluation with k-anonymity and membership inference attack analysis."""
 
 import logging
-from typing import Dict, List, Optional
 
 import pandas as pd
 
-from table_evaluator.advanced_metrics.privacy_attacks import (
-    identify_quasi_identifiers,
+from table_evaluator.metrics.privacy import (
     calculate_k_anonymity,
+    identify_quasi_identifiers,
     simulate_membership_inference_attack,
 )
 
@@ -29,10 +28,10 @@ class AdvancedPrivacyEvaluator:
     def k_anonymity_evaluation(
         self,
         synthetic_data: pd.DataFrame,
-        quasi_identifiers: Optional[List[str]] = None,
-        sensitive_attributes: Optional[List[str]] = None,
+        quasi_identifiers: list[str] | None = None,
+        sensitive_attributes: list[str] | None = None,
         auto_detect_qi: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """
         Comprehensive k-anonymity evaluation of synthetic data.
 
@@ -118,9 +117,9 @@ class AdvancedPrivacyEvaluator:
         self,
         real_data: pd.DataFrame,
         synthetic_data: pd.DataFrame,
-        target_columns: Optional[List[str]] = None,
-        attack_models: Optional[List[str]] = None,
-    ) -> Dict:
+        target_columns: list[str] | None = None,
+        attack_models: list[str] | None = None,
+    ) -> dict:
         """
         Membership inference attack evaluation.
 
@@ -216,11 +215,11 @@ class AdvancedPrivacyEvaluator:
         self,
         real_data: pd.DataFrame,
         synthetic_data: pd.DataFrame,
-        quasi_identifiers: Optional[List[str]] = None,
-        sensitive_attributes: Optional[List[str]] = None,
+        quasi_identifiers: list[str] | None = None,
+        sensitive_attributes: list[str] | None = None,
         include_k_anonymity: bool = True,
         include_membership_inference: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """
         Comprehensive privacy evaluation combining multiple techniques.
 
@@ -283,7 +282,7 @@ class AdvancedPrivacyEvaluator:
 
     def privacy_risk_dashboard(
         self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame, **kwargs
-    ) -> Dict:
+    ) -> dict:
         """
         Generate a privacy risk dashboard with key metrics and visualizations.
 
@@ -376,8 +375,8 @@ class AdvancedPrivacyEvaluator:
         return (attack_accuracy - 0.5) * 2.0
 
     def _assess_combined_privacy_risk(
-        self, k_anon_results: Dict, membership_results: Dict
-    ) -> Dict:
+        self, k_anon_results: dict, membership_results: dict
+    ) -> dict:
         """Assess overall privacy risk from combined analyses."""
         risk_factors = []
 
@@ -423,8 +422,8 @@ class AdvancedPrivacyEvaluator:
         }
 
     def _generate_combined_recommendations(
-        self, k_anon_results: Dict, membership_results: Dict
-    ) -> List[str]:
+        self, k_anon_results: dict, membership_results: dict
+    ) -> list[str]:
         """Generate combined recommendations from all privacy analyses."""
         recommendations = []
 
