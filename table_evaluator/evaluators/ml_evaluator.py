@@ -1,6 +1,7 @@
-"""Machine Learning evaluation functionality extracted from TableEvaluator."""
+"""Unified machine learning evaluation functionality with comprehensive target analysis."""
 
 import copy
+import logging
 from collections.abc import Callable
 
 import numpy as np
@@ -13,15 +14,24 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.evaluators.models.ml_models import (
+    ClassificationResults,
+    MLEvaluationResults,
+    MLSummary,
+    RegressionResults,
+    TargetEvaluationResult,
+)
 from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
+
+logger = logging.getLogger(__name__)
 
 
 class MLEvaluator:
-    """Handles machine learning evaluation of real vs synthetic data."""
+    """Unified machine learning evaluator with comprehensive target analysis."""
 
     def __init__(
         self,
-        comparison_metric: Callable,
+        comparison_metric: Callable | None = None,
         random_seed: int = RANDOM_SEED,
         *,
         verbose: bool = False,
@@ -31,10 +41,13 @@ class MLEvaluator:
 
         Args:
             comparison_metric: Function to compare two arrays (e.g., stats.pearsonr)
+                              If None, defaults to stats.pearsonr
             random_seed: Random seed for reproducibility
             verbose: Whether to print detailed output
         """
-        self.comparison_metric = comparison_metric
+        from scipy import stats
+
+        self.comparison_metric = comparison_metric or stats.pearsonr
         self.random_seed = random_seed
         self.verbose = verbose
 
@@ -282,3 +295,385 @@ class MLEvaluator:
         ]
 
         return pd.DataFrame({'real': r2r + f2r, 'fake': r2f + f2f}, index=index)
+
+    def evaluate(
+        self,
+        real_data: pd.DataFrame,
+        synthetic_data: pd.DataFrame,
+        target_columns: list[str] | None = None,
+        auto_detect_targets: bool = True,
+        classification_targets: list[str] | None = None,
+        regression_targets: list[str] | None = None,
+        max_targets: int = 5,
+        **kwargs,
+    ) -> 'MLEvaluationResults':
+        """
+        Comprehensive ML evaluation for all suitable target columns.
+
+        Args:
+            real_data: DataFrame containing real data
+            synthetic_data: DataFrame containing synthetic data
+            target_columns: Specific columns to use as targets (overrides auto-detection)
+            auto_detect_targets: Whether to automatically detect suitable target columns
+            classification_targets: Specific columns to treat as classification targets
+            regression_targets: Specific columns to treat as regression targets
+            max_targets: Maximum number of targets to evaluate (to control runtime)
+            **kwargs: Additional parameters for estimator_evaluation
+
+        Returns:
+            dict: Comprehensive ML evaluation results
+        """
+        if self.verbose:
+            print('Running comprehensive ML evaluation...')
+
+        results = {
+            'classification_results': {},
+            'regression_results': {},
+            'summary': {},
+            'recommendations': [],
+        }
+
+        # Determine target columns
+        targets_to_evaluate = self._determine_target_columns(
+            real_data, target_columns, auto_detect_targets, classification_targets, regression_targets, max_targets
+        )
+
+        if not targets_to_evaluate['classification'] and not targets_to_evaluate['regression']:
+            summary_dict = {'error': 'No suitable target columns found'}
+            recommendations = [
+                'No suitable target columns detected. Ensure data has categorical or numerical columns suitable for prediction.'
+            ]
+            # Return empty results with error message
+            return MLEvaluationResults(
+                classification_results=ClassificationResults(),
+                regression_results=RegressionResults(),
+                summary=MLSummary(**summary_dict),
+                recommendations=recommendations,
+                targets_requested=target_columns,
+                auto_detect_enabled=auto_detect_targets,
+                max_targets_limit=max_targets,
+            )
+
+        # Evaluate classification targets
+        classification_scores = []
+        for target_col in targets_to_evaluate['classification']:
+            try:
+                if self.verbose:
+                    print(f'Evaluating classification target: {target_col}')
+
+                score = self.estimator_evaluation(real_data, synthetic_data, target_col, target_type='class', **kwargs)
+                results['classification_results'][target_col] = {
+                    'score': score,
+                    'task_type': 'classification',
+                    'quality_rating': self._rate_ml_quality(score, 'classification'),
+                }
+                classification_scores.append(score)
+
+            except Exception as e:
+                logger.error(f'Classification evaluation failed for {target_col}: {e}')
+                results['classification_results'][target_col] = {'error': str(e)}
+
+        # Evaluate regression targets
+        regression_scores = []
+        for target_col in targets_to_evaluate['regression']:
+            try:
+                if self.verbose:
+                    print(f'Evaluating regression target: {target_col}')
+
+                score = self.estimator_evaluation(real_data, synthetic_data, target_col, target_type='regr', **kwargs)
+                results['regression_results'][target_col] = {
+                    'score': score,
+                    'task_type': 'regression',
+                    'quality_rating': self._rate_ml_quality(score, 'regression'),
+                }
+                regression_scores.append(score)
+
+            except Exception as e:
+                logger.error(f'Regression evaluation failed for {target_col}: {e}')
+                results['regression_results'][target_col] = {'error': str(e)}
+
+        # Generate summary
+        summary_dict = self._generate_ml_summary(classification_scores, regression_scores, targets_to_evaluate)
+
+        # Generate recommendations
+        recommendations = self._generate_ml_recommendations(
+            results['classification_results'], results['regression_results'], summary_dict
+        )
+
+        # Build Pydantic models
+        try:
+            # Create TargetEvaluationResult objects for classification results
+            classification_results = ClassificationResults()
+            for target, result in results['classification_results'].items():
+                if 'error' not in result:
+                    classification_results[target] = TargetEvaluationResult(**result)
+                else:
+                    classification_results[target] = TargetEvaluationResult(
+                        score=0.0, task_type='classification', quality_rating='Error', error=result['error']
+                    )
+
+            # Create TargetEvaluationResult objects for regression results
+            regression_results = RegressionResults()
+            for target, result in results['regression_results'].items():
+                if 'error' not in result:
+                    regression_results[target] = TargetEvaluationResult(**result)
+                else:
+                    regression_results[target] = TargetEvaluationResult(
+                        score=0.0, task_type='regression', quality_rating='Error', error=result['error']
+                    )
+
+            # ML summary
+            summary = MLSummary(**summary_dict)
+
+            # Create comprehensive results
+            return MLEvaluationResults(
+                classification_results=classification_results,
+                regression_results=regression_results,
+                summary=summary,
+                recommendations=recommendations,
+                targets_requested=target_columns,
+                auto_detect_enabled=auto_detect_targets,
+                max_targets_limit=max_targets,
+            )
+        except Exception as e:
+            logger.error(f'Error building MLEvaluationResults: {e}')
+            # Fallback: create models with error handling
+            return MLEvaluationResults(
+                classification_results=ClassificationResults(),
+                regression_results=RegressionResults(),
+                summary=MLSummary(**summary_dict),
+                recommendations=recommendations,
+                targets_requested=target_columns,
+                auto_detect_enabled=auto_detect_targets,
+                max_targets_limit=max_targets,
+            )
+
+    def _determine_target_columns(
+        self,
+        data: pd.DataFrame,
+        target_columns: list[str] | None,
+        auto_detect: bool,
+        classification_targets: list[str] | None,
+        regression_targets: list[str] | None,
+        max_targets: int,
+    ) -> dict:
+        """Determine which columns to use as targets for ML evaluation."""
+        targets_to_evaluate = {'classification': [], 'regression': []}
+
+        # Use explicitly specified targets if provided
+        if target_columns:
+            for col in target_columns[:max_targets]:
+                if col in data.columns:
+                    # Determine task type based on data characteristics
+                    if self._is_classification_target(data[col]):
+                        targets_to_evaluate['classification'].append(col)
+                    else:
+                        targets_to_evaluate['regression'].append(col)
+            return targets_to_evaluate
+
+        # Use explicitly specified task-specific targets
+        if classification_targets:
+            targets_to_evaluate['classification'] = [
+                col for col in classification_targets[:max_targets] if col in data.columns
+            ]
+        if regression_targets:
+            targets_to_evaluate['regression'] = [col for col in regression_targets[:max_targets] if col in data.columns]
+
+        # Auto-detect targets if enabled and no explicit targets provided
+        if auto_detect and not (classification_targets or regression_targets):
+            potential_targets = []
+
+            for col in data.columns:
+                col_data = data[col]
+
+                # Skip columns with too many missing values
+                if col_data.isnull().sum() / len(col_data) > 0.5:
+                    continue
+
+                # Skip columns with too many unique values for classification
+                # or too few for regression
+                unique_ratio = len(col_data.unique()) / len(col_data)
+
+                if self._is_classification_target(col_data):
+                    potential_targets.append((col, 'classification', unique_ratio))
+                elif self._is_regression_target(col_data):
+                    potential_targets.append((col, 'regression', unique_ratio))
+
+            # Sort by suitability and take top candidates
+            potential_targets.sort(key=lambda x: x[2])
+
+            for col, task_type, _ in potential_targets[:max_targets]:
+                targets_to_evaluate[task_type].append(col)
+
+        return targets_to_evaluate
+
+    def _is_classification_target(self, series: pd.Series) -> bool:
+        """Determine if a column is suitable for classification."""
+        # Check if it's categorical or has few unique values
+        unique_count = len(series.unique())
+        total_count = len(series)
+
+        # Consider categorical data types
+        if series.dtype == 'object' or series.dtype.name == 'category':
+            return unique_count <= min(50, total_count * 0.1)  # At most 50 classes or 10% of data
+
+        # Consider numerical data with few unique values
+        if pd.api.types.is_numeric_dtype(series):
+            return 2 <= unique_count <= min(20, total_count * 0.05)  # 2-20 classes, max 5% of data
+
+        return False
+
+    def _is_regression_target(self, series: pd.Series) -> bool:
+        """Determine if a column is suitable for regression."""
+        # Must be numerical
+        if not pd.api.types.is_numeric_dtype(series):
+            return False
+
+        # Should have reasonable number of unique values
+        unique_count = len(series.unique())
+        total_count = len(series)
+
+        # At least 10 unique values and at least 5% unique
+        return unique_count >= 10 and unique_count >= total_count * 0.05
+
+    def _rate_ml_quality(self, score: float, task_type: str) -> str:
+        """Rate the ML quality based on score and task type."""
+        if task_type == 'classification':
+            # Score is 1 - MAPE (higher is better)
+            if score >= 0.9:
+                return 'Excellent'
+            if score >= 0.8:
+                return 'Good'
+            if score >= 0.7:
+                return 'Fair'
+            if score >= 0.6:
+                return 'Poor'
+            return 'Very Poor'
+        # regression
+        # Score is correlation coefficient (higher is better)
+        if score >= 0.9:
+            return 'Excellent'
+        if score >= 0.7:
+            return 'Good'
+        if score >= 0.5:
+            return 'Fair'
+        if score >= 0.3:
+            return 'Poor'
+        return 'Very Poor'
+
+    def _generate_ml_summary(
+        self, classification_scores: list[float], regression_scores: list[float], targets_evaluated: dict
+    ) -> dict:
+        """Generate summary statistics for ML evaluation."""
+        summary = {
+            'targets_evaluated': {
+                'classification': len(targets_evaluated['classification']),
+                'regression': len(targets_evaluated['regression']),
+                'total': len(targets_evaluated['classification']) + len(targets_evaluated['regression']),
+            }
+        }
+
+        if classification_scores:
+            summary['classification_summary'] = {
+                'best_score': max(classification_scores),
+                'mean_score': np.mean(classification_scores),
+                'worst_score': min(classification_scores),
+                'std_score': np.std(classification_scores),
+            }
+            summary['best_classification_score'] = max(classification_scores)
+        else:
+            summary['best_classification_score'] = None
+
+        if regression_scores:
+            summary['regression_summary'] = {
+                'best_score': max(regression_scores),
+                'mean_score': np.mean(regression_scores),
+                'worst_score': min(regression_scores),
+                'std_score': np.std(regression_scores),
+            }
+            summary['best_regression_score'] = max(regression_scores)
+        else:
+            summary['best_regression_score'] = None
+
+        # Overall ML quality assessment
+        all_scores = classification_scores + regression_scores
+        if all_scores:
+            mean_score = np.mean(all_scores)
+            if mean_score >= 0.8:
+                summary['overall_ml_quality'] = 'Excellent'
+            elif mean_score >= 0.7:
+                summary['overall_ml_quality'] = 'Good'
+            elif mean_score >= 0.6:
+                summary['overall_ml_quality'] = 'Fair'
+            elif mean_score >= 0.5:
+                summary['overall_ml_quality'] = 'Poor'
+            else:
+                summary['overall_ml_quality'] = 'Very Poor'
+        else:
+            summary['overall_ml_quality'] = 'Unknown'
+
+        return summary
+
+    def _generate_ml_recommendations(
+        self, classification_results: dict, regression_results: dict, summary: dict
+    ) -> list[str]:
+        """Generate actionable recommendations based on ML evaluation results."""
+        recommendations = []
+
+        overall_quality = summary.get('overall_ml_quality', 'Unknown')
+
+        if overall_quality == 'Very Poor':
+            recommendations.extend(
+                [
+                    'Very low ML similarity detected across targets.',
+                    'Consider fundamental improvements to the data generation model.',
+                    'Review feature distributions and correlations.',
+                    'Ensure the synthetic data captures the underlying patterns of the real data.',
+                ]
+            )
+        elif overall_quality == 'Poor':
+            recommendations.extend(
+                [
+                    'Low ML similarity detected. The synthetic data may not capture complex patterns.',
+                    'Consider increasing model complexity or training data size.',
+                    'Review preprocessing steps and feature engineering.',
+                ]
+            )
+        elif overall_quality == 'Fair':
+            recommendations.extend(
+                [
+                    'Moderate ML similarity achieved. Some patterns are captured.',
+                    'Fine-tuning the generation model may improve results.',
+                    'Focus on poorly performing target variables.',
+                ]
+            )
+        elif overall_quality in ['Good', 'Excellent']:
+            recommendations.append('Good ML similarity achieved. The synthetic data captures most important patterns.')
+
+        # Target-specific recommendations
+        poor_targets = []
+        for target, result in {**classification_results, **regression_results}.items():
+            if isinstance(result, dict) and 'quality_rating' in result:
+                if result['quality_rating'] in ['Poor', 'Very Poor']:
+                    poor_targets.append(target)
+
+        if poor_targets:
+            recommendations.append(
+                f'Targets with poor performance: {", ".join(poor_targets)}. '
+                'Focus on improving synthesis for these variables.'
+            )
+
+        # Task-specific recommendations
+        if summary.get('best_classification_score') and summary['best_classification_score'] < 0.7:
+            recommendations.append(
+                'Classification tasks show room for improvement. '
+                'Consider balancing class distributions and improving categorical feature synthesis.'
+            )
+
+        if summary.get('best_regression_score') and summary['best_regression_score'] < 0.7:
+            recommendations.append(
+                'Regression tasks show room for improvement. '
+                'Focus on capturing numerical distributions and feature correlations.'
+            )
+
+        return recommendations

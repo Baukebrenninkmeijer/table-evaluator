@@ -12,11 +12,9 @@ from table_evaluator import metrics as te_metrics
 from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.core.evaluation_config import EvaluationConfig
 from table_evaluator.data.data_converter import DataConverter
-from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
-from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
+from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
-from table_evaluator.metrics.ml import MLEvaluator
 from table_evaluator.metrics.statistical import associations
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
@@ -152,8 +150,8 @@ class TableEvaluator:
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
 
         # Initialize advanced evaluators
-        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(verbose=verbose)
-        self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
+        # Note: Advanced functionality is now integrated into the main evaluators
+        # Use privacy_evaluator.evaluate() and statistical_evaluator.evaluate() for comprehensive analysis
 
         self.visualization_manager = VisualizationManager(
             real=self.real,
@@ -766,30 +764,30 @@ class TableEvaluator:
                 'include_multivariate': True,
             }
 
-        results = {}
-
-        if include_wasserstein:
-            try:
-                results['wasserstein'] = self.advanced_statistical_evaluator.wasserstein_evaluation(
-                    self.real,
-                    self.fake,
-                    self.numerical_columns,
-                    **wasserstein_config,
-                )
-            except Exception as e:
-                logger.error(f'Wasserstein evaluation failed: {e}')
-                results['wasserstein'] = {'error': str(e)}
-
-        if include_mmd:
-            try:
-                results['mmd'] = self.advanced_statistical_evaluator.mmd_evaluation(
-                    self.real, self.fake, self.numerical_columns, **mmd_config
-                )
-            except Exception as e:
-                logger.error(f'MMD evaluation failed: {e}')
-                results['mmd'] = {'error': str(e)}
-
-        return results
+        # Use the unified statistical evaluator
+        try:
+            unified_results = self.statistical_evaluator.evaluate(
+                self.real,
+                self.fake,
+                numerical_columns=self.numerical_columns,
+                categorical_columns=self.categorical_columns,
+                include_basic=False,  # Only advanced methods
+                include_wasserstein=include_wasserstein,
+                include_mmd=include_mmd,
+                wasserstein_config=wasserstein_config,
+                mmd_config=mmd_config,
+            )
+            # Return only the advanced parts
+            results = {
+                'wasserstein': unified_results.get('wasserstein', {}),
+                'mmd': unified_results.get('mmd', {}),
+                'combined_metrics': unified_results.get('combined_metrics', {}),
+                'recommendations': unified_results.get('recommendations', []),
+            }
+            return results
+        except Exception as e:
+            logger.error(f'Advanced statistical evaluation failed: {e}')
+            return {'error': str(e)}
 
     def advanced_privacy_evaluation(
         self,
@@ -833,14 +831,27 @@ class TableEvaluator:
             if invalid_cols:
                 raise ValueError(f'sensitive_attributes contains invalid columns: {invalid_cols}')
 
-        return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
-            self.real,
-            self.fake,
-            quasi_identifiers=quasi_identifiers,
-            sensitive_attributes=sensitive_attributes,
-            include_k_anonymity=include_k_anonymity,
-            include_membership_inference=include_membership_inference,
-        )
+        # Use the unified privacy evaluator
+        try:
+            unified_results = self.privacy_evaluator.evaluate(
+                self.real,
+                self.fake,
+                quasi_identifiers=quasi_identifiers,
+                sensitive_attributes=sensitive_attributes,
+                include_basic=False,  # Only advanced methods
+                include_k_anonymity=include_k_anonymity,
+                include_membership_inference=include_membership_inference,
+            )
+            # Return the structure expected by the old API
+            return {
+                'k_anonymity': unified_results.get('k_anonymity', {}),
+                'membership_inference': unified_results.get('membership_inference', {}),
+                'overall_assessment': unified_results.get('overall_assessment', {}),
+                'combined_recommendations': unified_results.get('recommendations', []),
+            }
+        except Exception as e:
+            logger.error(f'Advanced privacy evaluation failed: {e}')
+            return {'error': str(e)}
 
     def comprehensive_advanced_evaluation(
         self,
