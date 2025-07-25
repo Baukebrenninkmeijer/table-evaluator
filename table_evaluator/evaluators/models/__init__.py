@@ -1,44 +1,53 @@
-"""Pydantic models for evaluator results."""
+"""Evaluator result models."""
 
-from .ml_models import (
+# Statistical models
+# ML models
+from table_evaluator.evaluators.models.ml_models import (
     ClassificationResults,
+    ClassificationSummary,
     MLEvaluationResults,
     MLSummary,
     RegressionResults,
-    TargetEvaluationResult,
+    RegressionSummary,
+    TargetsEvaluated,
 )
-from .privacy_models import (
-    BasicPrivacyResults,
-    KAnonymityResults,
-    MembershipInferenceResults,
-    OverallPrivacyAssessment,
-    PrivacyEvaluationResults,
-)
-from .statistical_models import (
+from table_evaluator.evaluators.models.statistical_models import (
     BasicStatisticalResults,
+    BestKernel,
+    ColumnDetail,
     CombinedStatisticalMetrics,
+    MMDQualityMetrics,
     MMDResults,
+    MMDSummary,
     StatisticalEvaluationResults,
+    StatisticalSignificance,
+    WassersteinOverallMetrics,
+    WassersteinQualityMetrics,
     WassersteinResults,
+    WassersteinSummary,
 )
 
 __all__ = [
-    # Privacy models
-    'BasicPrivacyResults',
-    'KAnonymityResults',
-    'MembershipInferenceResults',
-    'OverallPrivacyAssessment',
-    'PrivacyEvaluationResults',
     # Statistical models
     'BasicStatisticalResults',
+    'BestKernel',
+    'ColumnDetail',
     'CombinedStatisticalMetrics',
+    'MMDQualityMetrics',
     'MMDResults',
+    'MMDSummary',
     'StatisticalEvaluationResults',
+    'StatisticalSignificance',
+    'WassersteinOverallMetrics',
+    'WassersteinQualityMetrics',
     'WassersteinResults',
+    'WassersteinSummary',
     # ML models
     'ClassificationResults',
+    'ClassificationSummary',
     'MLEvaluationResults',
     'MLSummary',
     'RegressionResults',
-    'TargetEvaluationResult',
+    'RegressionSummary',
+    'TargetsEvaluated',
 ]

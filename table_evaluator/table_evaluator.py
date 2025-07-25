@@ -491,7 +491,7 @@ class TableEvaluator:
 
         """
         real, fake = self.convert_numerical_one_hot()
-        return self.privacy_evaluator.row_distance(real=real, fake=fake, n_samples=n_samples)
+        return self.privacy_evaluator.row_distance(real=real, synthetic=fake)
 
     def column_correlations(self) -> float:
         """

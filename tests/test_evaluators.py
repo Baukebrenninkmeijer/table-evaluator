@@ -111,7 +111,7 @@ def test_privacy_evaluator_row_distance(sample_data: tuple[pd.DataFrame, pd.Data
     converter = DataConverter()
     real_encoded, fake_encoded = converter.to_one_hot(real, fake, ['B', 'D'])
 
-    mean_dist, std_dist = evaluator.row_distance(real_encoded, fake_encoded, n_samples=5)
+    mean_dist, std_dist = evaluator.row_distance(real_encoded, fake_encoded)
 
     assert isinstance(mean_dist, float)
     assert isinstance(std_dist, float)

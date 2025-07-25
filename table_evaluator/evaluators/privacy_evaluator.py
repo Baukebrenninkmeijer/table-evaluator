@@ -6,17 +6,17 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 
-from table_evaluator.evaluators.models.privacy_models import (
-    BasicPrivacyResults,
-    KAnonymityResults,
-    MembershipInferenceResults,
-    OverallPrivacyAssessment,
-    PrivacyEvaluationResults,
-)
 from table_evaluator.metrics.privacy import (
     calculate_k_anonymity,
     identify_quasi_identifiers,
     simulate_membership_inference_attack,
+)
+from table_evaluator.models.privacy_models import (
+    BasicPrivacyAnalysis,
+    KAnonymityAnalysis,
+    MembershipInferenceAnalysis,
+    PrivacyEvaluationResults,
+    PrivacyRiskAssessment,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,276 +39,193 @@ class PrivacyEvaluator:
         Check whether any real values occur in the fake data (exact matches).
 
         Args:
-            real: Real dataset
-            fake: Synthetic dataset
-            return_len: Whether to return count instead of the actual rows
+            real: DataFrame containing real data
+            fake: DataFrame containing synthetic data
+            return_len: If True, return the count instead of the DataFrame
 
         Returns:
-            Union[pd.DataFrame, int]: DataFrame with copied rows or count of copies
+            DataFrame with copies found or count if return_len is True
         """
-        # Create hashes of each row to efficiently find exact matches
-        real_hashes = real.apply(lambda x: hash(tuple(x)), axis=1)
-        fake_hashes = fake.apply(lambda x: hash(tuple(x)), axis=1)
+        try:
+            # Convert to string for exact matching
+            real_str = real.astype(str)
+            fake_str = fake.astype(str)
 
-        # Find fake rows that match real rows
-        duplicate_indices = fake_hashes.isin(real_hashes.values)
-        duplicate_indices = duplicate_indices[duplicate_indices].sort_index().index.tolist()
+            # Find exact matches row-wise
+            real_tuples = [tuple(row) for row in real_str.values]
+            fake_tuples = [tuple(row) for row in fake_str.values]
 
-        if self.verbose:
-            print(f'Number of copied rows: {len(duplicate_indices)}')
+            real_set = set(real_tuples)
+            copies = [fake.iloc[i] for i, fake_tuple in enumerate(fake_tuples) if fake_tuple in real_set]
 
-        copies = fake.loc[duplicate_indices, :]
+            if return_len:
+                return len(copies)
 
-        return len(copies) if return_len else copies
+            return pd.DataFrame(copies) if copies else pd.DataFrame()
+
+        except Exception as e:
+            logger.error(f'Error finding copies: {e}')
+            if return_len:
+                return 0
+            return pd.DataFrame()
 
     def get_duplicates(
-        self, real: pd.DataFrame, fake: pd.DataFrame, return_values: bool = False
-    ) -> tuple[pd.DataFrame, pd.DataFrame] | tuple[int, int]:
+        self, real: pd.DataFrame, fake: pd.DataFrame, return_values: bool = True
+    ) -> tuple[int, int] | tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Find duplicates within each dataset separately.
+        Get duplicated rows within each dataset.
 
         Args:
-            real: Real dataset
-            fake: Synthetic dataset
-            return_values: Whether to return actual duplicate rows or just counts
+            real: DataFrame containing real data
+            fake: DataFrame containing synthetic data
+            return_values: If True, return the duplicate rows; if False, return counts
 
         Returns:
-            Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]:
-                Duplicate rows or counts for (real, fake) datasets
+            Tuple of duplicate DataFrames or counts
         """
-        real_duplicates = real[real.duplicated(keep=False)]
-        fake_duplicates = fake[fake.duplicated(keep=False)]
-
-        if return_values:
-            return real_duplicates, fake_duplicates
-        return len(real_duplicates), len(fake_duplicates)
-
-    def row_distance(self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None) -> tuple[float, float]:
-        """
-        Calculate mean and standard deviation of minimum distances between fake and real rows.
-
-        This measures how close each synthetic row is to its nearest real row,
-        which can indicate privacy risk.
-
-        Args:
-            real: Real dataset (must be numerical and one-hot encoded)
-            fake: Synthetic dataset (must be numerical and one-hot encoded)
-            n_samples: Number of samples to use (None = use all data)
-
-        Returns:
-            Tuple[float, float]: (mean_distance, std_distance) of minimum distances
-        """
-        if n_samples is None:
-            n_samples = len(real)
-
-        # Ensure both datasets have the same columns in the same order
-        columns = sorted(real.columns.tolist())
-        real_aligned = real[columns].copy()
-
-        # Add missing columns to fake dataset with zeros
-        fake_aligned = fake.copy()
-        for col in columns:
-            if col not in fake_aligned.columns:
-                fake_aligned[col] = 0
-        fake_aligned = fake_aligned[columns]
-
-        # Standardize columns with more than 2 unique values
-        for column in columns:
-            if len(real_aligned[column].unique()) > 2:
-                real_mean, real_std = (
-                    real_aligned[column].mean(),
-                    real_aligned[column].std(),
-                )
-                fake_mean, fake_std = (
-                    fake_aligned[column].mean(),
-                    fake_aligned[column].std(),
-                )
-
-                if real_std > 0:
-                    real_aligned[column] = (real_aligned[column] - real_mean) / real_std
-                if fake_std > 0:
-                    fake_aligned[column] = (fake_aligned[column] - fake_mean) / fake_std
-
-        # Calculate pairwise distances and find minimum distance for each fake row
-        distances = cdist(real_aligned[:n_samples], fake_aligned[:n_samples])
-        min_distances = np.min(distances, axis=1)
-
-        return float(np.mean(min_distances)), float(np.std(min_distances))
-
-    # Advanced Privacy Methods (from AdvancedPrivacyEvaluator)
-
-    def k_anonymity_evaluation(
-        self,
-        synthetic_data: pd.DataFrame,
-        quasi_identifiers: list[str] | None = None,
-        sensitive_attributes: list[str] | None = None,
-        auto_detect_qi: bool = True,
-    ) -> dict:
-        """
-        Comprehensive k-anonymity evaluation of synthetic data.
-
-        Args:
-            synthetic_data: DataFrame containing synthetic data
-            quasi_identifiers: List of quasi-identifier column names
-            sensitive_attributes: List of sensitive attribute column names
-            auto_detect_qi: Whether to automatically detect quasi-identifiers
-
-        Returns:
-            Dictionary containing k-anonymity analysis results
-        """
-        if self.verbose:
-            print('Performing k-anonymity analysis...')
-
-        results = {'analysis': {}, 'recommendations': [], 'privacy_score': 0.0}
-
         try:
-            # Auto-detect quasi-identifiers if not provided
-            if quasi_identifiers is None and auto_detect_qi:
-                quasi_identifiers = identify_quasi_identifiers(synthetic_data)
-                if self.verbose:
-                    print(f'Auto-detected quasi-identifiers: {quasi_identifiers}')
+            real_duplicates = real[real.duplicated(keep=False)]
+            fake_duplicates = fake[fake.duplicated(keep=False)]
 
-            if not quasi_identifiers:
-                results['analysis'] = {
-                    'error': 'No quasi-identifiers specified or detected',
-                    'k_value': float('inf'),
-                    'anonymity_level': 'Perfect (no quasi-identifiers)',
-                }
-                results['privacy_score'] = 1.0
-                return results
-
-            # Calculate k-anonymity metrics
-            k_anon_results = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
-
-            results['analysis'] = k_anon_results
-            results['quasi_identifiers_used'] = quasi_identifiers
-            if sensitive_attributes:
-                results['sensitive_attributes_used'] = sensitive_attributes
-
-            # Generate specific recommendations
-            k_value = k_anon_results.get('k_value', 0)
-            violations = k_anon_results.get('violations', 0)
-
-            if k_value < 2:
-                results['recommendations'].append(
-                    'Critical: Some records are uniquely identifiable. Apply generalization or suppression techniques.'
-                )
-            elif k_value < 3:
-                results['recommendations'].append(
-                    'Warning: Low k-anonymity detected. Consider increasing generalization.'
-                )
-            elif k_value < 5:
-                results['recommendations'].append(
-                    'Moderate k-anonymity. Consider minor improvements for better privacy.'
-                )
-            else:
-                results['recommendations'].append('Good k-anonymity level achieved.')
-
-            if violations > 0:
-                results['recommendations'].append(
-                    f'{violations} equivalence classes violate k-anonymity. '
-                    'Focus on these specific groups for improvement.'
-                )
-
-            # Calculate privacy score
-            results['privacy_score'] = self._calculate_k_anonymity_score(k_value, violations)
+            if return_values:
+                return real_duplicates, fake_duplicates
+            return len(real_duplicates), len(fake_duplicates)
 
         except Exception as e:
-            logger.error(f'Error in k-anonymity evaluation: {e}')
-            results['analysis'] = {'error': str(e)}
-            results['recommendations'] = ['Error in analysis - check data format']
+            logger.error(f'Error finding duplicates: {e}')
+            if return_values:
+                return pd.DataFrame(), pd.DataFrame()
+            return 0, 0
 
-        return results
-
-    def membership_inference_evaluation(
-        self,
-        real_data: pd.DataFrame,
-        synthetic_data: pd.DataFrame,
-        target_columns: list[str] | None = None,
-        attack_models: list[str] | None = None,
-    ) -> dict:
+    def row_distance(self, real: pd.DataFrame, synthetic: pd.DataFrame) -> tuple[float, float]:
         """
-        Membership inference attack evaluation.
+        Calculate mean and std of row-wise distances between real and synthetic data.
 
         Args:
-            real_data: Original dataset
-            synthetic_data: Synthetic dataset
-            target_columns: Columns to use for attack (auto-detected if None)
-            attack_models: List of attack models to use
+            real: DataFrame containing real data
+            synthetic: DataFrame containing synthetic data
 
         Returns:
-            Dictionary containing membership inference attack results
+            Tuple of (mean_distance, std_distance)
         """
-        if self.verbose:
-            print('Performing membership inference attack simulation...')
-
-        results = {
-            'attack_results': {},
-            'vulnerability_assessment': {},
-            'recommendations': [],
-        }
-
         try:
-            # Simulate membership inference attacks
-            attack_results = simulate_membership_inference_attack(real_data, synthetic_data, target_columns)
+            # Select only numerical columns
+            real_num = real.select_dtypes(include=[np.number])
+            synthetic_num = synthetic.select_dtypes(include=[np.number])
 
-            results['attack_results'] = attack_results
+            # Use common columns
+            common_cols = list(set(real_num.columns) & set(synthetic_num.columns))
+            if not common_cols:
+                return 0.0, 0.0
 
-            # Assess vulnerability
-            if 'summary' in attack_results:
-                summary = attack_results['summary']
-                max_accuracy = summary.get('max_attack_accuracy', 0.5)
-                vulnerability_level = summary.get('privacy_vulnerability', 'Unknown')
+            real_num = real_num[common_cols]
+            synthetic_num = synthetic_num[common_cols]
 
-                results['vulnerability_assessment'] = {
-                    'max_attack_accuracy': max_accuracy,
-                    'vulnerability_level': vulnerability_level,
-                    'privacy_risk_score': self._calculate_inference_risk_score(max_accuracy),
-                    'baseline_accuracy': 0.5,
-                }
+            # Sample for computational efficiency
+            n_samples = min(1000, len(real_num), len(synthetic_num))
+            real_sample = real_num.sample(n=n_samples, random_state=42)
+            synthetic_sample = synthetic_num.sample(n=n_samples, random_state=42)
 
-                # Generate recommendations
-                if max_accuracy > 0.75:
-                    results['recommendations'].extend(
-                        [
-                            'High privacy risk: Attackers can distinguish real from synthetic data.',
-                            'Consider differential privacy mechanisms.',
-                            'Increase synthesis model complexity or training data size.',
-                            'Add noise to sensitive attributes.',
-                        ]
-                    )
-                elif max_accuracy > 0.6:
-                    results['recommendations'].extend(
-                        [
-                            'Moderate privacy risk detected.',
-                            'Consider adding privacy-preserving techniques.',
-                            'Review data preprocessing and synthesis parameters.',
-                        ]
-                    )
-                else:
-                    results['recommendations'].append('Low privacy risk - good privacy protection achieved.')
+            # Calculate pairwise distances
+            distances = cdist(real_sample.values, synthetic_sample.values, metric='euclidean')
+            min_distances = distances.min(axis=1)
 
-            # Model-specific analysis
-            model_performances = []
-            for model_name, model_results in attack_results.items():
-                if model_name != 'summary' and 'error' not in model_results:
-                    model_performances.append(
-                        {
-                            'model': model_name,
-                            'accuracy': model_results.get('accuracy', 0),
-                            'auc_score': model_results.get('auc_score', 0),
-                            'risk_level': model_results.get('privacy_risk', 'Unknown'),
-                        }
-                    )
-
-            results['model_performances'] = model_performances
+            return float(np.mean(min_distances)), float(np.std(min_distances))
 
         except Exception as e:
-            logger.error(f'Error in membership inference evaluation: {e}')
-            results['attack_results'] = {'error': str(e)}
-            results['recommendations'] = ['Error in attack simulation - check data compatibility']
+            logger.error(f'Error calculating row distances: {e}')
+            return 0.0, 0.0
 
-        return results
+    def _assess_privacy_risk(
+        self,
+        basic_privacy: BasicPrivacyAnalysis,
+        k_anonymity: KAnonymityAnalysis | None,
+        membership_inference: MembershipInferenceAnalysis | None,
+    ) -> PrivacyRiskAssessment:
+        """Assess overall privacy risk based on analysis results."""
+        risks = []
+
+        # Basic privacy risks
+        if basic_privacy.exact_copies_fraction > 0.1:
+            risks.append('High proportion of exact copies detected')
+        elif basic_privacy.exact_copies_fraction > 0.01:
+            risks.append('Moderate proportion of exact copies detected')
+
+        # K-anonymity risks
+        k_anon_contribution = 1.0
+        if k_anonymity:
+            if k_anonymity.k_value < 2:
+                risks.append('High k-anonymity risk')
+                k_anon_contribution = 0.2
+            elif k_anonymity.k_value < 5:
+                risks.append('Moderate k-anonymity risk')
+                k_anon_contribution = min(1.0, k_anonymity.k_value / 5.0)
+
+        # Membership inference risks
+        inference_contribution = 0.0
+        if membership_inference:
+            if membership_inference.max_attack_accuracy > 0.75:
+                risks.append('High membership inference risk')
+                inference_contribution = (membership_inference.max_attack_accuracy - 0.5) * 2
+            elif membership_inference.max_attack_accuracy > 0.6:
+                risks.append('Moderate membership inference risk')
+                inference_contribution = (membership_inference.max_attack_accuracy - 0.5) * 2
+
+        # Overall risk assessment
+        if any('High' in risk for risk in risks):
+            risk_level = 'High'
+        elif any('Moderate' in risk for risk in risks):
+            risk_level = 'Moderate'
+        else:
+            risk_level = 'Low'
+
+        # Calculate combined privacy score
+        base_score = 1.0
+        base_score *= k_anon_contribution
+        base_score *= max(0.0, 1.0 - inference_contribution)
+        base_score *= max(0.0, 1.0 - basic_privacy.exact_copies_fraction * 2)
+
+        privacy_score = max(0.0, min(1.0, base_score))
+
+        return PrivacyRiskAssessment(
+            risk_level=risk_level,
+            privacy_score=privacy_score,
+            identified_risks=risks,
+            k_anonymity_contribution=k_anon_contribution,
+            inference_risk_contribution=inference_contribution,
+        )
+
+    def _generate_recommendations(
+        self,
+        basic_privacy: BasicPrivacyAnalysis,
+        k_anonymity: KAnonymityAnalysis | None,
+        membership_inference: MembershipInferenceAnalysis | None,
+        overall_assessment: PrivacyRiskAssessment,
+    ) -> list[str]:
+        """Generate privacy improvement recommendations."""
+        recommendations = []
+
+        # Basic privacy recommendations
+        if basic_privacy.exact_copies_fraction > 0.01:
+            recommendations.append('Reduce exact copies by adding more noise or using different generation parameters')
+
+        # K-anonymity recommendations
+        if k_anonymity and k_anonymity.k_value < 5:
+            recommendations.append(
+                f'Improve k-anonymity (current k={k_anonymity.k_value}) by generalizing quasi-identifiers'
+            )
+
+        # Membership inference recommendations
+        if membership_inference and membership_inference.max_attack_accuracy > 0.6:
+            recommendations.append(membership_inference.recommendation)
+
+        # Overall recommendations
+        if overall_assessment.risk_level == 'High':
+            recommendations.append('Consider regenerating synthetic data with stronger privacy protections')
+        elif overall_assessment.risk_level == 'Moderate':
+            recommendations.append('Review and improve specific privacy risk factors identified')
+
+        return recommendations
 
     def evaluate(
         self,
@@ -335,267 +252,84 @@ class PrivacyEvaluator:
             **kwargs: Additional parameters for specific methods
 
         Returns:
-            dict: Comprehensive privacy analysis results
+            PrivacyEvaluationResults: Comprehensive privacy analysis results
         """
         if self.verbose:
             print('Running comprehensive privacy evaluation...')
 
-        results = {
-            'basic_privacy': {},
-            'k_anonymity': {},
-            'membership_inference': {},
-            'overall_assessment': {},
-            'recommendations': [],
-        }
+        analysis_errors = []
 
-        # Basic privacy evaluation
+        # Basic privacy analysis
+        basic_privacy = BasicPrivacyAnalysis(
+            exact_copies_count=0,
+            exact_copies_fraction=0.0,
+            real_duplicates_count=0,
+            synthetic_duplicates_count=0,
+            mean_row_distance=0.0,
+            std_row_distance=0.0,
+        )
+
         if include_basic:
             try:
-                results['basic_privacy'] = {
-                    'copies': {
-                        'count': self.get_copies(real_data, synthetic_data, return_len=True),
-                        'fraction': self.get_copies(real_data, synthetic_data, return_len=True) / len(synthetic_data),
-                    },
-                    'duplicates': {
-                        'real_count': self.get_duplicates(real_data, synthetic_data, return_values=False)[0],
-                        'synthetic_count': self.get_duplicates(real_data, synthetic_data, return_values=False)[1],
-                    },
-                    'row_distances': {
-                        'mean': self.row_distance(real_data, synthetic_data)[0],
-                        'std': self.row_distance(real_data, synthetic_data)[1],
-                    },
-                }
-            except Exception as e:
-                logger.error(f'Basic privacy evaluation failed: {e}')
-                results['basic_privacy'] = {'error': str(e)}
+                copies_count = self.get_copies(real_data, synthetic_data, return_len=True)
+                copies_fraction = copies_count / len(synthetic_data) if len(synthetic_data) > 0 else 0.0
 
-        # K-anonymity evaluation
-        if include_k_anonymity:
-            try:
-                results['k_anonymity'] = self.k_anonymity_evaluation(
-                    synthetic_data, quasi_identifiers, sensitive_attributes
+                real_dup_count, synthetic_dup_count = self.get_duplicates(
+                    real_data, synthetic_data, return_values=False
+                )
+                mean_dist, std_dist = self.row_distance(real_data, synthetic_data)
+
+                basic_privacy = BasicPrivacyAnalysis(
+                    exact_copies_count=copies_count,
+                    exact_copies_fraction=copies_fraction,
+                    real_duplicates_count=real_dup_count,
+                    synthetic_duplicates_count=synthetic_dup_count,
+                    mean_row_distance=mean_dist,
+                    std_row_distance=std_dist,
                 )
             except Exception as e:
-                logger.error(f'K-anonymity evaluation failed: {e}')
-                results['k_anonymity'] = {'error': str(e)}
+                logger.error(f'Basic privacy evaluation failed: {e}')
+                analysis_errors.append(f'Basic privacy analysis: {e!s}')
 
-        # Membership inference evaluation
+        # K-anonymity analysis
+        k_anonymity = None
+        if include_k_anonymity:
+            try:
+                if quasi_identifiers is None:
+                    quasi_identifiers = identify_quasi_identifiers(synthetic_data)
+
+                k_anonymity = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
+            except Exception as e:
+                logger.error(f'K-anonymity evaluation failed: {e}')
+                analysis_errors.append(f'K-anonymity analysis: {e!s}')
+
+        # Membership inference analysis
+        membership_inference = None
         if include_membership_inference:
             try:
-                results['membership_inference'] = self.membership_inference_evaluation(real_data, synthetic_data)
+                membership_inference = simulate_membership_inference_attack(real_data, synthetic_data)
             except Exception as e:
                 logger.error(f'Membership inference evaluation failed: {e}')
-                results['membership_inference'] = {'error': str(e)}
+                analysis_errors.append(f'Membership inference analysis: {e!s}')
 
-        # Combined analysis
-        try:
-            overall_assessment_dict = self._assess_combined_privacy_risk(
-                results['k_anonymity'], results['membership_inference']
-            )
-            combined_recommendations = self._generate_combined_recommendations(
-                results['k_anonymity'], results['membership_inference']
-            )
-        except Exception as e:
-            logger.error(f'Combined privacy assessment failed: {e}')
-            overall_assessment_dict = {'error': str(e)}
-            combined_recommendations = []
+        # Overall assessment
+        overall_assessment = self._assess_privacy_risk(basic_privacy, k_anonymity, membership_inference)
 
-        # Build Pydantic models
-        try:
-            # Basic privacy results
-            basic_privacy = BasicPrivacyResults(**results['basic_privacy'])
+        # Generate recommendations
+        recommendations = self._generate_recommendations(
+            basic_privacy, k_anonymity, membership_inference, overall_assessment
+        )
 
-            # K-anonymity results
-            k_anonymity = KAnonymityResults(**results['k_anonymity'])
-
-            # Membership inference results
-            membership_inference = MembershipInferenceResults(**results['membership_inference'])
-
-            # Overall assessment
-            overall_assessment = OverallPrivacyAssessment(**overall_assessment_dict)
-
-            # Create comprehensive results
-            return PrivacyEvaluationResults(
-                basic_privacy=basic_privacy,
-                k_anonymity=k_anonymity,
-                membership_inference=membership_inference,
-                overall_assessment=overall_assessment,
-                recommendations=combined_recommendations,
-                included_basic=include_basic,
-                included_k_anonymity=include_k_anonymity,
-                included_membership_inference=include_membership_inference,
-            )
-        except Exception as e:
-            logger.error(f'Error building PrivacyEvaluationResults: {e}')
-            # Fallback: create models with error handling
-            return PrivacyEvaluationResults(
-                basic_privacy=BasicPrivacyResults(**results.get('basic_privacy', {})),
-                k_anonymity=KAnonymityResults(**results.get('k_anonymity', {})),
-                membership_inference=MembershipInferenceResults(**results.get('membership_inference', {})),
-                overall_assessment=OverallPrivacyAssessment(**overall_assessment_dict),
-                recommendations=combined_recommendations,
-                included_basic=include_basic,
-                included_k_anonymity=include_k_anonymity,
-                included_membership_inference=include_membership_inference,
-            )
-
-    def privacy_risk_dashboard(self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame, **kwargs) -> dict:
-        """
-        Generate a privacy risk dashboard with key metrics and visualizations.
-
-        Args:
-            real_data: Original dataset
-            synthetic_data: Synthetic dataset
-            **kwargs: Additional parameters for evaluation
-
-        Returns:
-            Dictionary with dashboard-ready privacy metrics
-        """
-        if self.verbose:
-            print('Generating privacy risk dashboard...')
-
-        # Run comprehensive evaluation
-        comprehensive_results = self.evaluate(real_data, synthetic_data, **kwargs)
-
-        # Extract key metrics for dashboard
-        dashboard = {
-            'risk_summary': {},
-            'key_metrics': {},
-            'alerts': [],
-            'recommendations': [],
-        }
-
-        try:
-            # Overall risk level
-            overall_assessment = comprehensive_results.get('overall_assessment', {})
-            dashboard['risk_summary'] = {
-                'overall_risk_level': overall_assessment.get('overall_risk_level', 'Unknown'),
-                'privacy_score': overall_assessment.get('privacy_score', 0.0),
-                'risk_factors': overall_assessment.get('identified_risks', []),
-            }
-
-            # Key metrics
-            k_anon = comprehensive_results.get('k_anonymity', {}).get('analysis', {})
-            membership = comprehensive_results.get('membership_inference', {}).get('vulnerability_assessment', {})
-
-            dashboard['key_metrics'] = {
-                'k_anonymity_value': k_anon.get('k_value', 'N/A'),
-                'k_anonymity_level': k_anon.get('anonymity_level', 'N/A'),
-                'max_attack_accuracy': membership.get('max_attack_accuracy', 'N/A'),
-                'vulnerability_level': membership.get('vulnerability_level', 'N/A'),
-            }
-
-            # Generate alerts
-            if k_anon.get('k_value', float('inf')) < 3:
-                dashboard['alerts'].append('Low k-anonymity detected')
-
-            if membership.get('max_attack_accuracy', 0) > 0.7:
-                dashboard['alerts'].append('High membership inference risk')
-
-            # Combined recommendations
-            dashboard['recommendations'] = comprehensive_results.get('recommendations', [])
-
-        except Exception as e:
-            logger.error(f'Error generating privacy dashboard: {e}')
-            dashboard['error'] = str(e)
-
-        return dashboard
-
-    # Helper methods
-
-    def _calculate_k_anonymity_score(self, k_value: int, violations: int) -> float:
-        """Calculate privacy score based on k-anonymity metrics."""
-        if k_value == 0:
-            return 0.0
-
-        # Base score from k-value
-        base_score = min(1.0, k_value / 10.0)  # Max score at k=10
-
-        # Penalty for violations
-        violation_penalty = violations * 0.1
-
-        return max(0.0, base_score - violation_penalty)
-
-    def _calculate_inference_risk_score(self, attack_accuracy: float) -> float:
-        """Calculate risk score from membership inference attack accuracy."""
-        # Convert accuracy to risk score (0.5 = no risk, 1.0 = maximum risk)
-        if attack_accuracy <= 0.5:
-            return 0.0
-
-        # Scale from 0.5-1.0 accuracy to 0.0-1.0 risk
-        return (attack_accuracy - 0.5) * 2.0
-
-    def _assess_combined_privacy_risk(self, k_anon_results: dict, membership_results: dict) -> dict:
-        """Assess overall privacy risk from combined analyses."""
-        risk_factors = []
-
-        # K-anonymity risk factors
-        k_anon_analysis = k_anon_results.get('analysis', {})
-        k_value = k_anon_analysis.get('k_value', float('inf'))
-
-        if k_value < 2:
-            risk_factors.append('Critical k-anonymity risk')
-        elif k_value < 5:
-            risk_factors.append('Moderate k-anonymity risk')
-
-        # Membership inference risk factors
-        vulnerability = membership_results.get('vulnerability_assessment', {})
-        max_accuracy = vulnerability.get('max_attack_accuracy', 0.5)
-
-        if max_accuracy > 0.75:
-            risk_factors.append('High membership inference risk')
-        elif max_accuracy > 0.6:
-            risk_factors.append('Moderate membership inference risk')
-
-        # Overall risk level
-        if any('Critical' in factor or 'High' in factor for factor in risk_factors):
-            overall_risk = 'High'
-        elif any('Moderate' in factor for factor in risk_factors):
-            overall_risk = 'Moderate'
-        else:
-            overall_risk = 'Low'
-
-        # Combined privacy score
-        k_anon_score = k_anon_results.get('privacy_score', 1.0)
-        inference_risk = vulnerability.get('privacy_risk_score', 0.0)
-        combined_score = k_anon_score * (1.0 - inference_risk)
-
-        return {
-            'overall_risk_level': overall_risk,
-            'identified_risks': risk_factors,
-            'privacy_score': max(0.0, combined_score),
-            'risk_breakdown': {
-                'k_anonymity_score': k_anon_score,
-                'inference_risk_score': inference_risk,
-            },
-        }
-
-    def _generate_combined_recommendations(self, k_anon_results: dict, membership_results: dict) -> list[str]:
-        """Generate combined recommendations from all privacy analyses."""
-        recommendations = []
-
-        # Add k-anonymity recommendations
-        k_anon_recs = k_anon_results.get('recommendations', [])
-        recommendations.extend(k_anon_recs)
-
-        # Add membership inference recommendations
-        membership_recs = membership_results.get('recommendations', [])
-        recommendations.extend(membership_recs)
-
-        # Add combined recommendations
-        k_value = k_anon_results.get('analysis', {}).get('k_value', float('inf'))
-        max_accuracy = membership_results.get('vulnerability_assessment', {}).get('max_attack_accuracy', 0.5)
-
-        if k_value < 3 and max_accuracy > 0.7:
-            recommendations.append(
-                'Both k-anonymity and membership inference risks detected. '
-                'Consider comprehensive privacy-preserving data synthesis methods.'
-            )
-
-        # Remove duplicates while preserving order
-        unique_recommendations = []
-        for rec in recommendations:
-            if rec not in unique_recommendations:
-                unique_recommendations.append(rec)
-
-        return unique_recommendations
+        return PrivacyEvaluationResults(
+            basic_privacy=basic_privacy,
+            k_anonymity=k_anonymity,
+            membership_inference=membership_inference,
+            overall_assessment=overall_assessment,
+            recommendations=recommendations,
+            quasi_identifiers_used=quasi_identifiers,
+            sensitive_attributes_used=sensitive_attributes,
+            analysis_errors=analysis_errors,
+            included_basic=include_basic,
+            included_k_anonymity=include_k_anonymity,
+            included_membership_inference=include_membership_inference,
+        )

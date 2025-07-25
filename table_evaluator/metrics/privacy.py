@@ -11,8 +11,29 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.models.privacy_models import (
+    AttackModelResult,
+    KAnonymityAnalysis,
+    LDiversityAnalysis,
+    MembershipInferenceAnalysis,
+    StatisticalDistribution,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _convert_statistical_distribution(describe_dict: dict) -> StatisticalDistribution:
+    """Convert pandas describe() output to StatisticalDistribution model."""
+    return StatisticalDistribution(
+        count=describe_dict.get('count', 0.0),
+        mean=describe_dict.get('mean', 0.0),
+        std=describe_dict.get('std', 0.0),
+        min=describe_dict.get('min', 0.0),
+        percentile_25=describe_dict.get('25%', 0.0),
+        percentile_50=describe_dict.get('50%', 0.0),
+        percentile_75=describe_dict.get('75%', 0.0),
+        max=describe_dict.get('max', 0.0),
+    )
 
 
 def identify_quasi_identifiers(df: pd.DataFrame, max_unique_ratio: float = 0.9, min_unique_count: int = 2) -> list[str]:
@@ -50,7 +71,7 @@ def calculate_k_anonymity(
     df: pd.DataFrame,
     quasi_identifiers: list[str],
     sensitive_attributes: list[str] | None = None,
-) -> dict:
+) -> KAnonymityAnalysis:
     """
     Calculate k-anonymity metrics for a dataset.
 
@@ -63,16 +84,19 @@ def calculate_k_anonymity(
         sensitive_attributes: List of sensitive attribute column names
 
     Returns:
-        Dictionary with k-anonymity analysis results
+        KAnonymityAnalysis: K-anonymity analysis results
     """
     if not quasi_identifiers:
-        return {
-            'k_value': float('inf'),
-            'anonymity_level': 'Perfect',
-            'violations': 0,
-            'equivalence_classes': 1,
-            'error': 'No quasi-identifiers specified',
-        }
+        return KAnonymityAnalysis(
+            k_value=0,
+            anonymity_level='Error',
+            violations=0,
+            equivalence_classes=0,
+            avg_class_size=0.0,
+            class_size_distribution=StatisticalDistribution(
+                count=0.0, mean=0.0, std=0.0, min=0.0, percentile_25=0.0, percentile_50=0.0, percentile_75=0.0, max=0.0
+            ),
+        )
 
     # Group by quasi-identifiers
     try:
@@ -98,75 +122,62 @@ def calculate_k_anonymity(
         else:
             anonymity_level = 'Poor'
 
-        results = {
-            'k_value': int(k_value),
-            'anonymity_level': anonymity_level,
-            'violations': int(violations),
-            'equivalence_classes': int(n_equivalence_classes),
-            'avg_class_size': float(avg_class_size),
-            'class_size_distribution': grouped['count'].describe().to_dict(),
-        }
+        # Convert class size distribution
+        class_size_distribution = _convert_statistical_distribution(grouped['count'].describe().to_dict())
 
-        # Additional analysis for sensitive attributes
+        # Handle l-diversity results
+        l_diversity_results = {}
         if sensitive_attributes:
-            sensitive_analysis = analyze_l_diversity(df, quasi_identifiers, sensitive_attributes)
-            results['l_diversity'] = sensitive_analysis
+            for sensitive_attr in sensitive_attributes:
+                try:
+                    # Group by quasi-identifiers and analyze diversity in sensitive attribute
+                    diversity_analysis = (
+                        df.groupby(quasi_identifiers)[sensitive_attr]
+                        .apply(lambda x: x.nunique())
+                        .reset_index(name='l_value')
+                    )
 
-        return results
+                    min_l = diversity_analysis['l_value'].min()
+                    avg_l = diversity_analysis['l_value'].mean()
+
+                    # Check for violations (classes with l < 2)
+                    l_violations = (diversity_analysis['l_value'] < 2).sum()
+
+                    l_diversity_results[sensitive_attr] = LDiversityAnalysis(
+                        min_l_value=int(min_l),
+                        avg_l_value=float(avg_l),
+                        l_violations=int(l_violations),
+                        diversity_distribution=_convert_statistical_distribution(
+                            diversity_analysis['l_value'].describe().to_dict()
+                        ),
+                    )
+
+                except Exception as e:
+                    logger.error(f'Error analyzing l-diversity for {sensitive_attr}: {e}')
+                    # Skip this sensitive attribute if it fails
+
+        return KAnonymityAnalysis(
+            k_value=int(k_value),
+            anonymity_level=anonymity_level,
+            violations=int(violations),
+            equivalence_classes=int(n_equivalence_classes),
+            avg_class_size=float(avg_class_size),
+            class_size_distribution=class_size_distribution,
+            l_diversity_results=l_diversity_results,
+        )
 
     except Exception as e:
         logger.error(f'Error calculating k-anonymity: {e}')
-        return {
-            'k_value': 0,
-            'anonymity_level': 'Error',
-            'violations': 0,
-            'equivalence_classes': 0,
-            'error': str(e),
-        }
-
-
-def analyze_l_diversity(df: pd.DataFrame, quasi_identifiers: list[str], sensitive_attributes: list[str]) -> dict:
-    """
-    Analyze l-diversity within equivalence classes.
-
-    l-diversity ensures that each equivalence class has at least l diverse
-    values for sensitive attributes.
-
-    Args:
-        df: DataFrame to analyze
-        quasi_identifiers: List of quasi-identifier column names
-        sensitive_attributes: List of sensitive attribute column names
-
-    Returns:
-        Dictionary with l-diversity analysis results
-    """
-    results = {}
-
-    for sensitive_attr in sensitive_attributes:
-        try:
-            # Group by quasi-identifiers and analyze diversity in sensitive attribute
-            diversity_analysis = (
-                df.groupby(quasi_identifiers)[sensitive_attr].apply(lambda x: x.nunique()).reset_index(name='l_value')
-            )
-
-            min_l = diversity_analysis['l_value'].min()
-            avg_l = diversity_analysis['l_value'].mean()
-
-            # Check for violations (classes with l < 2)
-            l_violations = (diversity_analysis['l_value'] < 2).sum()
-
-            results[sensitive_attr] = {
-                'min_l_value': int(min_l),
-                'avg_l_value': float(avg_l),
-                'l_violations': int(l_violations),
-                'diversity_distribution': diversity_analysis['l_value'].describe().to_dict(),
-            }
-
-        except Exception as e:
-            logger.error(f'Error analyzing l-diversity for {sensitive_attr}: {e}')
-            results[sensitive_attr] = {'error': str(e)}
-
-    return results
+        return KAnonymityAnalysis(
+            k_value=0,
+            anonymity_level='Error',
+            violations=0,
+            equivalence_classes=0,
+            avg_class_size=0.0,
+            class_size_distribution=StatisticalDistribution(
+                count=0.0, mean=0.0, std=0.0, min=0.0, percentile_25=0.0, percentile_50=0.0, percentile_75=0.0, max=0.0
+            ),
+        )
 
 
 def simulate_membership_inference_attack(
@@ -175,7 +186,7 @@ def simulate_membership_inference_attack(
     target_columns: list[str] | None = None,
     test_size: float = 0.3,
     random_state: int = RANDOM_SEED,
-) -> dict:
+) -> MembershipInferenceAnalysis:
     """
     Simulate membership inference attacks to assess privacy risks.
 
@@ -190,7 +201,7 @@ def simulate_membership_inference_attack(
         random_state: Random seed for reproducibility
 
     Returns:
-        Dictionary with attack simulation results
+        MembershipInferenceAnalysis: Attack simulation results
     """
     if target_columns is None:
         # Use numerical and low-cardinality categorical columns
@@ -200,12 +211,15 @@ def simulate_membership_inference_attack(
                 target_columns.append(col)
 
     if not target_columns:
-        return {'error': 'No suitable columns found for attack simulation'}
+        return MembershipInferenceAnalysis(
+            max_attack_accuracy=0.5,
+            avg_attack_accuracy=0.5,
+            privacy_vulnerability='Low',
+            recommendation='No suitable columns found for attack simulation',
+        )
 
     try:
         # Prepare attack dataset
-        attack_results = {}
-
         # Sample equal amounts from real and synthetic data
         min_samples = min(len(real_data), len(synthetic_data))
         sample_size = min(min_samples, 5000)  # Limit for computational efficiency
@@ -241,6 +255,9 @@ def simulate_membership_inference_attack(
             'random_forest': RandomForestClassifier(random_state=random_state, n_estimators=100),
         }
 
+        model_results = {}
+        accuracies = []
+
         for model_name, model in models.items():
             try:
                 # Train attack model
@@ -267,38 +284,60 @@ def simulate_membership_inference_attack(
                 else:
                     risk_level = 'Low'
 
-                attack_results[model_name] = {
-                    'accuracy': float(accuracy),
-                    'precision': float(precision),
-                    'recall': float(recall),
-                    'auc_score': float(auc_score),
-                    'privacy_risk': risk_level,
-                    'baseline_accuracy': 0.5,  # Random guessing baseline
-                }
+                model_results[model_name] = AttackModelResult(
+                    accuracy=float(accuracy),
+                    precision=float(precision),
+                    recall=float(recall),
+                    auc_score=float(auc_score),
+                    privacy_risk=risk_level,
+                    baseline_accuracy=0.5,
+                )
+
+                accuracies.append(accuracy)
 
             except Exception as e:
                 logger.error(f'Error training {model_name}: {e}')
-                attack_results[model_name] = {'error': str(e)}
+                # Skip this model if it fails
 
         # Overall assessment
-        accuracies = [result.get('accuracy', 0) for result in attack_results.values() if 'error' not in result]
-
         if accuracies:
             max_accuracy = max(accuracies)
             avg_accuracy = np.mean(accuracies)
 
-            attack_results['summary'] = {
-                'max_attack_accuracy': float(max_accuracy),
-                'avg_attack_accuracy': float(avg_accuracy),
-                'privacy_vulnerability': 'High' if max_accuracy > 0.75 else 'Medium' if max_accuracy > 0.6 else 'Low',
-                'recommendation': generate_privacy_recommendation(max_accuracy),
-            }
+            # Determine vulnerability level
+            if max_accuracy > 0.75:
+                vulnerability_level = 'High'
+            elif max_accuracy > 0.6:
+                vulnerability_level = 'Medium'
+            else:
+                vulnerability_level = 'Low'
 
-        return attack_results
+            # Generate recommendation
+            recommendation = generate_privacy_recommendation(max_accuracy)
+
+            return MembershipInferenceAnalysis(
+                logistic_regression=model_results.get('logistic_regression'),
+                random_forest=model_results.get('random_forest'),
+                max_attack_accuracy=float(max_accuracy),
+                avg_attack_accuracy=float(avg_accuracy),
+                privacy_vulnerability=vulnerability_level,
+                recommendation=recommendation,
+            )
+        return MembershipInferenceAnalysis(
+            max_attack_accuracy=0.5,
+            avg_attack_accuracy=0.5,
+            privacy_vulnerability='Low',
+            recommendation='No attack models could be trained successfully',
+        )
 
     except Exception as e:
         logger.error(f'Error in membership inference attack simulation: {e}')
-        return {'error': str(e)}
+        return MembershipInferenceAnalysis(
+            max_attack_accuracy=0.5,
+            avg_attack_accuracy=0.5,
+            privacy_vulnerability='Low',
+            recommendation=f'Error in attack simulation: {e}',
+        )
 
 
 def encode_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -347,7 +386,7 @@ def comprehensive_privacy_analysis(
     Returns:
         Dictionary with comprehensive privacy analysis results
     """
-    results = {'k_anonymity': {}, 'membership_inference': {}, 'overall_assessment': {}}
+    results = {'k_anonymity': None, 'membership_inference': None, 'overall_assessment': {}}
 
     # Auto-detect quasi-identifiers if not provided
     if quasi_identifiers is None:
@@ -355,14 +394,16 @@ def comprehensive_privacy_analysis(
 
     # K-anonymity analysis
     try:
-        results['k_anonymity'] = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
+        k_anonymity_result = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
+        results['k_anonymity'] = k_anonymity_result.model_dump()
     except Exception as e:
         logger.error(f'K-anonymity analysis failed: {e}')
         results['k_anonymity'] = {'error': str(e)}
 
     # Membership inference attack simulation
     try:
-        results['membership_inference'] = simulate_membership_inference_attack(real_data, synthetic_data)
+        membership_result = simulate_membership_inference_attack(real_data, synthetic_data)
+        results['membership_inference'] = membership_result.model_dump()
     except Exception as e:
         logger.error(f'Membership inference analysis failed: {e}')
         results['membership_inference'] = {'error': str(e)}
@@ -392,12 +433,11 @@ def assess_overall_privacy_risk(privacy_results: dict) -> dict:
         risks.append('Moderate k-anonymity risk')
 
     # Membership inference risk
-    if 'summary' in membership:
-        max_accuracy = membership['summary'].get('max_attack_accuracy', 0)
-        if max_accuracy > 0.75:
-            risks.append('High membership inference risk')
-        elif max_accuracy > 0.6:
-            risks.append('Moderate membership inference risk')
+    max_accuracy = membership.get('max_attack_accuracy', 0.5)
+    if max_accuracy > 0.75:
+        risks.append('High membership inference risk')
+    elif max_accuracy > 0.6:
+        risks.append('Moderate membership inference risk')
 
     # Overall risk level
     if any('High' in risk for risk in risks):
@@ -425,11 +465,10 @@ def calculate_privacy_score(k_anon: dict, membership: dict) -> float:
         score *= k_value / 5.0
 
     # Penalize based on membership inference
-    if 'summary' in membership:
-        max_accuracy = membership['summary'].get('max_attack_accuracy', 0.5)
-        # Convert accuracy to privacy score (0.5 = perfect, 1.0 = worst)
-        privacy_factor = max(0, 1.0 - (max_accuracy - 0.5) * 2)
-        score *= privacy_factor
+    max_accuracy = membership.get('max_attack_accuracy', 0.5)
+    # Convert accuracy to privacy score (0.5 = perfect, 1.0 = worst)
+    privacy_factor = max(0, 1.0 - (max_accuracy - 0.5) * 2)
+    score *= privacy_factor
 
     return max(0.0, min(1.0, score))
 

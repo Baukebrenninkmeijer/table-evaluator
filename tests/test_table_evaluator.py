@@ -335,7 +335,7 @@ def test_error_handling():
     real = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
     fake = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
     evaluator = TableEvaluator(real, fake)
-    with pytest.raises(ValueError, match='target_type must be "regr" or "class"'):
+    with pytest.raises(ValueError, match="target_type must be 'regr' or 'class'"):
         evaluator.estimator_evaluation(target_col='A', target_type='invalid_type')
 
 

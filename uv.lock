@@ -1941,11 +1941,7 @@ requires-dist = [
     { name = "psutil", marker = "extra == 'all'", specifier = ">=5.9.0" },
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=5.9.0" },
     { name = "pyarrow", specifier = "==17.0.0" },
-<<<<<<< HEAD
     { name = "pydantic", specifier = ">=2.11.7" },
-=======
-    { name = "pydantic", specifier = ">=2.0.0" },
->>>>>>> ae9755d (create models for evaluators)
     { name = "pytest", specifier = "==8.3.2" },
     { name = "pytest-benchmark", marker = "extra == 'all'", specifier = ">=4.0.0" },
     { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },

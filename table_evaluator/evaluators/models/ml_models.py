@@ -101,16 +101,52 @@ class RegressionResults(BaseModel):
         extra = 'allow'
 
 
+class TargetsEvaluated(BaseModel):
+    """Number of targets evaluated by type."""
+
+    classification: int = Field(default=0, description='Number of classification targets evaluated')
+    regression: int = Field(default=0, description='Number of regression targets evaluated')
+    total: int = Field(default=0, description='Total number of targets evaluated')
+
+    class Config:
+        extra = 'allow'
+
+
+class ClassificationSummary(BaseModel):
+    """Summary statistics for classification targets."""
+
+    best_score: float = Field(description='Best score achieved across classification targets')
+    mean_score: float = Field(description='Mean score across classification targets')
+    worst_score: float = Field(description='Worst score across classification targets')
+    std_score: float = Field(description='Standard deviation of classification scores')
+
+    class Config:
+        extra = 'allow'
+
+
+class RegressionSummary(BaseModel):
+    """Summary statistics for regression targets."""
+
+    best_score: float = Field(description='Best score achieved across regression targets')
+    mean_score: float = Field(description='Mean score across regression targets')
+    worst_score: float = Field(description='Worst score across regression targets')
+    std_score: float = Field(description='Standard deviation of regression scores')
+
+    class Config:
+        extra = 'allow'
+
+
 class MLSummary(BaseModel):
     """Summary statistics from ML evaluation."""
 
-    targets_evaluated: dict[str, int] = Field(
-        description='Number of targets evaluated by type (classification, regression, total)'
+    targets_evaluated: TargetsEvaluated = Field(
+        default_factory=TargetsEvaluated,
+        description='Number of targets evaluated by type (classification, regression, total)',
     )
-    classification_summary: dict[str, float] | None = Field(
+    classification_summary: ClassificationSummary | None = Field(
         default=None, description='Summary statistics for classification targets'
     )
-    regression_summary: dict[str, float] | None = Field(
+    regression_summary: RegressionSummary | None = Field(
         default=None, description='Summary statistics for regression targets'
     )
     best_classification_score: float | None = Field(
