@@ -1,11 +1,9 @@
-"""Data conversion utilities for table evaluation."""
+"""Data conversion utilities for table evaluator."""
 
-import logging
 from typing import Any
 
 import pandas as pd
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class DataConverter:
@@ -89,7 +87,7 @@ class DataConverter:
         *,
         drop_single_label: bool = False,
         nan_strategy: str = 'replace',
-        nan_replace_value: Any = 0.0,
+        nan_replace_value: str | float | bool = 0.0,
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
         """
         Encode datasets with mixed data to numerical-only datasets using adaptive logic.
@@ -200,7 +198,9 @@ class DataConverter:
         # Handle multi-value columns using one-hot encoding
         if multi_value_cols:
             real_onehot, fake_onehot = DataConverter.to_one_hot(
-                real=real_encoded, fake=fake_encoded, categorical_columns=multi_value_cols
+                real=real_encoded,
+                fake=fake_encoded,
+                categorical_columns=multi_value_cols,
             )
             real_encoded = real_onehot
             fake_encoded = fake_onehot

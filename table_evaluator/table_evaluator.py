@@ -1,10 +1,10 @@
-import logging
 import warnings
 from collections.abc import Callable
 from os import PathLike
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 
@@ -21,8 +21,6 @@ from table_evaluator.metrics.statistical import associations
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
-
-logger = logging.getLogger(__name__)
 
 
 class TableEvaluator:

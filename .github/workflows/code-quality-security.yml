@@ -132,3 +132,18 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
+
+  conventional-commits:
+    runs-on: ubuntu-latest
+    name: Conventional Commits Check
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Validate conventional commits
+      uses: wagoid/commitlint-github-action@v5
+      with:
+        configFile: '.commitlintrc.json'

@@ -1,11 +1,4 @@
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 import warnings
-from pathlib import Path
-
-import numpy as np
 
 from .table_evaluator import TableEvaluator
 from .utils import load_data
@@ -18,15 +11,20 @@ warnings.filterwarnings('ignore', category=FutureWarning, message='.*multi_class
 __all__ = ['TableEvaluator', 'load_data']
 
 
-def _get_version():
-    """Get version from pyproject.toml"""
+def _get_version() -> str:
+    """Get version from setuptools_scm"""
     try:
-        pyproject_path = Path(__file__).parent.parent / 'pyproject.toml'
-        with open(pyproject_path, 'rb') as f:
-            data = tomllib.load(f)
-        return data['project']['version']
-    except (FileNotFoundError, KeyError, ImportError):
-        return 'unknown'
+        from importlib.metadata import version
+
+        return version('table-evaluator')
+    except ImportError:
+        try:
+            # Fallback for older Python versions
+            import pkg_resources
+
+            return pkg_resources.get_distribution('table-evaluator').version
+        except Exception:
+            return 'unknown'
 
 
 __version__ = _get_version()

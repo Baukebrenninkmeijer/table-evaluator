@@ -64,7 +64,7 @@ jobs:
             - Plugin architecture integration (if applicable)
 
             ## Performance & Efficiency:
-            - NumPy/Pandas/Polars usage optimization
+            - NumPy/Pandas usage optimization
             - Memory management for large datasets
             - Computational complexity considerations
             - Caching opportunities
@@ -81,7 +81,6 @@ jobs:
             - Security best practices
 
             ## Library-Specific Concerns:
-            - Support for both Pandas and Polars backends
             - Advanced metrics implementation accuracy
             - Visualization integration
             - Configuration management

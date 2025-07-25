@@ -9,11 +9,9 @@
 name: Upload Python Package
 
 on:
-  # release:
-  #   types: [published]
   push:
-    branches:
-      - master
+    tags:
+      - '*'
 
 jobs:
   deploy:
@@ -47,7 +45,6 @@ jobs:
     - name: Build package
       run: uv build
     - name: Publish package
-      # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
