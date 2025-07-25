@@ -93,7 +93,6 @@ table_evaluator/
 - Run pre-commit hooks before committing: `pre-commit run --all-files`
 - Verify builds/installations locally to catch CI/CD issues early
 - Use project's Makefile targets for standardized operations
-- Test with both backends: `BACKEND=pandas pytest` and `BACKEND=polars pytest`
 
 ## Recent Major Achievement: Dython Dependency Replacement (v1.9.0)
 

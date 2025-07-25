@@ -9,20 +9,18 @@ from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import f1_score, jaccard_score
 
-from table_evaluator.association_metrics import associations
+# Import metrics module directly
+from table_evaluator import metrics as te_metrics
+from table_evaluator.metrics.statistical import associations
 from table_evaluator.core.evaluation_config import EvaluationConfig
-from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
 from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
-from table_evaluator.evaluators.ml_evaluator import MLEvaluator
+from table_evaluator.metrics.ml import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.utils import _preprocess_data, dict_to_df
+from table_evaluator.utils import _preprocess_data, dict_to_df, numerical_encoding
 from table_evaluator.visualization.visualization_manager import VisualizationManager
-
-# Import metrics module directly
-from table_evaluator import metrics as te_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -555,15 +553,18 @@ class TableEvaluator:
             + self.real.select_dtypes("bool").columns.tolist()
             + self.fake.select_dtypes("bool").columns.tolist()
         )
-        converter = DataConverter()
-        real, fake = converter.to_numerical_one_hot(self.real, self.fake, cat_cols)
+        real: pd.DataFrame = numerical_encoding(
+            self.real, nominal_columns=cat_cols
+        ).astype(float)  # type: ignore
         real = real.sort_index(axis=1)
-        fake = fake.sort_index(axis=1)
-
+        fake: pd.DataFrame = numerical_encoding(
+            self.fake, nominal_columns=cat_cols
+        ).astype(float)  # type: ignore
         for col in real.columns:
             if col not in fake:
                 logger.warning(f"Adding column {col} with all 0s")
                 fake[col] = 0.0
+        fake = fake.sort_index(axis=1)
 
         # Cast True/False columns to 0/1.
         # bool_cols = real.select_dtypes("bool").columns
@@ -612,7 +613,7 @@ class TableEvaluator:
 
         return result
 
-    def row_distance(self, n_samples: int | None = None) -> Tuple[np.number, np.number]:
+    def row_distance(self, n_samples: int | None = None) -> tuple[float, float]:
         """
 
         Calculate mean and standard deviation distances between `self.fake` and `self.real`.
@@ -754,7 +755,7 @@ class TableEvaluator:
             "Mean Correlation between fake and real columns": statistical_results[
                 "column_correlation"
             ],
-            f'{"1 - MAPE Estimator results" if target_type == "class" else "Correlation RMSE"}': ml_efficacy_results[
+            f"{'1 - MAPE Estimator results' if target_type == 'class' else 'Correlation RMSE'}": ml_efficacy_results[
                 "estimators"
             ],
         }
@@ -792,7 +793,7 @@ class TableEvaluator:
             )
 
         else:
-            print(f'\n{ml_efficacy_results["efficacy_title"]}:')
+            print(f"\n{ml_efficacy_results['efficacy_title']}:")
             print(self.estimators_scores.to_string())
 
             print("\nPrivacy results:")
