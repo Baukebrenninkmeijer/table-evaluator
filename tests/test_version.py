@@ -4,6 +4,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from table_evaluator import __version__, _get_version
 
 

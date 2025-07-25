@@ -142,7 +142,7 @@ lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT'
 lint.ignore = ['G001', 'G002', 'Q000', 'TRY003', 'G004', 'T201', 'Q000', 'TRY300', 'TC003']
 
 # Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 
 [tool.ruff.format]

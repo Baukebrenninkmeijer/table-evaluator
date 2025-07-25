@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pytest
 from pydantic import ValidationError
+
 from table_evaluator.models.privacy_models import (
     AnalysisMetadata,
     AttackModelResult,

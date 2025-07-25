@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+
 from table_evaluator.visualization.visualization_manager import VisualizationManager
 
 
