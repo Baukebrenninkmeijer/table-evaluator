@@ -1,5 +1,8 @@
 """Unified privacy evaluation functionality combining basic and advanced privacy analysis."""
 
+import logging
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
@@ -21,16 +24,113 @@ logger = logging.getLogger(__name__)
 
 
 class PrivacyEvaluator:
-    """Handles privacy evaluation of real vs synthetic data."""
+    """Handles privacy evaluation of real vs synthetic data with LRU caching for performance."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, cache_size: int = 128):
         """
         Initialize the privacy evaluator.
 
         Args:
             verbose: Whether to print detailed output
+            cache_size: Maximum size of the LRU cache for expensive computations
         """
         self.verbose = verbose
+
+        # Apply LRU caching to expensive methods that only use hashable arguments
+        self._cached_row_distance = lru_cache(maxsize=cache_size)(self._compute_row_distance_cached)
+        self._cached_duplicates = lru_cache(maxsize=cache_size)(self._compute_duplicates_cached)
+
+        # Store data for cache lookups (simple in-memory storage)
+        self._data_cache: dict[str, pd.DataFrame] = {}
+
+    def _compute_data_hash(self, data_repr: str) -> int:
+        """
+        Compute a hash of DataFrame for caching purposes.
+
+        Args:
+            data_repr: String representation of DataFrame
+
+        Returns:
+            Hash value for the data
+        """
+        return hash(data_repr)
+
+    def _dataframe_to_cache_key(self, df: pd.DataFrame) -> str:
+        """
+        Convert DataFrame to a string representation for caching.
+
+        Args:
+            df: DataFrame to convert
+
+        Returns:
+            String representation suitable for hashing
+        """
+        return f'{df.shape}_{hash(df.to_string())}'
+
+    def _compute_duplicates_cached(self, data_key: str) -> tuple[pd.DataFrame, int]:
+        """
+        Cached computation of duplicate rows within a dataset.
+
+        Args:
+            data_key: Cache key for the data
+
+        Returns:
+            Tuple of (duplicate_rows, duplicate_count)
+        """
+        if data_key not in self._data_cache:
+            return pd.DataFrame(), 0
+
+        data = self._data_cache[data_key]
+        duplicates = data[data.duplicated(keep=False)]
+        return duplicates, len(duplicates)
+
+    def _compute_row_distance_cached(
+        self, real_key: str, synthetic_key: str, max_samples: int = 5000
+    ) -> tuple[float, float]:
+        """
+        Cached computation of row distances between real and synthetic data.
+
+        Args:
+            real_key: Cache key for real data
+            synthetic_key: Cache key for synthetic data
+            max_samples: Maximum number of samples to use for distance calculation
+
+        Returns:
+            Tuple of (mean_distance, std_distance)
+        """
+        try:
+            if real_key not in self._data_cache or synthetic_key not in self._data_cache:
+                return 0.0, 0.0
+
+            real_data = self._data_cache[real_key]
+            synthetic_data = self._data_cache[synthetic_key]
+
+            # Select only numerical columns
+            real_num = real_data.select_dtypes(include=[np.number])
+            synthetic_num = synthetic_data.select_dtypes(include=[np.number])
+
+            # Use common columns
+            common_cols = list(set(real_num.columns) & set(synthetic_num.columns))
+            if not common_cols:
+                return 0.0, 0.0
+
+            real_num = real_num[common_cols]
+            synthetic_num = synthetic_num[common_cols]
+
+            # Sample for computational efficiency
+            n_samples = min(max_samples, len(real_num), len(synthetic_num))
+            real_sample = real_num.sample(n=n_samples, random_state=42)
+            synthetic_sample = synthetic_num.sample(n=n_samples, random_state=42)
+
+            # Calculate pairwise distances
+            distances = cdist(real_sample.values, synthetic_sample.values, metric='euclidean')
+            min_distances = distances.min(axis=1)
+
+            return float(np.mean(min_distances)), float(np.std(min_distances))
+
+        except Exception:
+            logger.exception('Error calculating row distances')
+            return 0.0, 0.0
 
     def get_copies(self, real: pd.DataFrame, fake: pd.DataFrame, return_len: bool = False) -> pd.DataFrame | int:
         """
@@ -53,21 +153,18 @@ class PrivacyEvaluator:
         duplicate_indices = duplicate_indices[duplicate_indices].sort_index().index.tolist()
 
         if self.verbose:
-            print(f'Number of copied rows: {len(duplicate_indices)}')
+            logger.info(f'Number of copied rows: {len(duplicate_indices)}')
 
-            return pd.DataFrame(copies) if copies else pd.DataFrame()
+        if return_len:
+            return len(duplicate_indices)
 
-        except Exception as e:
-            logger.error(f'Error finding copies: {e}')
-            if return_len:
-                return 0
-            return pd.DataFrame()
+        return pd.DataFrame(duplicate_indices) if duplicate_indices else pd.DataFrame()
 
     def get_duplicates(
-        self, real: pd.DataFrame, fake: pd.DataFrame, return_values: bool = True
+        self, real: pd.DataFrame, fake: pd.DataFrame, *, return_values: bool = True
     ) -> tuple[int, int] | tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Get duplicated rows within each dataset.
+        Get duplicated rows within each dataset (with caching).
 
         Args:
             real: DataFrame containing real data
@@ -78,41 +175,52 @@ class PrivacyEvaluator:
             Tuple of duplicate DataFrames or counts
         """
         try:
-            real_duplicates = real[real.duplicated(keep=False)]
-            fake_duplicates = fake[fake.duplicated(keep=False)]
+            # Use cached computation for duplicates
+            real_key = self._dataframe_to_cache_key(real)
+            fake_key = self._dataframe_to_cache_key(fake)
+
+            # Store data in cache for the cached methods to access
+            self._data_cache[real_key] = real
+            self._data_cache[fake_key] = fake
+
+            real_duplicates, real_count = self._cached_duplicates(real_key)
+            fake_duplicates, fake_count = self._cached_duplicates(fake_key)
 
             if return_values:
                 return real_duplicates, fake_duplicates
-            return len(real_duplicates), len(fake_duplicates)
+            return real_count, fake_count
 
-    def row_distance(self, real: pd.DataFrame, fake: pd.DataFrame, n_samples: int | None = None) -> tuple[float, float]:
+        except Exception:
+            logger.exception('Error finding duplicates')
+            if return_values:
+                return pd.DataFrame(), pd.DataFrame()
+            return 0, 0
+
+    def row_distance(self, real: pd.DataFrame, synthetic: pd.DataFrame, max_samples: int = 5000) -> tuple[float, float]:
+        """
+        Calculate mean and std of row-wise distances between real and synthetic data (with caching).
+
+        Args:
+            real: DataFrame containing real data
+            synthetic: DataFrame containing synthetic data
+            max_samples: Maximum number of samples to use for distance calculation
+
+        Returns:
+            Tuple of (mean_distance, std_distance)
         """
         try:
-            # Select only numerical columns
-            real_num = real.select_dtypes(include=[np.number])
-            synthetic_num = synthetic.select_dtypes(include=[np.number])
+            # Use cached computation for row distances
+            real_key = self._dataframe_to_cache_key(real)
+            synthetic_key = self._dataframe_to_cache_key(synthetic)
 
-            # Use common columns
-            common_cols = list(set(real_num.columns) & set(synthetic_num.columns))
-            if not common_cols:
-                return 0.0, 0.0
+            # Store data in cache for the cached methods to access
+            self._data_cache[real_key] = real
+            self._data_cache[synthetic_key] = synthetic
 
-            real_num = real_num[common_cols]
-            synthetic_num = synthetic_num[common_cols]
+            return self._cached_row_distance(real_key, synthetic_key, max_samples)
 
-            # Sample for computational efficiency
-            n_samples = min(1000, len(real_num), len(synthetic_num))
-            real_sample = real_num.sample(n=n_samples, random_state=42)
-            synthetic_sample = synthetic_num.sample(n=n_samples, random_state=42)
-
-            # Calculate pairwise distances
-            distances = cdist(real_sample.values, synthetic_sample.values, metric='euclidean')
-            min_distances = distances.min(axis=1)
-
-            return float(np.mean(min_distances)), float(np.std(min_distances))
-
-        except Exception as e:
-            logger.error(f'Error calculating row distances: {e}')
+        except Exception:
+            logger.exception('Error calculating row distances')
             return 0.0, 0.0
 
     def _assess_privacy_risk(
@@ -234,7 +342,7 @@ class PrivacyEvaluator:
             PrivacyEvaluationResults: Comprehensive privacy analysis results
         """
         if self.verbose:
-            print('Running comprehensive privacy evaluation...')
+            logger.info('Running comprehensive privacy evaluation...')
 
         analysis_errors = []
 
@@ -250,12 +358,17 @@ class PrivacyEvaluator:
 
         if include_basic:
             try:
-                copies_count = self.get_copies(real_data, synthetic_data, return_len=True)
+                copies_count_result = self.get_copies(real_data, synthetic_data, return_len=True)
+                copies_count = int(copies_count_result) if isinstance(copies_count_result, int) else 0
                 copies_fraction = copies_count / len(synthetic_data) if len(synthetic_data) > 0 else 0.0
 
-                real_dup_count, synthetic_dup_count = self.get_duplicates(
-                    real_data, synthetic_data, return_values=False
-                )
+                duplicate_counts = self.get_duplicates(real_data, synthetic_data, return_values=False)
+                if isinstance(duplicate_counts, tuple) and len(duplicate_counts) == 2:
+                    real_dup_count = int(duplicate_counts[0]) if isinstance(duplicate_counts[0], int) else 0
+                    synthetic_dup_count = int(duplicate_counts[1]) if isinstance(duplicate_counts[1], int) else 0
+                else:
+                    real_dup_count, synthetic_dup_count = 0, 0
+
                 mean_dist, std_dist = self.row_distance(real_data, synthetic_data)
 
                 basic_privacy = BasicPrivacyAnalysis(
@@ -267,7 +380,7 @@ class PrivacyEvaluator:
                     std_row_distance=std_dist,
                 )
             except Exception as e:
-                logger.error(f'Basic privacy evaluation failed: {e}')
+                logger.exception('Basic privacy evaluation failed')
                 analysis_errors.append(f'Basic privacy analysis: {e!s}')
 
         # K-anonymity analysis
@@ -279,7 +392,7 @@ class PrivacyEvaluator:
 
                 k_anonymity = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
             except Exception as e:
-                logger.error(f'K-anonymity evaluation failed: {e}')
+                logger.exception('K-anonymity evaluation failed')
                 analysis_errors.append(f'K-anonymity analysis: {e!s}')
 
         # Membership inference analysis
@@ -288,7 +401,7 @@ class PrivacyEvaluator:
             try:
                 membership_inference = simulate_membership_inference_attack(real_data, synthetic_data)
             except Exception as e:
-                logger.error(f'Membership inference evaluation failed: {e}')
+                logger.exception('Membership inference evaluation failed')
                 analysis_errors.append(f'Membership inference analysis: {e!s}')
 
         # Overall assessment

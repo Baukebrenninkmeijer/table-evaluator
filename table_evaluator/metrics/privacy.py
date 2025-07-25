@@ -93,6 +93,7 @@ def calculate_k_anonymity(
             class_size_distribution=StatisticalDistribution(
                 count=0.0, mean=0.0, std=0.0, min=0.0, percentile_25=0.0, percentile_50=0.0, percentile_75=0.0, max=0.0
             ),
+            sample_size=len(df) if df is not None else 0,
         )
 
     # Group by quasi-identifiers
@@ -161,6 +162,7 @@ def calculate_k_anonymity(
             avg_class_size=float(avg_class_size),
             class_size_distribution=class_size_distribution,
             l_diversity_results=l_diversity_results,
+            sample_size=len(df),
         )
 
     except Exception as e:
@@ -174,6 +176,7 @@ def calculate_k_anonymity(
             class_size_distribution=StatisticalDistribution(
                 count=0.0, mean=0.0, std=0.0, min=0.0, percentile_25=0.0, percentile_50=0.0, percentile_75=0.0, max=0.0
             ),
+            sample_size=0,
         )
 
 
@@ -213,6 +216,7 @@ def simulate_membership_inference_attack(
             avg_attack_accuracy=0.5,
             privacy_vulnerability='Low',
             recommendation='No suitable columns found for attack simulation',
+            sample_size=len(real_data),
         )
 
     try:
@@ -292,8 +296,8 @@ def simulate_membership_inference_attack(
 
                 accuracies.append(accuracy)
 
-            except Exception as e:
-                logger.error(f'Error training {model_name}: {e}')
+            except Exception:  # noqa: PERF203
+                logger.exception(f'Error training {model_name}')
                 # Skip this model if it fails
 
         # Overall assessment
@@ -319,21 +323,24 @@ def simulate_membership_inference_attack(
                 avg_attack_accuracy=float(avg_accuracy),
                 privacy_vulnerability=vulnerability_level,
                 recommendation=recommendation,
+                sample_size=min_samples,
             )
         return MembershipInferenceAnalysis(
             max_attack_accuracy=0.5,
             avg_attack_accuracy=0.5,
             privacy_vulnerability='Low',
             recommendation='No attack models could be trained successfully',
+            sample_size=min(len(real_data), len(synthetic_data)),
         )
 
     except Exception as e:
-        logger.error(f'Error in membership inference attack simulation: {e}')
+        logger.exception('Error in membership inference attack simulation')
         return MembershipInferenceAnalysis(
             max_attack_accuracy=0.5,
             avg_attack_accuracy=0.5,
             privacy_vulnerability='Low',
             recommendation=f'Error in attack simulation: {e}',
+            sample_size=min(len(real_data), len(synthetic_data)),
         )
 
 

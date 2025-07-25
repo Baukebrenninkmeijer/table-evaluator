@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
+import pendulum
 from pydantic import BaseModel, Field
+
+
+class AnalysisMetadata(BaseModel):
+    """Metadata for privacy analysis results."""
+
+    analysis_timestamp: datetime = Field(default_factory=lambda: pendulum.now('Europe/Paris'))
+    library_version: str = Field(default='1.9.0')
+    analysis_duration_seconds: float | None = None
+
+
+class BaseStatisticalResult(BaseModel):
+    """Base class for statistical analysis results with common metadata."""
+
+    analysis_timestamp: datetime = Field(default_factory=lambda: pendulum.now('Europe/Paris'))
+    sample_size: int = Field(ge=0, description='Number of samples analyzed')
+    computation_method: str = Field(default='standard', description='Method used for computation')
 
 
 class StatisticalDistribution(BaseModel):
@@ -32,7 +50,7 @@ class LDiversityAnalysis(BaseModel):
     diversity_distribution: StatisticalDistribution
 
 
-class KAnonymityAnalysis(BaseModel):
+class KAnonymityAnalysis(BaseStatisticalResult):
     """Core k-anonymity analysis results."""
 
     k_value: int = Field(ge=0)
@@ -55,7 +73,7 @@ class AttackModelResult(BaseModel):
     baseline_accuracy: float = Field(default=0.5)
 
 
-class MembershipInferenceAnalysis(BaseModel):
+class MembershipInferenceAnalysis(BaseStatisticalResult):
     """Complete membership inference attack analysis."""
 
     # Individual model results (optional for detailed analysis)
@@ -92,6 +110,9 @@ class PrivacyRiskAssessment(BaseModel):
 
 class PrivacyEvaluationResults(BaseModel):
     """Complete privacy evaluation results with clean, strongly-typed structure."""
+
+    # Analysis metadata
+    metadata: AnalysisMetadata = Field(default_factory=AnalysisMetadata)
 
     # Core analysis results
     basic_privacy: BasicPrivacyAnalysis
