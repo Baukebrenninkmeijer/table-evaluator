@@ -2,12 +2,14 @@ from typing import Any
 
 import pandas as pd
 
+from table_evaluator.types import PathLike
+
 
 def load_data(
-    path_real: str,
-    path_fake: str,
-    real_sep: str = ",",
-    fake_sep: str = ",",
+    path_real: PathLike,
+    path_fake: PathLike,
+    real_sep: str = ',',
+    fake_sep: str = ',',
     drop_columns: list | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -30,10 +32,10 @@ def load_data(
         try:
             fake = fake.drop(columns=drop_columns)
         except KeyError:
-            ValueError(f"Some of {drop_columns} were not found on fake.index.")
+            ValueError(f'Some of {drop_columns} were not found on fake.index.')
         if len(fake.columns.tolist()) != len(real.columns.tolist()):
             raise ValueError(
-                f"Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}"
+                f'Real and fake do not have same nr of columns: {len(fake.columns)} and {len(real.columns)}'
             )
         fake.columns = real.columns
     else:
@@ -45,7 +47,7 @@ def load_data(
 
 
 def dict_to_df(data: dict[str, Any]) -> pd.DataFrame:
-    return pd.DataFrame({"result": list(data.values())}, index=list(data.keys()))
+    return pd.DataFrame({'result': list(data.values())}, index=list(data.keys()))
 
 
 def _preprocess_data(
@@ -58,7 +60,7 @@ def _preprocess_data(
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     # Make sure columns and their order are the same.
     if set(real.columns.tolist()) != set(fake.columns.tolist()):
-        raise ValueError("Columns in real and fake dataframe are not the same")
+        raise ValueError('Columns in real and fake dataframe are not the same')
     if len(real.columns) == len(fake.columns):  # Apply identical ordering.
         fake = fake[real.columns.tolist()]
 
@@ -67,17 +69,13 @@ def _preprocess_data(
         fake = fake.infer_objects()
         numerical_columns = [
             column
-            for column in real.select_dtypes(include="number").columns
+            for column in real.select_dtypes(include='number').columns
             if len(real[column].unique()) > unique_thresh
         ]
-        categorical_columns = [
-            column for column in real.columns if column not in numerical_columns
-        ]
+        categorical_columns = [column for column in real.columns if column not in numerical_columns]
     else:
         categorical_columns = cat_cols
-        numerical_columns = [
-            column for column in real.columns if column not in cat_cols
-        ]
+        numerical_columns = [column for column in real.columns if column not in cat_cols]
 
     # Make sure the number of samples is equal in both datasets.
     if n_samples is None:
@@ -85,21 +83,15 @@ def _preprocess_data(
     elif len(fake) >= n_samples and len(real) >= n_samples:
         n_samples = n_samples
     else:
-        raise Exception(
-            f"Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}"
-        )
+        raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
 
     real = real.sample(n_samples, random_state=seed).reset_index(drop=True)
     fake = fake.sample(n_samples, random_state=seed).reset_index(drop=True)
-    assert len(real) == len(fake), "len(real) != len(fake)"
+    assert len(real) == len(fake), 'len(real) != len(fake)'
 
-    real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna("[NAN]")
-    fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna("[NAN]")
+    real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna('[NAN]')
+    fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna('[NAN]')
 
-    real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(
-        real[numerical_columns].mean()
-    )
-    fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(
-        fake[numerical_columns].mean()
-    )
+    real.loc[:, numerical_columns] = real.loc[:, numerical_columns].fillna(real[numerical_columns].mean())
+    fake.loc[:, numerical_columns] = fake.loc[:, numerical_columns].fillna(fake[numerical_columns].mean())
     return real, fake, numerical_columns, categorical_columns

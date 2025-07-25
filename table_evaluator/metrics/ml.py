@@ -491,10 +491,10 @@ def train_test_on_synthetic(
 ) -> dict:
     """
     Train a model on synthetic data and test on real data.
-    
+
     This is a common evaluation pattern to assess how well synthetic data
     can replace real data for model training.
-    
+
     Args:
         real_data: Original dataset for testing
         synthetic_data: Synthetic dataset for training
@@ -502,7 +502,7 @@ def train_test_on_synthetic(
         model_type: Type of model to use
         task_type: Type of ML task ('classification', 'regression', or 'auto')
         random_state: Random seed for reproducibility
-        
+
     Returns:
         Dictionary with evaluation results
     """

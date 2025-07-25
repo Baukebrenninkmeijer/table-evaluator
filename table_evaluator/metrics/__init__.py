@@ -5,7 +5,7 @@ This module provides a unified interface for all metrics used in synthetic data 
 organized into logical categories:
 
 - Statistical metrics: Distribution comparison and association measures
-- Privacy metrics: Privacy risk assessment and anonymity analysis  
+- Privacy metrics: Privacy risk assessment and anonymity analysis
 - ML metrics: Machine learning utility evaluation
 
 The module maintains backward compatibility while providing a cleaner, more organized API.
