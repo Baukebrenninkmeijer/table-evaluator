@@ -24,7 +24,7 @@ class EvaluationConfig(BaseModel):
     estimator_configs: dict = {}
 
     # Validation
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration values."""
         if self.unique_thresh < 0:
             raise ValueError('unique_thresh must be non-negative')

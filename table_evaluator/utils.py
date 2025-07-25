@@ -89,7 +89,8 @@ def _preprocess_data(
 
     real = real.sample(n_samples, random_state=seed).reset_index(drop=True)
     fake = fake.sample(n_samples, random_state=seed).reset_index(drop=True)
-    assert len(real) == len(fake), 'len(real) != len(fake)'
+    if len(real) != len(fake):
+        raise ValueError(f'Length mismatch: real data has {len(real)} rows, fake data has {len(fake)} rows')
 
     real.loc[:, categorical_columns] = real.loc[:, categorical_columns].fillna('[NAN]')
     fake.loc[:, categorical_columns] = fake.loc[:, categorical_columns].fillna('[NAN]')
@@ -100,4 +101,4 @@ def _preprocess_data(
 
 
 def set_random_seed(seed: int = RANDOM_SEED) -> None:
-    np.random.seed(seed)
+    np.random.default_rng(seed)

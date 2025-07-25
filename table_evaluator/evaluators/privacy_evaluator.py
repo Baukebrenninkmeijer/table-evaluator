@@ -2,6 +2,7 @@
 
 import logging
 from functools import lru_cache
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 class PrivacyEvaluator:
     """Handles privacy evaluation of real vs synthetic data with LRU caching for performance."""
 
-    def __init__(self, verbose: bool = False, cache_size: int = 128):
+    def __init__(self, *, verbose: bool = False, cache_size: int = 128) -> None:
         """
         Initialize the privacy evaluator.
 
@@ -132,7 +133,7 @@ class PrivacyEvaluator:
             logger.exception('Error calculating row distances')
             return 0.0, 0.0
 
-    def get_copies(self, real: pd.DataFrame, fake: pd.DataFrame, return_len: bool = False) -> pd.DataFrame | int:
+    def get_copies(self, real: pd.DataFrame, fake: pd.DataFrame, *, return_len: bool = False) -> pd.DataFrame | int:
         """
         Check whether any real values occur in the fake data (exact matches).
 
@@ -223,23 +224,20 @@ class PrivacyEvaluator:
             logger.exception('Error calculating row distances')
             return 0.0, 0.0
 
-    def _assess_privacy_risk(
-        self,
-        basic_privacy: BasicPrivacyAnalysis,
-        k_anonymity: KAnonymityAnalysis | None,
-        membership_inference: MembershipInferenceAnalysis | None,
-    ) -> PrivacyRiskAssessment:
-        """Assess overall privacy risk based on analysis results."""
+    def _assess_basic_privacy_risks(self, basic_privacy: BasicPrivacyAnalysis) -> list[str]:
+        """Assess basic privacy risks."""
         risks = []
-
-        # Basic privacy risks
         if basic_privacy.exact_copies_fraction > 0.1:
             risks.append('High proportion of exact copies detected')
         elif basic_privacy.exact_copies_fraction > 0.01:
             risks.append('Moderate proportion of exact copies detected')
+        return risks
 
-        # K-anonymity risks
+    def _assess_k_anonymity_risks(self, k_anonymity: KAnonymityAnalysis | None) -> tuple[list[str], float]:
+        """Assess k-anonymity risks and return contribution score."""
+        risks = []
         k_anon_contribution = 1.0
+
         if k_anonymity:
             if k_anonymity.k_value < 2:
                 risks.append('High k-anonymity risk')
@@ -248,8 +246,15 @@ class PrivacyEvaluator:
                 risks.append('Moderate k-anonymity risk')
                 k_anon_contribution = min(1.0, k_anonymity.k_value / 5.0)
 
-        # Membership inference risks
+        return risks, k_anon_contribution
+
+    def _assess_membership_inference_risks(
+        self, membership_inference: MembershipInferenceAnalysis | None
+    ) -> tuple[list[str], float]:
+        """Assess membership inference risks and return contribution score."""
+        risks = []
         inference_contribution = 0.0
+
         if membership_inference:
             if membership_inference.max_attack_accuracy > 0.75:
                 risks.append('High membership inference risk')
@@ -258,26 +263,55 @@ class PrivacyEvaluator:
                 risks.append('Moderate membership inference risk')
                 inference_contribution = (membership_inference.max_attack_accuracy - 0.5) * 2
 
-        # Overall risk assessment
-        if any('High' in risk for risk in risks):
-            risk_level = 'High'
-        elif any('Moderate' in risk for risk in risks):
-            risk_level = 'Moderate'
-        else:
-            risk_level = 'Low'
+        return risks, inference_contribution
 
-        # Calculate combined privacy score
+    def _calculate_overall_risk_level(self, all_risks: list[str]) -> Literal['Low', 'Moderate', 'High']:
+        """Determine overall risk level from identified risks."""
+        if any('High' in risk for risk in all_risks):
+            return 'High'
+        if any('Moderate' in risk for risk in all_risks):
+            return 'Moderate'
+        return 'Low'
+
+    def _calculate_privacy_score(
+        self,
+        k_anon_contribution: float,
+        inference_contribution: float,
+        basic_privacy: BasicPrivacyAnalysis,
+    ) -> float:
+        """Calculate combined privacy score."""
         base_score = 1.0
         base_score *= k_anon_contribution
         base_score *= max(0.0, 1.0 - inference_contribution)
         base_score *= max(0.0, 1.0 - basic_privacy.exact_copies_fraction * 2)
 
-        privacy_score = max(0.0, min(1.0, base_score))
+        return max(0.0, min(1.0, base_score))
+
+    def _assess_privacy_risk(
+        self,
+        basic_privacy: BasicPrivacyAnalysis,
+        k_anonymity: KAnonymityAnalysis | None,
+        membership_inference: MembershipInferenceAnalysis | None,
+    ) -> PrivacyRiskAssessment:
+        """Assess overall privacy risk based on analysis results."""
+        # Assess different types of privacy risks
+        basic_risks = self._assess_basic_privacy_risks(basic_privacy)
+        k_anon_risks, k_anon_contribution = self._assess_k_anonymity_risks(k_anonymity)
+        inference_risks, inference_contribution = self._assess_membership_inference_risks(membership_inference)
+
+        # Combine all risks
+        all_risks = basic_risks + k_anon_risks + inference_risks
+
+        # Determine overall risk level
+        risk_level = self._calculate_overall_risk_level(all_risks)
+
+        # Calculate combined privacy score
+        privacy_score = self._calculate_privacy_score(k_anon_contribution, inference_contribution, basic_privacy)
 
         return PrivacyRiskAssessment(
             risk_level=risk_level,
             privacy_score=privacy_score,
-            identified_risks=risks,
+            identified_risks=all_risks,
             k_anonymity_contribution=k_anon_contribution,
             inference_risk_contribution=inference_contribution,
         )
@@ -320,10 +354,10 @@ class PrivacyEvaluator:
         synthetic_data: pd.DataFrame,
         quasi_identifiers: list[str] | None = None,
         sensitive_attributes: list[str] | None = None,
+        *,
         include_basic: bool = True,
         include_k_anonymity: bool = True,
         include_membership_inference: bool = True,
-        **kwargs,
     ) -> 'PrivacyEvaluationResults':
         """
         Comprehensive privacy evaluation with all methods.

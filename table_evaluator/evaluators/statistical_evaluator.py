@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class StatisticalEvaluator:
     """Unified statistical evaluator combining basic and advanced statistical analysis."""
 
-    def __init__(self, comparison_metric: Callable | None = None, verbose: bool = False):
+    def __init__(self, comparison_metric: Callable | None = None, *, verbose: bool = False) -> None:
         """
         Initialize the statistical evaluator.
 
@@ -107,7 +107,7 @@ class StatisticalEvaluator:
                 nom_nom_assoc='theil',
             )['corr']
 
-            values = corr_df.values
+            values = corr_df.to_numpy()
             # Remove diagonal elements (self-correlations)
             values = values[~np.eye(values.shape[0], dtype=bool)].reshape(values.shape[0], -1)
             total_metrics[ds_name] = values.flatten()
@@ -119,7 +119,7 @@ class StatisticalEvaluator:
         corr, p = self.comparison_metric(total_metrics['real'], total_metrics['fake'])
         return corr
 
-    def pca_correlation(self, real: pd.DataFrame, fake: pd.DataFrame, lingress: bool = False) -> float:
+    def pca_correlation(self, real: pd.DataFrame, fake: pd.DataFrame, *, lingress: bool = False) -> float:
         """
         Calculate the relation between PCA explained variance values.
 
@@ -162,6 +162,7 @@ class StatisticalEvaluator:
         real: pd.DataFrame,
         fake: pd.DataFrame,
         numerical_columns: list[str],
+        *,
         include_2d: bool = False,
         enable_sampling: bool = False,
         max_samples: int = 5000,
@@ -213,23 +214,24 @@ class StatisticalEvaluator:
                 results['distances_2d'] = distances_2d
 
             # Per-column detailed analysis
-            column_details = {}
-            for col in numerical_columns:
+            def _compute_transport_cost_safe(col: str) -> tuple[float, np.ndarray, np.ndarray]:
                 try:
                     cost, plan, bins = optimal_transport_cost(real[col], fake[col])
-                    column_details[col] = {
+                    return {
                         'transport_cost': cost,
                         'transport_plan_shape': plan.shape,
                         'n_bins': len(bins) - 1,
                     }
                 except Exception as e:
                     logger.warning(f'Failed to compute transport cost for {col}: {e}')
-                    column_details[col] = {'error': str(e)}
+                    return {'error': str(e)}
+
+            column_details = {col: _compute_transport_cost_safe(col) for col in numerical_columns}
 
             results['column_details'] = column_details
 
             # Overall quality metrics
-            p1_distances = distances_p1['wasserstein_distance'].values
+            p1_distances = distances_p1['wasserstein_distance'].to_numpy()
             results['quality_metrics'] = {
                 'mean_wasserstein_p1': np.mean(p1_distances),
                 'median_wasserstein_p1': np.median(p1_distances),
@@ -240,7 +242,7 @@ class StatisticalEvaluator:
             }
 
         except Exception as e:
-            logger.error(f'Error in Wasserstein evaluation: {e}')
+            logger.exception('Error in Wasserstein evaluation')
             results['error'] = str(e)
 
         return results
@@ -251,9 +253,8 @@ class StatisticalEvaluator:
         fake: pd.DataFrame,
         numerical_columns: list[str],
         kernel_types: list[str] | None = None,
+        *,
         include_multivariate: bool = True,
-        enable_sampling: bool = False,
-        max_samples: int = 5000,
     ) -> dict:
         """
         Comprehensive Maximum Mean Discrepancy evaluation.
@@ -305,108 +306,91 @@ class StatisticalEvaluator:
                 results['best_kernel'] = best_kernel_info
 
         except Exception as e:
-            logger.error(f'Error in MMD evaluation: {e}')
+            logger.exception('Error in MMD evaluation')
             results['error'] = str(e)
 
         return results
 
-    def evaluate(
+    def _run_basic_statistical_evaluation(
         self,
         real_data: pd.DataFrame,
         synthetic_data: pd.DataFrame,
         numerical_columns: list[str],
-        categorical_columns: list[str] | None = None,
-        include_basic: bool = True,
-        include_wasserstein: bool = True,
-        include_mmd: bool = True,
-        wasserstein_config: dict | None = None,
-        mmd_config: dict | None = None,
-        **kwargs,
-    ) -> 'StatisticalEvaluationResults':
-        """
-        Comprehensive statistical evaluation with all methods.
-
-        Args:
-            real_data: DataFrame containing real data
-            synthetic_data: DataFrame containing synthetic data
-            numerical_columns: List of numerical column names
-            categorical_columns: List of categorical column names
-            include_basic: Whether to include basic statistical evaluation
-            include_wasserstein: Whether to include Wasserstein distance analysis
-            include_mmd: Whether to include MMD analysis
-            wasserstein_config: Configuration for Wasserstein evaluation
-            mmd_config: Configuration for MMD evaluation
-            **kwargs: Additional parameters
-
-        Returns:
-            dict: Comprehensive statistical analysis results
-        """
-        if self.verbose:
-            print('Running comprehensive statistical evaluation...')
-
-        results = {
-            'basic_statistics': {},
-            'wasserstein': {},
-            'mmd': {},
-            'combined_metrics': {},
-            'recommendations': [],
-        }
-
-        # Basic statistical evaluation
-        if include_basic:
-            try:
-                if categorical_columns is None:
-                    categorical_columns = []
-
-                results['basic_statistics'] = {
-                    'basic_statistical_evaluation': self.basic_statistical_evaluation(
-                        real_data, synthetic_data, numerical_columns
-                    ),
-                    'correlation_correlation': self.correlation_correlation(
-                        real_data, synthetic_data, categorical_columns
-                    )
-                    if categorical_columns
-                    else None,
-                    'pca_correlation': self.pca_correlation(
-                        real_data[numerical_columns], synthetic_data[numerical_columns]
-                    ),
-                }
-            except Exception as e:
-                logger.error(f'Basic statistical evaluation failed: {e}')
-                results['basic_statistics'] = {'error': str(e)}
-
-        # Wasserstein analysis
-        if include_wasserstein:
-            try:
-                if wasserstein_config is None:
-                    wasserstein_config = {}
-                results['wasserstein'] = self.wasserstein_evaluation(
-                    real_data, synthetic_data, numerical_columns, **wasserstein_config
-                )
-            except Exception as e:
-                logger.error(f'Wasserstein evaluation failed: {e}')
-                results['wasserstein'] = {'error': str(e)}
-
-        # MMD analysis
-        if include_mmd:
-            try:
-                if mmd_config is None:
-                    mmd_config = {}
-                results['mmd'] = self.mmd_evaluation(real_data, synthetic_data, numerical_columns, **mmd_config)
-            except Exception as e:
-                logger.error(f'MMD evaluation failed: {e}')
-                results['mmd'] = {'error': str(e)}
-
-        # Combined analysis
+        categorical_columns: list[str],
+    ) -> dict:
+        """Run basic statistical evaluation with error handling."""
         try:
-            combined_metrics_dict = self._combine_metrics(results['wasserstein'], results['mmd'])
-            recommendations = self._generate_recommendations(results)
+            return {
+                'basic_statistical_evaluation': self.basic_statistical_evaluation(
+                    real_data, synthetic_data, numerical_columns
+                ),
+                'correlation_correlation': self.correlation_correlation(real_data, synthetic_data, categorical_columns)
+                if categorical_columns
+                else None,
+                'pca_correlation': self.pca_correlation(
+                    real_data[numerical_columns], synthetic_data[numerical_columns]
+                ),
+            }
         except Exception as e:
-            logger.error(f'Combined analysis failed: {e}')
-            combined_metrics_dict = {'error': str(e)}
-            recommendations = []
+            logger.exception('Basic statistical evaluation failed')
+            return {'error': str(e)}
 
-            # Build Pydantic models
+    def _run_wasserstein_evaluation(
+        self,
+        real_data: pd.DataFrame,
+        synthetic_data: pd.DataFrame,
+        numerical_columns: list[str],
+        wasserstein_config: dict,
+    ) -> dict:
+        """Run Wasserstein evaluation with error handling."""
+        try:
+            return self.wasserstein_evaluation(real_data, synthetic_data, numerical_columns, **wasserstein_config)
+        except Exception as e:
+            logger.exception('Wasserstein evaluation failed')
+            return {'error': str(e)}
+
+    def _run_mmd_evaluation(
+        self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame, numerical_columns: list[str], mmd_config: dict
+    ) -> dict:
+        """Run MMD evaluation with error handling."""
+        try:
+            return self.mmd_evaluation(real_data, synthetic_data, numerical_columns, **mmd_config)
+        except Exception as e:
+            logger.exception('MMD evaluation failed')
+            return {'error': str(e)}
+
+    def _run_combined_analysis(self, wasserstein_results: dict, mmd_results: dict) -> tuple[dict, list[str]]:
+        """Run combined analysis with error handling."""
+        try:
+            combined_metrics_dict = self._combine_metrics(wasserstein_results, mmd_results)
+            recommendations = self._generate_recommendations(
+                {
+                    'wasserstein': wasserstein_results,
+                    'mmd': mmd_results,
+                    'basic_statistics': {},
+                    'combined_metrics': combined_metrics_dict,
+                    'recommendations': [],
+                }
+            )
+        except Exception as e:
+            logger.exception('Combined analysis failed')
+            return {'error': str(e)}, []
+        else:
+            return combined_metrics_dict, recommendations
+
+    def _build_evaluation_results(
+        self,
+        results: dict,
+        combined_metrics_dict: dict,
+        recommendations: list[str],
+        numerical_columns: list[str],
+        categorical_columns: list[str],
+        *,
+        include_basic: bool,
+        include_wasserstein: bool,
+        include_mmd: bool,
+    ) -> 'StatisticalEvaluationResults':
+        """Build the final evaluation results with error handling."""
         try:
             # Basic statistical results
             basic_statistics = BasicStatisticalResults(**results['basic_statistics'])
@@ -433,8 +417,8 @@ class StatisticalEvaluator:
                 included_wasserstein=include_wasserstein,
                 included_mmd=include_mmd,
             )
-        except Exception as e:
-            logger.error(f'Error building StatisticalEvaluationResults: {e}')
+        except Exception:
+            logger.exception('Error building StatisticalEvaluationResults')
             # Fallback: create models with error handling
             return StatisticalEvaluationResults(
                 basic_statistics=BasicStatisticalResults(**results.get('basic_statistics', {})),
@@ -448,6 +432,83 @@ class StatisticalEvaluator:
                 included_wasserstein=include_wasserstein,
                 included_mmd=include_mmd,
             )
+
+    def evaluate(
+        self,
+        real_data: pd.DataFrame,
+        synthetic_data: pd.DataFrame,
+        numerical_columns: list[str],
+        categorical_columns: list[str] | None = None,
+        *,
+        include_basic: bool = True,
+        include_wasserstein: bool = True,
+        include_mmd: bool = True,
+        wasserstein_config: dict | None = None,
+        mmd_config: dict | None = None,
+    ) -> 'StatisticalEvaluationResults':
+        """
+        Comprehensive statistical evaluation with all methods.
+
+        Args:
+            real_data: DataFrame containing real data
+            synthetic_data: DataFrame containing synthetic data
+            numerical_columns: List of numerical column names
+            categorical_columns: List of categorical column names
+            include_basic: Whether to include basic statistical evaluation
+            include_wasserstein: Whether to include Wasserstein distance analysis
+            include_mmd: Whether to include MMD analysis
+            wasserstein_config: Configuration for Wasserstein evaluation
+            mmd_config: Configuration for MMD evaluation
+            **kwargs: Additional parameters
+
+        Returns:
+            dict: Comprehensive statistical analysis results
+        """
+        if self.verbose:
+            print('Running comprehensive statistical evaluation...')
+
+        # Initialize configuration defaults
+        if categorical_columns is None:
+            categorical_columns = []
+        if wasserstein_config is None:
+            wasserstein_config = {}
+        if mmd_config is None:
+            mmd_config = {}
+
+        results = {
+            'basic_statistics': {},
+            'wasserstein': {},
+            'mmd': {},
+        }
+
+        # Run evaluations
+        if include_basic:
+            results['basic_statistics'] = self._run_basic_statistical_evaluation(
+                real_data, synthetic_data, numerical_columns, categorical_columns
+            )
+
+        if include_wasserstein:
+            results['wasserstein'] = self._run_wasserstein_evaluation(
+                real_data, synthetic_data, numerical_columns, wasserstein_config
+            )
+
+        if include_mmd:
+            results['mmd'] = self._run_mmd_evaluation(real_data, synthetic_data, numerical_columns, mmd_config)
+
+        # Combined analysis
+        combined_metrics_dict, recommendations = self._run_combined_analysis(results['wasserstein'], results['mmd'])
+
+        # Build and return final results
+        return self._build_evaluation_results(
+            results,
+            combined_metrics_dict,
+            recommendations,
+            numerical_columns,
+            categorical_columns,
+            include_basic,
+            include_wasserstein,
+            include_mmd,
+        )
 
     # Helper methods
 

@@ -130,3 +130,11 @@ class PrivacyEvaluationResults(BaseModel):
     included_basic: bool = True
     included_k_anonymity: bool = False
     included_membership_inference: bool = False
+
+
+# Rebuild models that use datetime to resolve forward references
+AnalysisMetadata.model_rebuild()
+BaseStatisticalResult.model_rebuild()
+KAnonymityAnalysis.model_rebuild()
+MembershipInferenceAnalysis.model_rebuild()
+PrivacyEvaluationResults.model_rebuild()

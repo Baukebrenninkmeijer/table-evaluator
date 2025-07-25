@@ -1,5 +1,7 @@
 """Pydantic models for machine learning evaluation results."""
 
+from collections.abc import Iterator
+
 from pydantic import BaseModel, Field
 
 
@@ -30,19 +32,19 @@ class ClassificationResults(BaseModel):
         """Allow dictionary-style assignment for backward compatibility."""
         self.targets[key] = value
 
-    def items(self):
+    def items(self) -> dict[str, TargetEvaluationResult]:
         """Allow iteration over items for backward compatibility."""
         return self.targets.items()
 
-    def keys(self):
+    def keys(self) -> list[str]:
         """Allow access to keys for backward compatibility."""
         return self.targets.keys()
 
-    def values(self):
+    def values(self) -> dict[str, TargetEvaluationResult]:
         """Allow access to values for backward compatibility."""
         return self.targets.values()
 
-    def get(self, key: str, default=None):
+    def get(self, key: str, default: TargetEvaluationResult | None = None) -> TargetEvaluationResult | None:
         """Allow .get() method for backward compatibility."""
         return self.targets.get(key, default)
 
@@ -50,7 +52,7 @@ class ClassificationResults(BaseModel):
         """Allow len() function for backward compatibility."""
         return len(self.targets)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         """Allow iteration over keys for backward compatibility."""
         return iter(self.targets)
 
@@ -73,19 +75,19 @@ class RegressionResults(BaseModel):
         """Allow dictionary-style assignment for backward compatibility."""
         self.targets[key] = value
 
-    def items(self):
+    def items(self) -> dict[str, TargetEvaluationResult]:
         """Allow iteration over items for backward compatibility."""
         return self.targets.items()
 
-    def keys(self):
+    def keys(self) -> list[str]:
         """Allow access to keys for backward compatibility."""
         return self.targets.keys()
 
-    def values(self):
+    def values(self) -> dict[str, TargetEvaluationResult]:
         """Allow access to values for backward compatibility."""
         return self.targets.values()
 
-    def get(self, key: str, default=None):
+    def get(self, key: str, default: TargetEvaluationResult | None = None) -> TargetEvaluationResult | None:
         """Allow .get() method for backward compatibility."""
         return self.targets.get(key, default)
 
@@ -93,7 +95,7 @@ class RegressionResults(BaseModel):
         """Allow len() function for backward compatibility."""
         return len(self.targets)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         """Allow iteration over keys for backward compatibility."""
         return iter(self.targets)
 

@@ -1992,6 +1992,12 @@ dev = [
     { name = "pytest-benchmark" },
 ]
 
+[package.dev-dependencies]
+jupyter = [
+    { name = "ipython" },
+    { name = "ipywidgets" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'all'", specifier = ">=1.2.2.post1" },
@@ -2029,6 +2035,12 @@ requires-dist = [
     { name = "tqdm", specifier = "==4.66.5" },
 ]
 provides-extras = ["dev", "all"]
+
+[package.metadata.requires-dev]
+jupyter = [
+    { name = "ipython", specifier = ">=8.28.0" },
+    { name = "ipywidgets", specifier = ">=8.1.7" },
+]
 
 [[package]]
 name = "threadpoolctl"

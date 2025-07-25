@@ -28,26 +28,24 @@ from table_evaluator.evaluators.models.statistical_models import (
 )
 
 __all__ = [
-    # Statistical models
     'BasicStatisticalResults',
     'BestKernel',
+    'ClassificationResults',
+    'ClassificationSummary',
     'ColumnDetail',
     'CombinedStatisticalMetrics',
+    'MLEvaluationResults',
+    'MLSummary',
     'MMDQualityMetrics',
     'MMDResults',
     'MMDSummary',
+    'RegressionResults',
+    'RegressionSummary',
     'StatisticalEvaluationResults',
     'StatisticalSignificance',
+    'TargetsEvaluated',
     'WassersteinOverallMetrics',
     'WassersteinQualityMetrics',
     'WassersteinResults',
     'WassersteinSummary',
-    # ML models
-    'ClassificationResults',
-    'ClassificationSummary',
-    'MLEvaluationResults',
-    'MLSummary',
-    'RegressionResults',
-    'RegressionSummary',
-    'TargetsEvaluated',
 ]

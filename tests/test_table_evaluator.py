@@ -4,11 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 from pandas.api.types import is_numeric_dtype
+
 from table_evaluator.table_evaluator import TableEvaluator
 from table_evaluator.utils import set_random_seed
 
 # Ensure consistent random state
 set_random_seed()
+
+# Global random number generator for tests
+rng = np.random.default_rng(42)
 
 
 @pytest.fixture
@@ -36,20 +40,21 @@ def sample_data() -> tuple[pd.DataFrame, pd.DataFrame]:
 @pytest.fixture
 def large_sample_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     set_random_seed()
+    rng = np.random.default_rng(42)
     real_data = pd.DataFrame(
         {
-            'A': np.random.randint(0, 100, 1000),
-            'B': np.random.choice(['x', 'y', 'z'], 1000),
-            'C': np.random.rand(1000),
-            'D': np.random.choice([True, False], 1000),
+            'A': rng.integers(0, 100, 1000),
+            'B': rng.choice(['x', 'y', 'z'], 1000),
+            'C': rng.random(1000),
+            'D': rng.choice([True, False], 1000),
         }
     )
     fake_data = pd.DataFrame(
         {
-            'A': np.random.randint(0, 100, 1000),
-            'B': np.random.choice(['x', 'y', 'z'], 1000),
-            'C': np.random.rand(1000),
-            'D': np.random.choice([True, False], 1000),
+            'A': rng.integers(0, 100, 1000),
+            'B': rng.choice(['x', 'y', 'z'], 1000),
+            'C': rng.random(1000),
+            'D': rng.choice([True, False], 1000),
         }
     )
     return real_data, fake_data
@@ -77,7 +82,9 @@ def test_initialization(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     assert set(evaluator.numerical_columns) == {'A', 'C'}
 
 
-def test_initialization_with_custom_columns(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
+def test_initialization_with_custom_columns(
+    sample_data: tuple[pd.DataFrame, pd.DataFrame],
+):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake, cat_cols=['B'], unique_thresh=10)
     assert evaluator.categorical_columns == ['B']
@@ -144,8 +151,8 @@ def test_plot_pca(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
         patch('seaborn.scatterplot') as mock_scatterplot,
         patch('table_evaluator.visualization.visualization_manager.PCA') as mock_pca,
     ):
-        mock_pca().fit_transform.return_value = np.random.rand(5, 2)  # type: ignore
-        mock_pca().transform.return_value = np.random.rand(5, 2)  # type: ignore
+        mock_pca().fit_transform.return_value = rng.random((5, 2))  # type: ignore
+        mock_pca().transform.return_value = rng.random((5, 2))  # type: ignore
         evaluator.plot_pca(show=False)
         mock_subplots.assert_called_once()
         assert mock_scatterplot.call_count == 2
@@ -218,7 +225,11 @@ def test_pca_correlation(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
 
     with (
         patch('table_evaluator.evaluators.statistical_evaluator.PCA') as mock_pca,
-        patch.object(evaluator.statistical_evaluator, 'comparison_metric', return_value=(0.8, 0.1)),
+        patch.object(
+            evaluator.statistical_evaluator,
+            'comparison_metric',
+            return_value=(0.8, 0.1),
+        ),
     ):
         mock_pca().explained_variance_ = np.array([0.5, 0.3, 0.2])
         correlation = evaluator.pca_correlation(lingress=True)
@@ -241,7 +252,7 @@ def test_correlation_correlation(sample_data: tuple[pd.DataFrame, pd.DataFrame])
     evaluator = TableEvaluator(real, fake)
 
     with patch('table_evaluator.table_evaluator.associations') as mock_associations:
-        mock_associations.return_value = {'corr': pd.DataFrame(np.random.rand(4, 4))}
+        mock_associations.return_value = {'corr': pd.DataFrame(rng.random((4, 4)))}
         correlation = evaluator.correlation_correlation()
         assert isinstance(correlation, float)
 
@@ -285,7 +296,7 @@ def test_row_distance(sample_data: tuple[pd.DataFrame, pd.DataFrame]):
     real, fake = sample_data
     evaluator = TableEvaluator(real, fake)
 
-    mean, std = evaluator.row_distance(n_samples=5)
+    mean, std = evaluator.row_distance(max_samples=5)
     assert isinstance(mean, float)
     assert isinstance(std, float)
 
