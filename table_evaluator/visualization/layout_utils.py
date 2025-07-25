@@ -1,6 +1,5 @@
 """Layout utilities for plotting functions."""
 
-
 import pandas as pd
 
 
@@ -34,7 +33,7 @@ def calculate_label_based_height(dataframe: pd.DataFrame, base_height: int = 6) 
     max_len = 0
 
     # Find the maximum label length in categorical columns
-    categorical_data = dataframe.select_dtypes(include=["object"])
+    categorical_data = dataframe.select_dtypes(include=['object'])
     if not categorical_data.empty:
         lengths = []
         for col in categorical_data.columns:
