@@ -27,8 +27,8 @@ def test_preprocess_data():
     assert 'col1' in numerical_cols
     assert 'col3' in numerical_cols
     assert 'col2' in categorical_cols
-    assert not preprocessed_real.isnull().values.any()
-    assert not preprocessed_fake.isnull().values.any()
+    assert not preprocessed_real.isna().to_numpy().any()
+    assert not preprocessed_fake.isna().to_numpy().any()
 
     # Test with specified n_samples
     preprocessed_real, preprocessed_fake, _, _ = _preprocess_data(real_data.copy(), fake_data.copy(), n_samples=3)
@@ -67,5 +67,5 @@ def test_preprocess_data():
     real_data_nan = pd.DataFrame({'col1': [1, 2, np.nan, 4, 5], 'col2': ['A', np.nan, 'A', 'C', 'B']})
     fake_data_nan = pd.DataFrame({'col1': [6, np.nan, 8, 9, 10], 'col2': [np.nan, 'C', 'A', 'A', 'C']})
     preprocessed_real, preprocessed_fake, _, _ = _preprocess_data(real_data_nan.copy(), fake_data_nan.copy())
-    assert not preprocessed_real.isnull().to_numpy().any()
-    assert not preprocessed_fake.isnull().to_numpy().any()
+    assert not preprocessed_real.isna().to_numpy().any()
+    assert not preprocessed_fake.isna().to_numpy().any()

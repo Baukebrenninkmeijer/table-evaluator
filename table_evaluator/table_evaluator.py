@@ -893,7 +893,7 @@ class TableEvaluator:
             try:
                 results['basic'] = self.evaluate(target_col, target_type, return_outputs=True, **kwargs)
             except Exception as e:
-                logger.error(f'Basic evaluation failed: {e}')
+                logger.exception(f'Basic evaluation failed: {e}')
                 results['basic'] = {'error': str(e)}
 
         # Advanced statistical evaluation
@@ -901,7 +901,7 @@ class TableEvaluator:
             try:
                 results['advanced_statistical'] = self.advanced_statistical_evaluation()
             except Exception as e:
-                logger.error(f'Advanced statistical evaluation failed: {e}')
+                logger.exception(f'Advanced statistical evaluation failed: {e}')
                 results['advanced_statistical'] = {'error': str(e)}
 
         # Advanced privacy evaluation
@@ -909,7 +909,7 @@ class TableEvaluator:
             try:
                 results['advanced_privacy'] = self.advanced_privacy_evaluation()
             except Exception as e:
-                logger.error(f'Advanced privacy evaluation failed: {e}')
+                logger.exception('Advanced privacy evaluation failed.')
                 results['advanced_privacy'] = {'error': str(e)}
 
         return results
