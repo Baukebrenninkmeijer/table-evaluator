@@ -52,8 +52,18 @@ dev = [
 polars = [
     "polars>=0.20.0,<2.0.0",
 ]
+text = [
+    "sentence-transformers>=2.2.0",
+    "nltk>=3.8.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+]
 all = [
     "polars>=0.20.0,<2.0.0",
+    "sentence-transformers>=2.2.0",
+    "nltk>=3.8.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
     "build>=1.2.2.post1",
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.7",

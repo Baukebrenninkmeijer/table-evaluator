@@ -26,6 +26,14 @@ from .privacy_attacks import (
     comprehensive_privacy_analysis,
 )
 
+from .textual import (
+    text_length_distribution_similarity,
+    vocabulary_overlap_analysis,
+    tfidf_corpus_similarity,
+    semantic_similarity_embeddings,
+    comprehensive_textual_analysis,
+)
+
 __all__ = [
     # Wasserstein distance
     "wasserstein_distance_1d",
@@ -44,4 +52,10 @@ __all__ = [
     "calculate_k_anonymity",
     "simulate_membership_inference_attack",
     "comprehensive_privacy_analysis",
+    # Textual analysis
+    "text_length_distribution_similarity",
+    "vocabulary_overlap_analysis",
+    "tfidf_corpus_similarity",
+    "semantic_similarity_embeddings",
+    "comprehensive_textual_analysis",
 ]

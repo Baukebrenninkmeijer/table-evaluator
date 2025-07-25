@@ -17,6 +17,7 @@ from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalE
 from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
+from table_evaluator.evaluators.textual_evaluator import TextualEvaluator
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
@@ -41,6 +42,7 @@ class TableEvaluator:
         real: pd.DataFrame,
         fake: pd.DataFrame,
         cat_cols: Optional[List[str]] = None,
+        text_cols: Optional[List[str]] = None,
         unique_thresh: int = 0,
         metric: str | Callable = "pearsonr",
         verbose: bool = False,
@@ -58,6 +60,8 @@ class TableEvaluator:
             fake (pd.DataFrame): Synthetic dataset.
             cat_cols (Optional[List[str]], optional): Columns to be evaluated as discrete. If provided, unique_thresh
                 is ignored. Defaults to None.
+            text_cols (Optional[List[str]], optional): Columns containing textual data for textual comparison analysis.
+                Defaults to None.
             unique_thresh (int, optional): Threshold for automatic evaluation if a column is numeric. Defaults to 0.
             metric (str, optional): Metric for evaluating linear relations. Defaults to "pearsonr".
             verbose (bool, optional): Whether to print verbose output. Defaults to False.
@@ -66,6 +70,7 @@ class TableEvaluator:
             name (Optional[str], optional): Name of the TableEvaluator, used in plotting functions. Defaults to None.
             seed (int, optional): Random seed for reproducibility. Defaults to 1337.
             sample (bool, optional): Whether to sample the datasets to n_samples. Defaults to False.
+            infer_types (bool, optional): Whether to automatically infer column types. Defaults to True.
         """
         # Input validation
         if not isinstance(real, pd.DataFrame):
@@ -104,6 +109,16 @@ class TableEvaluator:
                     f"cat_cols contains columns not in DataFrames: {invalid_cols}"
                 )
 
+        # Validate textual columns
+        if text_cols is not None:
+            if not isinstance(text_cols, list):
+                raise TypeError("text_cols must be a list of strings or None")
+            invalid_cols = set(text_cols) - set(real.columns)
+            if invalid_cols:
+                raise ValueError(
+                    f"text_cols contains columns not in DataFrames: {invalid_cols}"
+                )
+
         # Validate other parameters
         if not isinstance(unique_thresh, int) or unique_thresh < 0:
             raise ValueError("unique_thresh must be a non-negative integer")
@@ -131,6 +146,7 @@ class TableEvaluator:
         self.unique_thresh = unique_thresh
         self.real = real.copy()
         self.fake = fake.copy()
+        self.text_cols = text_cols if text_cols is not None else []
         self.comparison_metric: Callable = (
             getattr(stats, metric) if isinstance(metric, str) else metric
         )
@@ -170,6 +186,7 @@ class TableEvaluator:
             verbose=verbose
         )
         self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
+        self.textual_evaluator = TextualEvaluator(verbose=verbose)
 
         self.visualization_manager = VisualizationManager(
             real=self.real,
@@ -1090,6 +1107,294 @@ class TableEvaluator:
 
         return results
 
+    def textual_evaluation(
+        self,
+        include_semantic: bool = True,
+        enable_sampling: bool = False,
+        max_samples: int = 1000,
+        tfidf_config: Optional[Dict] = None,
+        semantic_config: Optional[Dict] = None,
+    ) -> Dict:
+        """
+        Run comprehensive textual evaluation on specified text columns.
+
+        Args:
+            include_semantic: Whether to include semantic similarity analysis
+            enable_sampling: Whether to enable sampling for large datasets
+            max_samples: Maximum samples per dataset when sampling is enabled
+            tfidf_config: Configuration for TF-IDF evaluation
+            semantic_config: Configuration for semantic evaluation
+
+        Returns:
+            Dictionary with comprehensive textual evaluation results
+
+        Raises:
+            ValueError: If no text columns are specified
+        """
+        if not self.text_cols:
+            raise ValueError("No text columns specified. Use text_cols parameter in constructor.")
+
+        # Input validation
+        if not isinstance(include_semantic, bool):
+            raise TypeError("include_semantic must be a boolean")
+        if not isinstance(enable_sampling, bool):
+            raise TypeError("enable_sampling must be a boolean")
+        if not isinstance(max_samples, int) or max_samples <= 0:
+            raise ValueError("max_samples must be a positive integer")
+
+        if tfidf_config is not None and not isinstance(tfidf_config, dict):
+            raise TypeError("tfidf_config must be a dictionary or None")
+        if semantic_config is not None and not isinstance(semantic_config, dict):
+            raise TypeError("semantic_config must be a dictionary or None")
+
+        # Performance warning for large datasets
+        total_rows = len(self.real) + len(self.fake)
+        if total_rows > 100000:
+            logger.warning(
+                f"Large text dataset detected ({total_rows:,} total rows). "
+                f"Text analysis may be slow. Consider enabling sampling with enable_sampling=True."
+            )
+
+        results = {}
+
+        # Evaluate each text column
+        for col in self.text_cols:
+            if self.verbose:
+                print(f"\nEvaluating text column: {col}")
+
+            try:
+                col_results = self.textual_evaluator.comprehensive_evaluation(
+                    self.real[col],
+                    self.fake[col],
+                    include_semantic=include_semantic,
+                    enable_sampling=enable_sampling,
+                    max_samples=max_samples,
+                    tfidf_config=tfidf_config,
+                    semantic_config=semantic_config,
+                )
+                results[col] = col_results
+
+            except Exception as e:
+                logger.error(f"Error evaluating text column {col}: {e}")
+                results[col] = {"error": str(e)}
+
+        # Calculate overall textual similarity
+        column_similarities = []
+        for col, col_results in results.items():
+            if "error" not in col_results and "combined_metrics" in col_results:
+                similarity = col_results["combined_metrics"].get("overall_similarity", 0)
+                column_similarities.append(similarity)
+
+        if column_similarities:
+            results["overall_textual_metrics"] = {
+                "mean_similarity": float(np.mean(column_similarities)),
+                "median_similarity": float(np.median(column_similarities)),
+                "min_similarity": float(np.min(column_similarities)),
+                "max_similarity": float(np.max(column_similarities)),
+                "num_text_columns": len(column_similarities),
+            }
+        else:
+            results["overall_textual_metrics"] = {
+                "error": "No successful text evaluations completed"
+            }
+
+        return results
+
+    def basic_textual_evaluation(
+        self, enable_sampling: bool = False, max_samples: int = 1000
+    ) -> Dict:
+        """
+        Run basic (quick) textual evaluation using only lightweight metrics.
+
+        Args:
+            enable_sampling: Whether to enable sampling for large datasets
+            max_samples: Maximum samples per dataset when sampling is enabled
+
+        Returns:
+            Dictionary with basic textual evaluation results
+
+        Raises:
+            ValueError: If no text columns are specified
+        """
+        if not self.text_cols:
+            raise ValueError("No text columns specified. Use text_cols parameter in constructor.")
+
+        if not isinstance(enable_sampling, bool):
+            raise TypeError("enable_sampling must be a boolean")
+        if not isinstance(max_samples, int) or max_samples <= 0:
+            raise ValueError("max_samples must be a positive integer")
+
+        results = {}
+
+        for col in self.text_cols:
+            if self.verbose:
+                print(f"\nBasic evaluation of text column: {col}")
+
+            try:
+                col_results = self.textual_evaluator.quick_evaluation(
+                    self.real[col], self.fake[col]
+                )
+                results[col] = col_results
+
+            except Exception as e:
+                logger.error(f"Error in basic evaluation of text column {col}: {e}")
+                results[col] = {"error": str(e)}
+
+        # Calculate overall metrics
+        column_similarities = []
+        for col, col_results in results.items():
+            if "error" not in col_results:
+                similarity = col_results.get("overall_similarity", 0)
+                column_similarities.append(similarity)
+
+        if column_similarities:
+            results["overall_basic_metrics"] = {
+                "mean_similarity": float(np.mean(column_similarities)),
+                "num_text_columns": len(column_similarities),
+            }
+
+        return results
+
+    def comprehensive_evaluation_with_text(
+        self,
+        target_col: str,
+        target_type: str = "class",
+        text_weight: float = 0.5,
+        include_basic: bool = True,
+        include_advanced_statistical: bool = True,
+        include_advanced_privacy: bool = True,
+        include_textual: bool = True,
+        textual_config: Optional[Dict] = None,
+        **kwargs,
+    ) -> Dict:
+        """
+        Run comprehensive evaluation combining tabular and textual analysis.
+
+        Args:
+            target_col: Column to use for ML evaluation
+            target_type: Type of ML task ("class" or "regr")
+            text_weight: Weight for textual metrics in overall similarity (0.0 to 1.0)
+            include_basic: Whether to include basic tabular evaluation
+            include_advanced_statistical: Whether to include advanced statistical metrics
+            include_advanced_privacy: Whether to include advanced privacy metrics
+            include_textual: Whether to include textual evaluation
+            textual_config: Configuration for textual evaluation
+            **kwargs: Additional parameters
+
+        Returns:
+            Dictionary with comprehensive evaluation results including textual analysis
+        """
+        # Input validation
+        if not isinstance(text_weight, (int, float)) or not 0.0 <= text_weight <= 1.0:
+            raise ValueError("text_weight must be a number between 0.0 and 1.0")
+
+        if not isinstance(include_textual, bool):
+            raise TypeError("include_textual must be a boolean")
+
+        if textual_config is not None and not isinstance(textual_config, dict):
+            raise TypeError("textual_config must be a dictionary or None")
+
+        # Start with comprehensive advanced evaluation (without text)
+        results = self.comprehensive_advanced_evaluation(
+            target_col=target_col,
+            target_type=target_type,
+            include_basic=include_basic,
+            include_advanced_statistical=include_advanced_statistical,
+            include_advanced_privacy=include_advanced_privacy,
+            **kwargs,
+        )
+
+        # Add textual evaluation if requested and text columns are available
+        if include_textual and self.text_cols:
+            if textual_config is None:
+                textual_config = {"include_semantic": True, "enable_sampling": False}
+
+            try:
+                results["textual"] = self.textual_evaluation(**textual_config)
+            except Exception as e:
+                logger.error(f"Textual evaluation failed: {e}")
+                results["textual"] = {"error": str(e)}
+
+            # Combine textual and tabular similarity scores
+            try:
+                results["combined_similarity"] = self._calculate_combined_similarity(
+                    results, text_weight
+                )
+            except Exception as e:
+                logger.error(f"Combined similarity calculation failed: {e}")
+                results["combined_similarity"] = {"error": str(e)}
+
+        elif include_textual and not self.text_cols:
+            results["textual"] = {
+                "error": "No text columns specified. Use text_cols parameter in constructor."
+            }
+
+        return results
+
+    def _calculate_combined_similarity(self, results: Dict, text_weight: float) -> Dict:
+        """
+        Calculate combined similarity score from tabular and textual metrics.
+
+        Args:
+            results: Dictionary containing evaluation results
+            text_weight: Weight for textual metrics (0.0 to 1.0)
+
+        Returns:
+            Dictionary with combined similarity metrics
+        """
+        combined = {"text_weight": text_weight, "tabular_weight": 1.0 - text_weight}
+
+        # Extract tabular similarity from basic evaluation
+        tabular_similarity = None
+        if "basic" in results and "error" not in results["basic"]:
+            # Get overall similarity from basic evaluation
+            basic_results = results["basic"]
+            if "Similarity Score" in basic_results:
+                tabular_similarity = basic_results["Similarity Score"]
+
+        # Extract textual similarity
+        textual_similarity = None
+        if "textual" in results and "error" not in results["textual"]:
+            textual_results = results["textual"]
+            if "overall_textual_metrics" in textual_results:
+                textual_similarity = textual_results["overall_textual_metrics"].get(
+                    "mean_similarity", None
+                )
+
+        # Calculate weighted combination
+        if tabular_similarity is not None and textual_similarity is not None:
+            combined_score = (
+                text_weight * textual_similarity + (1.0 - text_weight) * tabular_similarity
+            )
+            combined["overall_similarity"] = float(combined_score)
+            combined["tabular_similarity"] = float(tabular_similarity)
+            combined["textual_similarity"] = float(textual_similarity)
+            combined["success"] = True
+
+        elif tabular_similarity is not None:
+            # Only tabular available
+            combined["overall_similarity"] = float(tabular_similarity)
+            combined["tabular_similarity"] = float(tabular_similarity)
+            combined["textual_similarity"] = None
+            combined["success"] = True
+            combined["note"] = "Only tabular metrics available"
+
+        elif textual_similarity is not None:
+            # Only textual available
+            combined["overall_similarity"] = float(textual_similarity)
+            combined["tabular_similarity"] = None
+            combined["textual_similarity"] = float(textual_similarity)
+            combined["success"] = True
+            combined["note"] = "Only textual metrics available"
+
+        else:
+            # Neither available
+            combined["overall_similarity"] = 0.0
+            combined["success"] = False
+            combined["error"] = "Neither tabular nor textual similarity could be calculated"
+
+        return combined
+
     def get_available_advanced_metrics(self) -> Dict:
         """
         Get information about available advanced metrics.
@@ -1097,7 +1402,7 @@ class TableEvaluator:
         Returns:
             Dictionary with information about available metrics
         """
-        return {
+        metrics = {
             "advanced_statistical": {
                 "wasserstein_distance": "Earth Mover's Distance for distribution comparison",
                 "mmd": "Maximum Mean Discrepancy with multiple kernels",
@@ -1107,3 +1412,13 @@ class TableEvaluator:
                 "membership_inference": "Membership inference attack simulation",
             },
         }
+
+        # Add textual metrics if text columns are available
+        if self.text_cols:
+            metrics["textual"] = {
+                "lexical_diversity": "Length distributions and vocabulary overlap analysis",
+                "tfidf_similarity": "TF-IDF based corpus-level similarity",
+                "semantic_similarity": "Transformer-based semantic similarity (optional)",
+            }
+
+        return metrics
