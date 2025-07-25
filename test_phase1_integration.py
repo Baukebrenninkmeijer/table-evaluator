@@ -4,26 +4,27 @@ Integration test for Phase 1 advanced functionality.
 Tests the new MMD, Wasserstein, and advanced privacy features.
 """
 
+import os
+import sys
+
 import numpy as np
 import pandas as pd
-import sys
-import os
 
 # Add the current directory to the path so we can import table_evaluator
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from table_evaluator.table_evaluator import TableEvaluator
+from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
+from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
 from table_evaluator.metrics.statistical import (
-    mmd_squared,
     RBFKernel,
+    earth_movers_distance_summary,
     mmd_column_wise,
     mmd_multivariate,
+    mmd_squared,
     wasserstein_distance_1d,
     wasserstein_distance_df,
-    earth_movers_distance_summary,
 )
-from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
-from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
+from table_evaluator.table_evaluator import TableEvaluator
 
 
 def test_mmd_functionality():
@@ -271,9 +272,8 @@ def main():
     if failed == 0:
         print("🎉 All Phase 1 advanced functionality tests passed!")
         return 0
-    else:
-        print("❌ Some tests failed. Please check the implementation.")
-        return 1
+    print("❌ Some tests failed. Please check the implementation.")
+    return 1
 
 
 if __name__ == "__main__":

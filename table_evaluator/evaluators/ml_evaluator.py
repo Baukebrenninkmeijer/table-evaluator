@@ -1,7 +1,7 @@
 """Machine Learning evaluation functionality extracted from TableEvaluator."""
 
 import copy
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -145,13 +145,13 @@ class MLEvaluator:
                 estimators_scores["real"], estimators_scores["fake"]
             )
             return corr
-        else:  # target_type == "class"
-            mape = mean_absolute_percentage_error(
-                estimators_scores["f1_real"], estimators_scores["f1_fake"]
-            )
-            return 1 - mape
+        # target_type == "class"
+        mape = mean_absolute_percentage_error(
+            estimators_scores["f1_real"], estimators_scores["f1_fake"]
+        )
+        return 1 - mape
 
-    def _get_estimators(self, target_type: str) -> List:
+    def _get_estimators(self, target_type: str) -> list:
         """Get appropriate estimators for the task type."""
         if target_type == "regr":
             return [
@@ -160,25 +160,25 @@ class MLEvaluator:
                 Ridge(alpha=1.0, random_state=42),
                 ElasticNet(random_state=42),
             ]
-        else:  # target_type == "class"
-            return [
-                LogisticRegression(
-                    multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
-                ),
-                RandomForestClassifier(n_estimators=10, random_state=42),
-                DecisionTreeClassifier(random_state=42),
-                MLPClassifier(
-                    [50, 50],
-                    solver="adam",
-                    activation="relu",
-                    learning_rate="adaptive",
-                    random_state=42,
-                ),
-            ]
+        # target_type == "class"
+        return [
+            LogisticRegression(
+                multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
+            ),
+            RandomForestClassifier(n_estimators=10, random_state=42),
+            DecisionTreeClassifier(random_state=42),
+            MLPClassifier(
+                [50, 50],
+                solver="adam",
+                activation="relu",
+                learning_rate="adaptive",
+                random_state=42,
+            ),
+        ]
 
     def _fit_estimators(
         self,
-        estimators: List,
+        estimators: list,
         x_train: pd.DataFrame,
         y_train: pd.Series,
         data_type: str,
@@ -194,9 +194,9 @@ class MLEvaluator:
 
     def _score_estimators(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -214,22 +214,21 @@ class MLEvaluator:
                 fake_x_test,
                 fake_y_test,
             )
-        else:
-            return self._score_regression(
-                r_estimators,
-                f_estimators,
-                estimator_names,
-                real_x_test,
-                real_y_test,
-                fake_x_test,
-                fake_y_test,
-            )
+        return self._score_regression(
+            r_estimators,
+            f_estimators,
+            estimator_names,
+            real_x_test,
+            real_y_test,
+            fake_x_test,
+            fake_y_test,
+        )
 
     def _score_classification(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -239,7 +238,7 @@ class MLEvaluator:
         rows = []
 
         for r_classifier, f_classifier, estimator_name in zip(
-            r_estimators, f_estimators, estimator_names
+            r_estimators, f_estimators, estimator_names, strict=False
         ):
             for x_test, y_test, dataset_name in [
                 (real_x_test, real_y_test, "real"),
@@ -264,9 +263,9 @@ class MLEvaluator:
 
     def _score_regression(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,

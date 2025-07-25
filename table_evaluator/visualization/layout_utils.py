@@ -1,11 +1,10 @@
 """Layout utilities for plotting functions."""
 
-from typing import Tuple
 
 import pandas as pd
 
 
-def calculate_subplot_layout(n_items: int, n_cols: int = 3) -> Tuple[int, int]:
+def calculate_subplot_layout(n_items: int, n_cols: int = 3) -> tuple[int, int]:
     """
     Calculate subplot grid dimensions.
 

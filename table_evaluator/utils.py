@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -8,8 +8,8 @@ def load_data(
     path_fake: str,
     real_sep: str = ",",
     fake_sep: str = ",",
-    drop_columns: Optional[List] = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    drop_columns: list | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load data from a real and synthetic data csv. This function makes sure that the loaded data has the same columns
     with the same data types.
@@ -44,7 +44,7 @@ def load_data(
     return real, fake
 
 
-def dict_to_df(data: Dict[str, Any]) -> pd.DataFrame:
+def dict_to_df(data: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame({"result": list(data.values())}, index=list(data.keys()))
 
 
@@ -55,7 +55,7 @@ def _preprocess_data(
     unique_thresh=0,
     n_samples=None,
     seed=1337,
-) -> Tuple[pd.DataFrame, pd.DataFrame, List[str], List[str]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     # Make sure columns and their order are the same.
     if set(real.columns.tolist()) != set(fake.columns.tolist()):
         raise ValueError("Columns in real and fake dataframe are not the same")

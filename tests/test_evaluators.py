@@ -3,11 +3,10 @@
 import pandas as pd
 import pytest
 from scipy import stats
-
 from table_evaluator.data.data_converter import DataConverter
-from table_evaluator.metrics.ml import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
+from table_evaluator.metrics.ml import MLEvaluator
 
 
 @pytest.fixture

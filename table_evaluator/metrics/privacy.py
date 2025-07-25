@@ -1,7 +1,6 @@
 """Privacy attack simulation and analysis for synthetic data evaluation."""
 
 import logging
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def identify_quasi_identifiers(
     df: pd.DataFrame, max_unique_ratio: float = 0.9, min_unique_count: int = 2
-) -> List[str]:
+) -> list[str]:
     """
     Automatically identify potential quasi-identifiers in a dataset.
 
@@ -51,9 +50,9 @@ def identify_quasi_identifiers(
 
 def calculate_k_anonymity(
     df: pd.DataFrame,
-    quasi_identifiers: List[str],
-    sensitive_attributes: Optional[List[str]] = None,
-) -> Dict:
+    quasi_identifiers: list[str],
+    sensitive_attributes: list[str] | None = None,
+) -> dict:
     """
     Calculate k-anonymity metrics for a dataset.
 
@@ -131,8 +130,8 @@ def calculate_k_anonymity(
 
 
 def analyze_l_diversity(
-    df: pd.DataFrame, quasi_identifiers: List[str], sensitive_attributes: List[str]
-) -> Dict:
+    df: pd.DataFrame, quasi_identifiers: list[str], sensitive_attributes: list[str]
+) -> dict:
     """
     Analyze l-diversity within equivalence classes.
 
@@ -183,10 +182,10 @@ def analyze_l_diversity(
 def simulate_membership_inference_attack(
     real_data: pd.DataFrame,
     synthetic_data: pd.DataFrame,
-    target_columns: Optional[List[str]] = None,
+    target_columns: list[str] | None = None,
     test_size: float = 0.3,
     random_state: int = 42,
-) -> Dict:
+) -> dict:
     """
     Simulate membership inference attacks to assess privacy risks.
 
@@ -207,9 +206,7 @@ def simulate_membership_inference_attack(
         # Use numerical and low-cardinality categorical columns
         target_columns = []
         for col in real_data.columns:
-            if real_data[col].dtype in ["int64", "float64"]:
-                target_columns.append(col)
-            elif real_data[col].nunique() <= 20:  # Low-cardinality categorical
+            if real_data[col].dtype in ["int64", "float64"] or real_data[col].nunique() <= 20:
                 target_columns.append(col)
 
     if not target_columns:
@@ -350,21 +347,20 @@ def generate_privacy_recommendation(attack_accuracy: float) -> str:
             "High privacy risk detected. Consider adding differential privacy, "
             "increasing data synthesis complexity, or reducing data resolution."
         )
-    elif attack_accuracy > 0.6:
+    if attack_accuracy > 0.6:
         return (
             "Moderate privacy risk. Consider adding noise to sensitive attributes "
             "or using more sophisticated synthesis methods."
         )
-    else:
-        return "Low privacy risk. Current synthesis method provides good privacy protection."
+    return "Low privacy risk. Current synthesis method provides good privacy protection."
 
 
 def comprehensive_privacy_analysis(
     real_data: pd.DataFrame,
     synthetic_data: pd.DataFrame,
-    quasi_identifiers: Optional[List[str]] = None,
-    sensitive_attributes: Optional[List[str]] = None,
-) -> Dict:
+    quasi_identifiers: list[str] | None = None,
+    sensitive_attributes: list[str] | None = None,
+) -> dict:
     """
     Comprehensive privacy analysis combining k-anonymity and membership inference.
 
@@ -411,7 +407,7 @@ def comprehensive_privacy_analysis(
     return results
 
 
-def assess_overall_privacy_risk(privacy_results: Dict) -> Dict:
+def assess_overall_privacy_risk(privacy_results: dict) -> dict:
     """Assess overall privacy risk based on multiple analyses."""
     k_anon = privacy_results.get("k_anonymity", {})
     membership = privacy_results.get("membership_inference", {})
@@ -449,7 +445,7 @@ def assess_overall_privacy_risk(privacy_results: Dict) -> Dict:
     }
 
 
-def calculate_privacy_score(k_anon: Dict, membership: Dict) -> float:
+def calculate_privacy_score(k_anon: dict, membership: dict) -> float:
     """Calculate overall privacy score (0-1, higher is better)."""
     score = 1.0
 
@@ -468,7 +464,7 @@ def calculate_privacy_score(k_anon: Dict, membership: Dict) -> float:
     return max(0.0, min(1.0, score))
 
 
-def generate_comprehensive_recommendations(risks: List[str]) -> List[str]:
+def generate_comprehensive_recommendations(risks: list[str]) -> list[str]:
     """Generate comprehensive privacy improvement recommendations."""
     recommendations = []
 

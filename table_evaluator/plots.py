@@ -1,22 +1,23 @@
 from collections.abc import Sequence
-from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from table_evaluator.association_metrics import associations
+
+from table_evaluator.metrics.statistical import associations
 
 
 def plot_correlation_difference(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    plot_diff: bool = True,
-    cat_cols: Optional[list[str]] = None,
-    annot: bool = False,
+    cat_cols: list[str] | None = None,
     fname: str | None = None,
+    *,
+    plot_diff: bool = True,
     show: bool = True,
-):
+    annot: bool = False,
+) -> plt.Figure | None:  # type: ignore
     """
     Plot the association matrices for the `real` dataframe, `fake` dataframe and plot the difference between them. Has
     support for continuous and Categorical (Male, Female) data types. All Object and Category dtypes are considered to
@@ -34,17 +35,13 @@ def plot_correlation_difference(
         cat_cols (Optional[list[str]]): List of Categorical columns.
         annot (bool): Whether to annotate the plot with numbers indicating the associations.
     """
-    assert isinstance(
-        real, pd.DataFrame
-    ), "`real` parameters must be a Pandas DataFrame"
-    assert isinstance(
-        fake, pd.DataFrame
-    ), "`fake` parameters must be a Pandas DataFrame"
+    assert isinstance(real, pd.DataFrame), "`real` parameters must be a Pandas DataFrame"
+    assert isinstance(fake, pd.DataFrame), "`fake` parameters must be a Pandas DataFrame"
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
     sns.set(style="white")
 
     if cat_cols is None:
-        cat_cols = real.select_dtypes(["object", "category"])
+        cat_cols = real.select_dtypes(["object", "category"]).columns.tolist()
     if plot_diff:
         fig, ax = plt.subplots(1, 3, figsize=(24, 7))
     else:
@@ -123,11 +120,10 @@ def plot_correlation_difference(
         plt.show()
     else:
         return fig
+    return None
 
 
-def plot_distributions(
-    real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, show: bool = True
-):
+def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, show: bool = True):
     """
     Plot the distribution plots for all columns in the real and fake dataset.
     Height of each row of plots scales with the length of the labels. Each plot
@@ -213,9 +209,7 @@ def plot_distributions(
         plt.close(fig)
 
 
-def plot_correlation_comparison(
-    evaluators: Sequence, annot: bool = False, show: bool = False
-):
+def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show: bool = False):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
@@ -232,10 +226,8 @@ def plot_correlation_comparison(
     real_corr = associations(
         evaluators[0].real,
         nominal_columns=evaluators[0].categorical_columns,
-        plot=False,
         nom_nom_assoc="theil",
         compute_only=True,
-        mark_columns=True,
         annot=False,
         cmap=cmap,
         cbar=False,
@@ -280,9 +272,7 @@ def plot_correlation_comparison(
         if i % (nr_plots - 1) == 0:
             cbar = az.collections[0].colorbar
             cbar.ax.tick_params(labelsize=20)
-    titles = ["Real"] + [
-        e.name if e.name is not None else idx for idx, e in enumerate(evaluators)
-    ]
+    titles = ["Real"] + [e.name if e.name is not None else idx for idx, e in enumerate(evaluators)]
     for i, label in enumerate(titles):
         flat_ax[i].set_yticklabels([])
         flat_ax[i].set_xticklabels([])
@@ -297,9 +287,7 @@ def plot_correlation_comparison(
         return fig
 
 
-def plot_cumsums(
-    real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, show: bool = True
-):
+def plot_cumsums(real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, show: bool = True):
     """
     Plot cumulative sum plots for all columns in the dataframes.
 
@@ -402,7 +390,7 @@ def cdf(
             return local_ax
 
 
-def plot_mean_std_comparison(evaluators: List, show: bool = True):
+def plot_mean_std_comparison(evaluators: list, show: bool = True):
     """
     Plot comparison between the means and standard deviations from each evaluator in evaluators.
 
@@ -425,9 +413,7 @@ def plot_mean_std_comparison(evaluators: List, show: bool = True):
         return fig
 
 
-def plot_mean_std(
-    real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True
-):
+def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True):
     """
     Plot the means and standard deviations of each dataset.
 

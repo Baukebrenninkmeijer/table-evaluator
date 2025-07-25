@@ -40,57 +40,6 @@ from table_evaluator.metrics.ml import MLEvaluator
 """
 
 # Core statistical metrics - commonly used functions
-from .statistical import (
-    # Basic metrics
-    mean_absolute_error,
-    euclidean_distance,
-    mean_absolute_percentage_error,
-    rmse,
-    cosine_similarity,
-    
-    # Association metrics
-    cramers_v,
-    theils_u,
-    correlation_ratio,
-    associations,
-    column_correlations,
-    
-    # Distribution comparison
-    js_distance_df,
-    jensenshannon_distance,
-    kolmogorov_smirnov_test,
-    kolmogorov_smirnov_df,
-    
-    # Advanced statistical methods
-    wasserstein_distance_1d,
-    wasserstein_distance_2d,
-    wasserstein_distance_df,
-    earth_movers_distance_summary,
-    optimal_transport_cost,
-    mmd_comprehensive_analysis,
-    
-    # MMD metrics
-    mmd_squared,
-    mmd_column_wise,
-    mmd_multivariate,
-    MMDKernel,
-    RBFKernel,
-    PolynomialKernel,
-    LinearKernel,
-)
-
-# Privacy metrics
-from .privacy import (
-    identify_quasi_identifiers,
-    calculate_k_anonymity,
-    analyze_l_diversity,
-    simulate_membership_inference_attack,
-    comprehensive_privacy_analysis,
-    assess_overall_privacy_risk,
-    calculate_privacy_score,
-    generate_comprehensive_recommendations,
-)
-
 # ML evaluation metrics
 from .ml import (
     MLEvaluator,
@@ -98,11 +47,57 @@ from .ml import (
     train_test_on_synthetic,
 )
 
+# Privacy metrics
+from .privacy import (
+    analyze_l_diversity,
+    assess_overall_privacy_risk,
+    calculate_k_anonymity,
+    calculate_privacy_score,
+    comprehensive_privacy_analysis,
+    generate_comprehensive_recommendations,
+    identify_quasi_identifiers,
+    simulate_membership_inference_attack,
+)
+from .statistical import (
+    LinearKernel,
+    MMDKernel,
+    PolynomialKernel,
+    RBFKernel,
+    associations,
+    column_correlations,
+    correlation_ratio,
+    cosine_similarity,
+    # Association metrics
+    cramers_v,
+    earth_movers_distance_summary,
+    euclidean_distance,
+    jensenshannon_distance,
+    # Distribution comparison
+    js_distance_df,
+    kolmogorov_smirnov_df,
+    kolmogorov_smirnov_test,
+    # Basic metrics
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    mmd_column_wise,
+    mmd_comprehensive_analysis,
+    mmd_multivariate,
+    # MMD metrics
+    mmd_squared,
+    optimal_transport_cost,
+    rmse,
+    theils_u,
+    # Advanced statistical methods
+    wasserstein_distance_1d,
+    wasserstein_distance_2d,
+    wasserstein_distance_df,
+)
+
 # Define what gets imported with "from table_evaluator.metrics import *"
 __all__ = [
     # Statistical metrics
     "mean_absolute_error",
-    "euclidean_distance", 
+    "euclidean_distance",
     "mean_absolute_percentage_error",
     "rmse",
     "cosine_similarity",
@@ -116,7 +111,7 @@ __all__ = [
     "kolmogorov_smirnov_test",
     "kolmogorov_smirnov_df",
     "wasserstein_distance_1d",
-    "wasserstein_distance_2d", 
+    "wasserstein_distance_2d",
     "wasserstein_distance_df",
     "earth_movers_distance_summary",
     "optimal_transport_cost",
@@ -128,7 +123,7 @@ __all__ = [
     "RBFKernel",
     "PolynomialKernel",
     "LinearKernel",
-    
+
     # Privacy metrics
     "identify_quasi_identifiers",
     "calculate_k_anonymity",
@@ -138,7 +133,7 @@ __all__ = [
     "assess_overall_privacy_risk",
     "calculate_privacy_score",
     "generate_comprehensive_recommendations",
-    
+
     # ML metrics
     "MLEvaluator",
     "evaluate_ml_utility",

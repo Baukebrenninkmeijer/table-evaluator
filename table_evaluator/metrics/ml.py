@@ -1,7 +1,7 @@
 """Machine Learning evaluation functionality for synthetic data quality assessment."""
 
 import copy
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -145,13 +145,13 @@ class MLEvaluator:
                 estimators_scores["real"], estimators_scores["fake"]
             )
             return corr
-        else:  # target_type == "class"
-            mape = mean_absolute_percentage_error(
-                estimators_scores["f1_real"], estimators_scores["f1_fake"]
-            )
-            return 1 - mape
+        # target_type == "class"
+        mape = mean_absolute_percentage_error(
+            estimators_scores["f1_real"], estimators_scores["f1_fake"]
+        )
+        return 1 - mape
 
-    def _get_estimators(self, target_type: str) -> List:
+    def _get_estimators(self, target_type: str) -> list:
         """Get appropriate estimators for the task type."""
         if target_type == "regr":
             return [
@@ -160,25 +160,25 @@ class MLEvaluator:
                 Ridge(alpha=1.0, random_state=42),
                 ElasticNet(random_state=42),
             ]
-        else:  # target_type == "class"
-            return [
-                LogisticRegression(
-                    multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
-                ),
-                RandomForestClassifier(n_estimators=10, random_state=42),
-                DecisionTreeClassifier(random_state=42),
-                MLPClassifier(
-                    [50, 50],
-                    solver="adam",
-                    activation="relu",
-                    learning_rate="adaptive",
-                    random_state=42,
-                ),
-            ]
+        # target_type == "class"
+        return [
+            LogisticRegression(
+                multi_class="auto", solver="lbfgs", max_iter=500, random_state=42
+            ),
+            RandomForestClassifier(n_estimators=10, random_state=42),
+            DecisionTreeClassifier(random_state=42),
+            MLPClassifier(
+                [50, 50],
+                solver="adam",
+                activation="relu",
+                learning_rate="adaptive",
+                random_state=42,
+            ),
+        ]
 
     def _fit_estimators(
         self,
-        estimators: List,
+        estimators: list,
         x_train: pd.DataFrame,
         y_train: pd.Series,
         data_type: str,
@@ -194,9 +194,9 @@ class MLEvaluator:
 
     def _score_estimators(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -214,22 +214,21 @@ class MLEvaluator:
                 fake_x_test,
                 fake_y_test,
             )
-        else:
-            return self._score_regression(
-                r_estimators,
-                f_estimators,
-                estimator_names,
-                real_x_test,
-                real_y_test,
-                fake_x_test,
-                fake_y_test,
-            )
+        return self._score_regression(
+            r_estimators,
+            f_estimators,
+            estimator_names,
+            real_x_test,
+            real_y_test,
+            fake_x_test,
+            fake_y_test,
+        )
 
     def _score_classification(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -239,7 +238,7 @@ class MLEvaluator:
         rows = []
 
         for r_classifier, f_classifier, estimator_name in zip(
-            r_estimators, f_estimators, estimator_names
+            r_estimators, f_estimators, estimator_names, strict=False
         ):
             for x_test, y_test, dataset_name in [
                 (real_x_test, real_y_test, "real"),
@@ -264,9 +263,9 @@ class MLEvaluator:
 
     def _score_regression(
         self,
-        r_estimators: List,
-        f_estimators: List,
-        estimator_names: List[str],
+        r_estimators: list,
+        f_estimators: list,
+        estimator_names: list[str],
         real_x_test: pd.DataFrame,
         real_y_test: pd.Series,
         fake_x_test: pd.DataFrame,
@@ -312,7 +311,7 @@ def evaluate_ml_utility(
     task_type: str = "auto",
     test_size: float = 0.2,
     random_state: int = 42,
-    models: List[str] = None,
+    models: list[str] = None,
 ) -> dict:
     """
     Evaluate the machine learning utility of synthetic data.
@@ -330,35 +329,34 @@ def evaluate_ml_utility(
         Dictionary with ML utility evaluation results
     """
     from sklearn.model_selection import train_test_split
-    from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
-    
+
     if models is None:
         models = ["random_forest", "logistic_regression"]
-    
+
     # Auto-detect task type
     if task_type == "auto":
         if real_data[target_column].dtype in ['object', 'category'] or real_data[target_column].nunique() < 20:
             task_type = "classification"
         else:
             task_type = "regression"
-    
+
     # Prepare data
     X_real = real_data.drop(columns=[target_column])
     y_real = real_data[target_column]
     X_synthetic = synthetic_data.drop(columns=[target_column])
     y_synthetic = synthetic_data[target_column]
-    
+
     # Split real data for testing
     X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
         X_real, y_real, test_size=test_size, random_state=random_state
     )
-    
+
     results = {
         "task_type": task_type,
         "model_results": {},
         "summary": {}
     }
-    
+
     # Train models and evaluate
     for model_name in models:
         model_results = _evaluate_single_model(
@@ -368,7 +366,7 @@ def evaluate_ml_utility(
             random_state
         )
         results["model_results"][model_name] = model_results
-    
+
     # Calculate summary statistics
     if task_type == "classification":
         real_scores = [results["model_results"][model]["real_accuracy"] for model in models]
@@ -378,14 +376,14 @@ def evaluate_ml_utility(
         real_scores = [results["model_results"][model]["real_r2"] for model in models]
         synthetic_scores = [results["model_results"][model]["synthetic_r2"] for model in models]
         metric_name = "r2_score"
-    
+
     results["summary"] = {
         f"mean_real_{metric_name}": np.mean(real_scores),
         f"mean_synthetic_{metric_name}": np.mean(synthetic_scores),
-        f"utility_score": np.mean(synthetic_scores) / np.mean(real_scores) if np.mean(real_scores) > 0 else 0,
+        "utility_score": np.mean(synthetic_scores) / np.mean(real_scores) if np.mean(real_scores) > 0 else 0,
         "score_difference": np.mean(real_scores) - np.mean(synthetic_scores)
     }
-    
+
     return results
 
 
@@ -421,22 +419,22 @@ def _evaluate_single_model(
             model_synthetic = LinearRegression()
         else:
             raise ValueError(f"Unknown regression model: {model_name}")
-    
+
     # Train models
     model_real.fit(X_real_train, y_real_train)
     model_synthetic.fit(X_synthetic, y_synthetic)
-    
+
     # Make predictions on real test set
     pred_real = model_real.predict(X_real_test)
     pred_synthetic = model_synthetic.predict(X_real_test)
-    
+
     # Calculate metrics
     if task_type == "classification":
-        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-        
+        from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
         real_accuracy = accuracy_score(y_real_test, pred_real)
         synthetic_accuracy = accuracy_score(y_real_test, pred_synthetic)
-        
+
         try:
             real_precision = precision_score(y_real_test, pred_real, average='weighted')
             synthetic_precision = precision_score(y_real_test, pred_synthetic, average='weighted')
@@ -452,7 +450,7 @@ def _evaluate_single_model(
             synthetic_recall = synthetic_accuracy
             real_f1 = real_accuracy
             synthetic_f1 = synthetic_accuracy
-        
+
         return {
             "real_accuracy": real_accuracy,
             "synthetic_accuracy": synthetic_accuracy,
@@ -463,24 +461,24 @@ def _evaluate_single_model(
             "real_f1": real_f1,
             "synthetic_f1": synthetic_f1,
         }
-    else:  # regression
-        from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-        
-        real_mse = mean_squared_error(y_real_test, pred_real)
-        synthetic_mse = mean_squared_error(y_real_test, pred_synthetic)
-        real_mae = mean_absolute_error(y_real_test, pred_real)
-        synthetic_mae = mean_absolute_error(y_real_test, pred_synthetic)
-        real_r2 = r2_score(y_real_test, pred_real)
-        synthetic_r2 = r2_score(y_real_test, pred_synthetic)
-        
-        return {
-            "real_mse": real_mse,
-            "synthetic_mse": synthetic_mse,
-            "real_mae": real_mae,
-            "synthetic_mae": synthetic_mae,
-            "real_r2": real_r2,
-            "synthetic_r2": synthetic_r2,
-        }
+    # regression
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+    real_mse = mean_squared_error(y_real_test, pred_real)
+    synthetic_mse = mean_squared_error(y_real_test, pred_synthetic)
+    real_mae = mean_absolute_error(y_real_test, pred_real)
+    synthetic_mae = mean_absolute_error(y_real_test, pred_synthetic)
+    real_r2 = r2_score(y_real_test, pred_real)
+    synthetic_r2 = r2_score(y_real_test, pred_synthetic)
+
+    return {
+        "real_mse": real_mse,
+        "synthetic_mse": synthetic_mse,
+        "real_mae": real_mae,
+        "synthetic_mae": synthetic_mae,
+        "real_r2": real_r2,
+        "synthetic_r2": synthetic_r2,
+    }
 
 
 def train_test_on_synthetic(
@@ -509,25 +507,25 @@ def train_test_on_synthetic(
         Dictionary with evaluation results
     """
     from sklearn.model_selection import train_test_split
-    
+
     # Auto-detect task type
     if task_type == "auto":
         if real_data[target_column].dtype in ['object', 'category'] or real_data[target_column].nunique() < 20:
             task_type = "classification"
         else:
             task_type = "regression"
-    
+
     # Prepare data
-    X_synthetic = synthetic_data.drop(columns=[target_column])  
+    X_synthetic = synthetic_data.drop(columns=[target_column])
     y_synthetic = synthetic_data[target_column]
     X_real = real_data.drop(columns=[target_column])
     y_real = real_data[target_column]
-    
+
     # Split real data for evaluation
     X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
         X_real, y_real, test_size=0.2, random_state=random_state
     )
-    
+
     # Initialize models
     if task_type == "classification":
         if model_type == "random_forest":
@@ -548,22 +546,22 @@ def train_test_on_synthetic(
             model_real = LinearRegression()
         else:
             raise ValueError(f"Unknown regression model: {model_type}")
-    
+
     # Train models
     model_synthetic.fit(X_synthetic, y_synthetic)  # Train on synthetic
     model_real.fit(X_real_train, y_real_train)     # Train on real (baseline)
-    
+
     # Test both models on real test data
     pred_synthetic = model_synthetic.predict(X_real_test)
     pred_real = model_real.predict(X_real_test)
-    
+
     # Calculate metrics
     if task_type == "classification":
         from sklearn.metrics import accuracy_score, classification_report
-        
+
         synthetic_accuracy = accuracy_score(y_real_test, pred_synthetic)
         real_accuracy = accuracy_score(y_real_test, pred_real)
-        
+
         return {
             "task_type": task_type,
             "model_type": model_type,
@@ -574,25 +572,25 @@ def train_test_on_synthetic(
             "classification_report_synthetic": classification_report(y_real_test, pred_synthetic, output_dict=True),
             "classification_report_real": classification_report(y_real_test, pred_real, output_dict=True)
         }
-    else:  # regression
-        from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-        
-        synthetic_mse = mean_squared_error(y_real_test, pred_synthetic)
-        real_mse = mean_squared_error(y_real_test, pred_real)
-        synthetic_r2 = r2_score(y_real_test, pred_synthetic)
-        real_r2 = r2_score(y_real_test, pred_real)
-        synthetic_mae = mean_absolute_error(y_real_test, pred_synthetic)
-        real_mae = mean_absolute_error(y_real_test, pred_real)
-        
-        return {
-            "task_type": task_type,
-            "model_type": model_type,
-            "synthetic_model_mse": synthetic_mse,
-            "real_model_mse": real_mse,
-            "synthetic_model_r2": synthetic_r2,
-            "real_model_r2": real_r2,
-            "synthetic_model_mae": synthetic_mae,
-            "real_model_mae": real_mae,
-            "mse_ratio": synthetic_mse / real_mse if real_mse > 0 else float('inf'),
-            "r2_ratio": synthetic_r2 / real_r2 if real_r2 > 0 else 0,
-        }
+    # regression
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+    synthetic_mse = mean_squared_error(y_real_test, pred_synthetic)
+    real_mse = mean_squared_error(y_real_test, pred_real)
+    synthetic_r2 = r2_score(y_real_test, pred_synthetic)
+    real_r2 = r2_score(y_real_test, pred_real)
+    synthetic_mae = mean_absolute_error(y_real_test, pred_synthetic)
+    real_mae = mean_absolute_error(y_real_test, pred_real)
+
+    return {
+        "task_type": task_type,
+        "model_type": model_type,
+        "synthetic_model_mse": synthetic_mse,
+        "real_model_mse": real_mse,
+        "synthetic_model_r2": synthetic_r2,
+        "real_model_r2": real_r2,
+        "synthetic_model_mae": synthetic_mae,
+        "real_model_mae": real_mae,
+        "mse_ratio": synthetic_mse / real_mse if real_mse > 0 else float('inf'),
+        "r2_ratio": synthetic_r2 / real_r2 if real_r2 > 0 else 0,
+    }

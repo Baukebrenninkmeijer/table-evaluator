@@ -1,25 +1,24 @@
 import logging
 import warnings
+from collections.abc import Callable
 from os import PathLike
-from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.metrics import f1_score, jaccard_score
 
-# Import metrics module directly
 from table_evaluator import metrics as te_metrics
-from table_evaluator.metrics.statistical import associations
 from table_evaluator.core.evaluation_config import EvaluationConfig
+from table_evaluator.data.data_converter import DataConverter
 from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
 from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
-from table_evaluator.metrics.ml import MLEvaluator
+from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
+from table_evaluator.metrics.statistical import associations
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
-from table_evaluator.utils import _preprocess_data, dict_to_df, numerical_encoding
+from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
 
 logger = logging.getLogger(__name__)
@@ -38,12 +37,12 @@ class TableEvaluator:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        cat_cols: Optional[List[str]] = None,
+        cat_cols: list[str] | None = None,
         unique_thresh: int = 0,
         metric: str | Callable = "pearsonr",
         verbose: bool = False,
-        n_samples: Optional[int] = None,
-        name: Optional[str] = None,
+        n_samples: int | None = None,
+        name: str | None = None,
         seed: int = 1337,
         sample: bool = False,
         infer_types: bool = True,
@@ -98,9 +97,7 @@ class TableEvaluator:
                 raise TypeError("cat_cols must be a list of strings or None")
             invalid_cols = set(cat_cols) - set(real.columns)
             if invalid_cols:
-                raise ValueError(
-                    f"cat_cols contains columns not in DataFrames: {invalid_cols}"
-                )
+                raise ValueError(f"cat_cols contains columns not in DataFrames: {invalid_cols}")
 
         # Validate other parameters
         if not isinstance(unique_thresh, int) or unique_thresh < 0:
@@ -129,44 +126,32 @@ class TableEvaluator:
         self.unique_thresh = unique_thresh
         self.real = real.copy()
         self.fake = fake.copy()
-        self.comparison_metric: Callable = (
-            getattr(stats, metric) if isinstance(metric, str) else metric
-        )
+        self.comparison_metric: Callable = getattr(stats, metric) if isinstance(metric, str) else metric
         self.verbose = verbose
         self.random_seed = seed
         self.sample = sample
         self.infer_types = infer_types
 
-        self.real, self.fake, self.numerical_columns, self.categorical_columns = (
-            _preprocess_data(
-                real=self.real,
-                fake=self.fake,
-                cat_cols=cat_cols,
-                unique_thresh=unique_thresh,
-                n_samples=n_samples,
-                seed=seed,
-            )
+        self.real, self.fake, self.numerical_columns, self.categorical_columns = _preprocess_data(
+            real=self.real,
+            fake=self.fake,
+            cat_cols=cat_cols,
+            unique_thresh=unique_thresh,
+            n_samples=n_samples,
+            seed=seed,
         )
         self.n_samples = len(self.real)
 
         # Initialize evaluation configuration
-        self.config = EvaluationConfig(
-            unique_thresh=unique_thresh, n_samples=n_samples, random_seed=seed
-        )
+        self.config = EvaluationConfig(unique_thresh=unique_thresh, n_samples=n_samples, random_seed=seed)
 
         # Initialize evaluator components
-        self.statistical_evaluator = StatisticalEvaluator(
-            comparison_metric=self.comparison_metric, verbose=verbose
-        )
-        self.ml_evaluator = MLEvaluator(
-            comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose
-        )
+        self.statistical_evaluator = StatisticalEvaluator(comparison_metric=self.comparison_metric, verbose=verbose)
+        self.ml_evaluator = MLEvaluator(comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose)
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
 
         # Initialize advanced evaluators
-        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(
-            verbose=verbose
-        )
+        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(verbose=verbose)
         self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
 
         self.visualization_manager = VisualizationManager(
@@ -187,9 +172,7 @@ class TableEvaluator:
         """
         return self.visualization_manager.plot_mean_std(fname=fname, show=show)
 
-    def plot_cumsums(
-        self, nr_cols=4, fname: PathLike | None = None, show: bool = True
-    ) -> None:
+    def plot_cumsums(self, nr_cols=4, fname: PathLike | None = None, show: bool = True) -> None:
         """
 
         Plot the cumulative sums for all columns in the real and fake dataset. Height of each row scales with the length
@@ -203,13 +186,9 @@ class TableEvaluator:
             fname str: If not none, saves the plot with this file name.
 
         """
-        return self.visualization_manager.plot_cumsums(
-            nr_cols=nr_cols, fname=fname, show=show
-        )
+        return self.visualization_manager.plot_cumsums(nr_cols=nr_cols, fname=fname, show=show)
 
-    def plot_distributions(
-        self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True
-    ) -> None:
+    def plot_distributions(self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True) -> None:
         """
 
         Plot the distribution plots for all columns in the real and fake dataset. Height of each row of plots scales
@@ -223,13 +202,9 @@ class TableEvaluator:
             fname (str, Optional): If not none, saves the plot with this file name.
 
         """
-        return self.visualization_manager.plot_distributions(
-            nr_cols=nr_cols, fname=fname, show=show
-        )
+        return self.visualization_manager.plot_distributions(nr_cols=nr_cols, fname=fname, show=show)
 
-    def plot_correlation_difference(
-        self, plot_diff=True, fname=None, show: bool = True, **kwargs
-    ) -> None:
+    def plot_correlation_difference(self, plot_diff=True, fname=None, show: bool = True, **kwargs) -> None:
         """
 
         Plot the association matrices for each table and, if chosen, the difference between them.
@@ -297,7 +272,7 @@ class TableEvaluator:
         """
         return self.visualization_manager.plot_pca(fname=fname, show=show)
 
-    def get_copies(self, return_len: bool = False) -> Union[pd.DataFrame, int]:
+    def get_copies(self, return_len: bool = False) -> pd.DataFrame | int:
         """
 
         Check whether any real values occur in the fake data.
@@ -315,9 +290,7 @@ class TableEvaluator:
         """
         return self.privacy_evaluator.get_copies(self.real, self.fake, return_len)
 
-    def get_duplicates(
-        self, return_values: bool = False
-    ) -> Tuple[pd.DataFrame, pd.DataFrame] | Tuple[int, int]:
+    def get_duplicates(self, return_values: bool = False) -> tuple[pd.DataFrame, pd.DataFrame] | tuple[int, int]:
         """
 
         Return duplicates within each dataset.
@@ -330,16 +303,14 @@ class TableEvaluator:
 
         Returns:
 
-            Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[int, int]]:
+            Union[tuple[pd.DataFrame, pd.DataFrame], tuple[int, int]]:
 
                 If return_values is True, returns a tuple of DataFrames with duplicates.
 
                 If return_values is False, returns a tuple of integers representing the lengths of those DataFrames.
 
         """
-        return self.privacy_evaluator.get_duplicates(
-            self.real, self.fake, return_values
-        )
+        return self.privacy_evaluator.get_duplicates(self.real, self.fake, return_values)
 
     def pca_correlation(self, lingress: bool = False) -> float:
         """
@@ -360,100 +331,7 @@ class TableEvaluator:
         real, fake = self.convert_numerical()
         return self.statistical_evaluator.pca_correlation(real, fake, lingress)
 
-    def fit_estimators(self) -> None:
-        """
-
-        Fit self.r_estimators and self.f_estimators to real and fake data, respectively.
-
-        """
-
-        if self.verbose:
-            print("\nFitting real")
-        for i, c in enumerate(self.r_estimators):
-            if self.verbose:
-                print(f"{i + 1}: {type(c).__name__}")
-            c.fit(self.real_x_train, self.real_y_train)
-
-        if self.verbose:
-            print("\nFitting fake")
-        for i, c in enumerate(self.f_estimators):
-            if self.verbose:
-                print(f"{i + 1}: {type(c).__name__}")
-            c.fit(self.fake_x_train, self.fake_y_train)
-
-    def score_estimators(self) -> None:
-        """
-
-        Get F1 scores of self.r_estimators and self.f_estimators on the fake and real data, respectively.
-
-        :return: dataframe with the results for each estimator on each data test set.
-
-        """
-
-        if self.target_type == "class":
-            rows = []
-            for r_classifier, f_classifier, estimator_name in zip(
-                self.r_estimators, self.f_estimators, self.estimator_names
-            ):
-                for dataset, target, dataset_name in zip(
-                    [self.real_x_test, self.fake_x_test],
-                    [self.real_y_test, self.fake_y_test],
-                    ["real", "fake"],
-                ):
-                    predictions_classifier_real = r_classifier.predict(dataset)
-                    predictions_classifier_fake = f_classifier.predict(dataset)
-                    f1_r = f1_score(
-                        target, predictions_classifier_real, average="micro"
-                    )
-                    f1_f = f1_score(
-                        target, predictions_classifier_fake, average="micro"
-                    )
-                    jac_sim = jaccard_score(
-                        predictions_classifier_real,
-                        predictions_classifier_fake,
-                        average="micro",
-                    )
-                    row = {
-                        "index": f"{estimator_name}_{dataset_name}",
-                        "f1_real": f1_r,
-                        "f1_fake": f1_f,
-                        "jaccard_similarity": jac_sim,
-                    }
-                    rows.append(row)
-            results = pd.DataFrame(rows).set_index("index")
-
-        elif self.target_type == "regr":
-            r2r = [
-                te_metrics.rmse(self.real_y_test, clf.predict(self.real_x_test))
-                for clf in self.r_estimators
-            ]
-            f2f = [
-                te_metrics.rmse(self.fake_y_test, clf.predict(self.fake_x_test))
-                for clf in self.f_estimators
-            ]
-
-            # Calculate test set accuracies on the other dataset
-            r2f = [
-                te_metrics.rmse(self.fake_y_test, clf.predict(self.fake_x_test))
-                for clf in self.r_estimators
-            ]
-            f2r = [
-                te_metrics.rmse(self.real_y_test, clf.predict(self.real_x_test))
-                for clf in self.f_estimators
-            ]
-            index = [
-                f"real_data_{classifier}" for classifier in self.estimator_names
-            ] + [f"fake_data_{classifier}" for classifier in self.estimator_names]
-            results = pd.DataFrame({"real": r2r + f2r, "fake": r2f + f2f}, index=index)
-        else:
-            raise Exception(
-                f"self.target_type should be either 'class' or 'regr', but is {self.target_type}."
-            )
-        return results
-
-    def visual_evaluation(
-        self, save_dir: PathLike | None = None, show: bool = True, **kwargs
-    ):
+    def visual_evaluation(self, save_dir: PathLike | None = None, show: bool = True, **kwargs):
         """
 
         Plot all visual evaluation metrics. Includes plotting the mean and standard deviation, cumulative sums,
@@ -473,9 +351,7 @@ class TableEvaluator:
             None
 
         """
-        return self.visualization_manager.visual_evaluation(
-            save_dir=save_dir, show=show, **kwargs
-        )
+        return self.visualization_manager.visual_evaluation(save_dir=save_dir, show=show, **kwargs)
 
     def basic_statistical_evaluation(self) -> float:
         """
@@ -491,9 +367,7 @@ class TableEvaluator:
             float: correlation coefficient
 
         """
-        return self.statistical_evaluator.basic_statistical_evaluation(
-            self.real, self.fake, self.numerical_columns
-        )
+        return self.statistical_evaluator.basic_statistical_evaluation(self.real, self.fake, self.numerical_columns)
 
     def correlation_correlation(self) -> float:
         """
@@ -507,11 +381,9 @@ class TableEvaluator:
             float: The correlation coefficient
 
         """
-        return self.statistical_evaluator.correlation_correlation(
-            self.real, self.fake, self.categorical_columns
-        )
+        return self.statistical_evaluator.correlation_correlation(self.real, self.fake, self.categorical_columns)
 
-    def convert_numerical(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def convert_numerical(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
 
         Convert dataset to a numerical representations while making sure they have identical columns. This is sometimes
@@ -520,7 +392,7 @@ class TableEvaluator:
 
         Returns:
 
-            Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe factorized using the pandas function
+            tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe factorized using the pandas function
 
         """
 
@@ -533,7 +405,7 @@ class TableEvaluator:
 
         return real, fake
 
-    def convert_numerical_one_hot(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def convert_numerical_one_hot(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
 
         Convert dataset to a numerical representations while making sure they have identical columns.
@@ -542,7 +414,7 @@ class TableEvaluator:
 
         Returns:
 
-            Tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe with categorical columns one-hot encoded and
+            tuple[pd.DataFrame, pd.DataFrame]: Real and fake dataframe with categorical columns one-hot encoded and
 
             binary columns factorized.
 
@@ -553,13 +425,9 @@ class TableEvaluator:
             + self.real.select_dtypes("bool").columns.tolist()
             + self.fake.select_dtypes("bool").columns.tolist()
         )
-        real: pd.DataFrame = numerical_encoding(
-            self.real, nominal_columns=cat_cols
-        ).astype(float)  # type: ignore
+        real: pd.DataFrame = DataConverter.numeric_encoding(self.real, categorical_columns=cat_cols).astype(float)  # type: ignore
         real = real.sort_index(axis=1)
-        fake: pd.DataFrame = numerical_encoding(
-            self.fake, nominal_columns=cat_cols
-        ).astype(float)  # type: ignore
+        fake: pd.DataFrame = DataConverter.numeric_encoding(self.fake, categorical_columns=cat_cols).astype(float)  # type: ignore
         for col in real.columns:
             if col not in fake:
                 logger.warning(f"Adding column {col} with all 0s")
@@ -573,9 +441,7 @@ class TableEvaluator:
 
         return real, fake
 
-    def estimator_evaluation(
-        self, target_col: str, target_type: str = "class", kfold: bool = False
-    ) -> float:
+    def estimator_evaluation(self, target_col: str, target_type: str = "class", kfold: bool = False) -> float:
         """
 
         Method to do full estimator evaluation, including training. And estimator is either a regressor or a classifier,
@@ -602,9 +468,7 @@ class TableEvaluator:
 
         """
         real, fake = self.convert_numerical()
-        result = self.ml_evaluator.estimator_evaluation(
-            real, fake, target_col, target_type, kfold
-        )
+        result = self.ml_evaluator.estimator_evaluation(real, fake, target_col, target_type, kfold)
 
         # Store the scores for backward compatibility with evaluate() method
         # We need to get the scores from the MLEvaluator but it doesn't expose them
@@ -624,7 +488,7 @@ class TableEvaluator:
 
         """
         real, fake = self.convert_numerical_one_hot()
-        return self.privacy_evaluator.row_distance(real, fake, n_samples)
+        return self.privacy_evaluator.row_distance(real=real, fake=fake, n_samples=n_samples)
 
     def column_correlations(self) -> float:
         """
@@ -649,7 +513,7 @@ class TableEvaluator:
         kfold: bool = False,
         notebook: bool = False,
         return_outputs: bool = False,
-    ) -> Dict | None:
+    ) -> dict | None:
         """
 
         Determine correlation between attributes from the real and fake dataset using a given metric.
@@ -695,9 +559,7 @@ class TableEvaluator:
         if not isinstance(target_col, str):
             raise TypeError("target_col must be a string")
         if target_col not in self.real.columns:
-            raise ValueError(
-                f"target_col '{target_col}' not found in DataFrame columns"
-            )
+            raise ValueError(f"target_col '{target_col}' not found in DataFrame columns")
 
         if target_type not in ["class", "regr"]:
             raise ValueError("target_type must be either 'class' or 'regr'")
@@ -705,9 +567,7 @@ class TableEvaluator:
         if metric is not None:
             if isinstance(metric, str):
                 if not hasattr(stats, metric):
-                    raise ValueError(
-                        f"metric '{metric}' is not available in scipy.stats"
-                    )
+                    raise ValueError(f"metric '{metric}' is not available in scipy.stats")
             elif not callable(metric):
                 raise TypeError("metric must be a string, callable, or None")
 
@@ -740,30 +600,20 @@ class TableEvaluator:
         pd.options.display.float_format = "{:,.4f}".format
 
         statistical_results, statistical_tab = self._calculate_statistical_metrics()
-        ml_efficacy_results, ml_efficacy_tab = self._calculate_ml_efficacy(
-            target_col, target_type, kfold
-        )
-        privacy_results, privacy_tab = self._calculate_privacy_metrics(
-            n_samples_distance
-        )
+        ml_efficacy_results, ml_efficacy_tab = self._calculate_ml_efficacy(target_col, target_type, kfold)
+        privacy_results, privacy_tab = self._calculate_privacy_metrics(n_samples_distance)
 
         all_results_dict = {
             "Basic statistics": statistical_results["basic_statistical"],
-            "Correlation column correlations": statistical_results[
-                "correlation_correlation"
-            ],
-            "Mean Correlation between fake and real columns": statistical_results[
-                "column_correlation"
-            ],
+            "Correlation column correlations": statistical_results["correlation_correlation"],
+            "Mean Correlation between fake and real columns": statistical_results["column_correlation"],
             f"{'1 - MAPE Estimator results' if target_type == 'class' else 'Correlation RMSE'}": ml_efficacy_results[
                 "estimators"
             ],
         }
         all_results_dict["Similarity Score"] = np.mean(list(all_results_dict.values()))
 
-        summary = EvaluationResult(
-            name="Overview Results", content=dict_to_df(all_results_dict)
-        )
+        summary = EvaluationResult(name="Overview Results", content=dict_to_df(all_results_dict))
 
         overview_tab = [
             summary,
@@ -777,9 +627,7 @@ class TableEvaluator:
                 *statistical_tab,
             ]
 
-            all_results = {
-                x.name: x.content.to_dict(orient="index") for x in all_results
-            }
+            all_results = {x.name: x.content.to_dict(orient="index") for x in all_results}
 
             return all_results
 
@@ -832,9 +680,7 @@ class TableEvaluator:
             ),
             EvaluationResult(
                 name="Kolmogorov-Smirnov statistic",
-                content=te_metrics.kolmogorov_smirnov_df(
-                    self.real, self.fake, self.numerical_columns
-                ),
+                content=te_metrics.kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns),
             ),
         ]
         return {
@@ -845,18 +691,12 @@ class TableEvaluator:
         }, statistical_tab
 
     def _calculate_ml_efficacy(self, target_col: str, target_type: str, kfold: bool):
-        estimators = self.estimator_evaluation(
-            target_col=target_col, target_type=target_type, kfold=kfold
-        )
+        estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
         efficacy_title = (
-            "Classifier F1-scores and their Jaccard similarities:"
-            if target_type == "class"
-            else "Regressor MSE-scores"
+            "Classifier F1-scores and their Jaccard similarities:" if target_type == "class" else "Regressor MSE-scores"
         )
 
-        ml_efficacy_tab = [
-            EvaluationResult(name=efficacy_title, content=self.estimators_scores)
-        ]
+        ml_efficacy_tab = [EvaluationResult(name=efficacy_title, content=self.estimators_scores)]
         return {
             "estimators": estimators,
             "efficacy_title": efficacy_title,
@@ -883,9 +723,9 @@ class TableEvaluator:
         self,
         include_wasserstein: bool = True,
         include_mmd: bool = True,
-        wasserstein_config: Optional[Dict] = None,
-        mmd_config: Optional[Dict] = None,
-    ) -> Dict:
+        wasserstein_config: dict | None = None,
+        mmd_config: dict | None = None,
+    ) -> dict:
         """
         Run advanced statistical evaluation using Wasserstein distance and MMD.
 
@@ -905,9 +745,7 @@ class TableEvaluator:
             raise TypeError("include_mmd must be a boolean")
 
         if not include_wasserstein and not include_mmd:
-            raise ValueError(
-                "At least one of include_wasserstein or include_mmd must be True"
-            )
+            raise ValueError("At least one of include_wasserstein or include_mmd must be True")
 
         if wasserstein_config is not None and not isinstance(wasserstein_config, dict):
             raise TypeError("wasserstein_config must be a dictionary or None")
@@ -926,13 +764,11 @@ class TableEvaluator:
 
         if include_wasserstein:
             try:
-                results["wasserstein"] = (
-                    self.advanced_statistical_evaluator.wasserstein_evaluation(
-                        self.real,
-                        self.fake,
-                        self.numerical_columns,
-                        **wasserstein_config,
-                    )
+                results["wasserstein"] = self.advanced_statistical_evaluator.wasserstein_evaluation(
+                    self.real,
+                    self.fake,
+                    self.numerical_columns,
+                    **wasserstein_config,
                 )
             except Exception as e:
                 logger.error(f"Wasserstein evaluation failed: {e}")
@@ -953,9 +789,9 @@ class TableEvaluator:
         self,
         include_k_anonymity: bool = True,
         include_membership_inference: bool = True,
-        quasi_identifiers: Optional[List[str]] = None,
-        sensitive_attributes: Optional[List[str]] = None,
-    ) -> Dict:
+        quasi_identifiers: list[str] | None = None,
+        sensitive_attributes: list[str] | None = None,
+    ) -> dict:
         """
         Run advanced privacy evaluation including k-anonymity and membership inference.
 
@@ -975,27 +811,21 @@ class TableEvaluator:
             raise TypeError("include_membership_inference must be a boolean")
 
         if not include_k_anonymity and not include_membership_inference:
-            raise ValueError(
-                "At least one of include_k_anonymity or include_membership_inference must be True"
-            )
+            raise ValueError("At least one of include_k_anonymity or include_membership_inference must be True")
 
         if quasi_identifiers is not None:
             if not isinstance(quasi_identifiers, list):
                 raise TypeError("quasi_identifiers must be a list or None")
             invalid_cols = set(quasi_identifiers) - set(self.real.columns)
             if invalid_cols:
-                raise ValueError(
-                    f"quasi_identifiers contains invalid columns: {invalid_cols}"
-                )
+                raise ValueError(f"quasi_identifiers contains invalid columns: {invalid_cols}")
 
         if sensitive_attributes is not None:
             if not isinstance(sensitive_attributes, list):
                 raise TypeError("sensitive_attributes must be a list or None")
             invalid_cols = set(sensitive_attributes) - set(self.real.columns)
             if invalid_cols:
-                raise ValueError(
-                    f"sensitive_attributes contains invalid columns: {invalid_cols}"
-                )
+                raise ValueError(f"sensitive_attributes contains invalid columns: {invalid_cols}")
 
         return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
             self.real,
@@ -1014,7 +844,7 @@ class TableEvaluator:
         include_advanced_statistical: bool = True,
         include_advanced_privacy: bool = True,
         **kwargs,
-    ) -> Dict:
+    ) -> dict:
         """
         Run comprehensive evaluation including both basic and advanced metrics.
 
@@ -1033,9 +863,7 @@ class TableEvaluator:
         if not isinstance(target_col, str):
             raise TypeError("target_col must be a string")
         if target_col not in self.real.columns:
-            raise ValueError(
-                f"target_col '{target_col}' not found in DataFrame columns"
-            )
+            raise ValueError(f"target_col '{target_col}' not found in DataFrame columns")
 
         if target_type not in ["class", "regr"]:
             raise ValueError("target_type must be either 'class' or 'regr'")
@@ -1047,9 +875,7 @@ class TableEvaluator:
         if not isinstance(include_advanced_privacy, bool):
             raise TypeError("include_advanced_privacy must be a boolean")
 
-        if not any(
-            [include_basic, include_advanced_statistical, include_advanced_privacy]
-        ):
+        if not any([include_basic, include_advanced_statistical, include_advanced_privacy]):
             raise ValueError("At least one evaluation type must be included")
 
         # Performance warning for large datasets
@@ -1066,9 +892,7 @@ class TableEvaluator:
         # Basic evaluation
         if include_basic:
             try:
-                results["basic"] = self.evaluate(
-                    target_col, target_type, return_outputs=True, **kwargs
-                )
+                results["basic"] = self.evaluate(target_col, target_type, return_outputs=True, **kwargs)
             except Exception as e:
                 logger.error(f"Basic evaluation failed: {e}")
                 results["basic"] = {"error": str(e)}
@@ -1091,7 +915,7 @@ class TableEvaluator:
 
         return results
 
-    def get_available_advanced_metrics(self) -> Dict:
+    def get_available_advanced_metrics(self) -> dict:
         """
         Get information about available advanced metrics.
 

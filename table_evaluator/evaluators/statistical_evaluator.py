@@ -1,14 +1,14 @@
 """Statistical evaluation functionality extracted from TableEvaluator."""
 
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.decomposition import PCA
+from sklearn.metrics import mean_absolute_percentage_error
 
 from table_evaluator.metrics.statistical import associations
-from table_evaluator import metrics as te_metrics
 
 
 class StatisticalEvaluator:
@@ -26,7 +26,7 @@ class StatisticalEvaluator:
         self.verbose = verbose
 
     def basic_statistical_evaluation(
-        self, real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]
+        self, real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]
     ) -> float:
         """
         Calculate the correlation coefficient between the basic properties of real and fake data.
@@ -69,7 +69,7 @@ class StatisticalEvaluator:
         return corr
 
     def correlation_correlation(
-        self, real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: List[str]
+        self, real: pd.DataFrame, fake: pd.DataFrame, categorical_columns: list[str]
     ) -> float:
         """
         Calculate correlation coefficient between association matrices of real and fake data.
@@ -143,8 +143,7 @@ class StatisticalEvaluator:
                 pca_real.explained_variance_, pca_fake.explained_variance_
             )
             return corr
-        else:
-            pca_error = te_metrics.mean_absolute_percentage_error(
-                pca_real.explained_variance_, pca_fake.explained_variance_
-            )
-            return 1 - pca_error
+        pca_error = mean_absolute_percentage_error(
+            pca_real.explained_variance_, pca_fake.explained_variance_
+        )
+        return float(1 - pca_error)

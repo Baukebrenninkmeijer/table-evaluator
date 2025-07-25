@@ -1,7 +1,6 @@
 """Configuration classes for table evaluation."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 
 @dataclass
@@ -10,7 +9,7 @@ class EvaluationConfig:
 
     # Data preprocessing
     unique_thresh: int = 0
-    n_samples: Optional[int] = None
+    n_samples: int | None = None
     random_seed: int = 1337
 
     # Privacy evaluation
@@ -21,7 +20,7 @@ class EvaluationConfig:
 
     # ML evaluation
     kfold: bool = False
-    estimator_configs: Dict = field(default_factory=dict)
+    estimator_configs: dict = field(default_factory=dict)
 
     # Validation
     def __post_init__(self):

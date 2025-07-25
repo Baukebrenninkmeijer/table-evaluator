@@ -2,7 +2,7 @@
 
 import logging
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from scipy import stats as ss
 from scipy.spatial.distance import cdist, jensenshannon
 from scipy.stats import chi2_contingency, ks_2samp
 from sklearn.metrics import mean_squared_error
-from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel, linear_kernel
+from sklearn.metrics.pairwise import linear_kernel, polynomial_kernel, rbf_kernel
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Basic Statistical Metrics
 # =============================================================================
+
 
 def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> np.floating[Any]:
     """
@@ -35,9 +36,7 @@ def mean_absolute_error(y_true: np.ndarray, y_pred: np.ndarray) -> np.floating[A
     return np.mean(np.abs(np.subtract(y_true, y_pred)))
 
 
-def euclidean_distance(
-    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
-) -> float:
+def euclidean_distance(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> float:
     """
     Returns the euclidean distance between y_true and y_pred.
 
@@ -51,9 +50,7 @@ def euclidean_distance(
     return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
 
 
-def mean_absolute_percentage_error(
-    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
-):
+def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series):
     """
     Returns the mean absolute percentage error between y_true and y_pred.
 
@@ -68,9 +65,7 @@ def mean_absolute_percentage_error(
     return np.mean(np.abs((y_true - y_pred) / y_true))
 
 
-def rmse(
-    y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series
-) -> np.ndarray | pd.Series:
+def rmse(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> np.ndarray | pd.Series:
     """
     Returns the root mean squared error between y_true and y_pred.
 
@@ -87,18 +82,17 @@ def rmse(
 def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """Calculate cosine similarity between two vectors."""
     y_true, y_pred = y_true.reshape(-1), y_pred.reshape(-1)
-    return np.sum(y_true * y_pred) / (
-        np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2))
-    )
+    return np.sum(y_true * y_pred) / (np.sqrt(np.sum(y_true**2)) * np.sqrt(np.sum(y_pred**2)))
 
 
 # =============================================================================
 # Association Metrics (from association_metrics.py)
 # =============================================================================
 
+
 def cramers_v(
-    x: Union[List, np.ndarray, pd.Series],
-    y: Union[List, np.ndarray, pd.Series],
+    x: list | np.ndarray | pd.Series,
+    y: list | np.ndarray | pd.Series,
     bias_correction: bool = True,
 ) -> float:
     """
@@ -130,9 +124,7 @@ def cramers_v(
 
     # Validate inputs
     if len(x_series) != len(y_series):
-        raise ValueError(
-            f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}"
-        )
+        raise ValueError(f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}")
 
     if len(x_series) == 0:
         raise ValueError("Input arrays cannot be empty")
@@ -178,9 +170,7 @@ def cramers_v(
     return min(1.0, cramers_v_val)
 
 
-def theils_u(
-    x: Union[List, np.ndarray, pd.Series], y: Union[List, np.ndarray, pd.Series]
-) -> float:
+def theils_u(x: list | np.ndarray | pd.Series, y: list | np.ndarray | pd.Series) -> float:
     """
     Calculate Theil's U statistic (Uncertainty coefficient) for categorical-categorical association.
     This is the uncertainty of x given y: U(x,y) != U(y,x)
@@ -205,9 +195,7 @@ def theils_u(
 
     # Validate inputs
     if len(x_series) != len(y_series):
-        raise ValueError(
-            f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}"
-        )
+        raise ValueError(f"Input arrays must have same length: {len(x_series)} vs {len(y_series)}")
 
     if len(x_series) == 0:
         raise ValueError("Input arrays cannot be empty")
@@ -223,9 +211,7 @@ def theils_u(
     # Calculate entropy of x using Shannon entropy formula: H(X) = -Σ p(x) * log2(p(x))
     x_counter = x_clean.value_counts()
     x_probs = x_counter / len(x_clean)
-    EPSILON = (
-        1e-10  # Small constant to prevent log(0), typical value for numerical stability
-    )
+    EPSILON = 1e-10  # Small constant to prevent log(0), typical value for numerical stability
     h_x = -np.sum(x_probs * np.log2(x_probs + EPSILON))  # Shannon entropy in bits
 
     if h_x == 0:
@@ -243,9 +229,7 @@ def theils_u(
             p_y = len(x_given_y) / len(x_clean)
             x_given_y_counter = x_given_y.value_counts()
             x_given_y_probs = x_given_y_counter / len(x_given_y)
-            h_x_given_y_val = -np.sum(
-                x_given_y_probs * np.log2(x_given_y_probs + EPSILON)
-            )
+            h_x_given_y_val = -np.sum(x_given_y_probs * np.log2(x_given_y_probs + EPSILON))
             h_x_given_y += p_y * h_x_given_y_val
 
     # Calculate Theil's U = (H(X) - H(X|Y)) / H(X)
@@ -255,8 +239,8 @@ def theils_u(
 
 
 def correlation_ratio(
-    categorical: Union[List, np.ndarray, pd.Series],
-    numerical: Union[List, np.ndarray, pd.Series],
+    categorical: list | np.ndarray | pd.Series,
+    numerical: list | np.ndarray | pd.Series,
 ) -> float:
     """
     Calculate correlation ratio (eta) for categorical-numerical association.
@@ -269,14 +253,8 @@ def correlation_ratio(
         Correlation ratio in the range [0,1]
     """
     # Convert to pandas Series for easier handling
-    cat_series = (
-        pd.Series(categorical)
-        if not isinstance(categorical, pd.Series)
-        else categorical
-    )
-    num_series = (
-        pd.Series(numerical) if not isinstance(numerical, pd.Series) else numerical
-    )
+    cat_series = pd.Series(categorical) if not isinstance(categorical, pd.Series) else categorical
+    num_series = pd.Series(numerical) if not isinstance(numerical, pd.Series) else numerical
 
     # Handle missing values by dropping them
     mask = ~(cat_series.isna() | num_series.isna())
@@ -312,12 +290,11 @@ def correlation_ratio(
 
 def associations(
     dataset: pd.DataFrame,
-    nominal_columns: Optional[Union[List[str], str]] = "auto",
+    nominal_columns: list[str] | str | None = "auto",
     nom_nom_assoc: str = "cramer",
     num_num_assoc: str = "pearson",
     nom_num_assoc: str = "correlation_ratio",
-    compute_only: bool = False,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """
     Calculate the correlation/strength-of-association matrix for mixed data types.
 
@@ -334,18 +311,14 @@ def associations(
     """
     if nominal_columns == "auto":
         # Auto-detect categorical columns based on dtype
-        nominal_columns = list(
-            dataset.select_dtypes(include=["object", "category", "bool"]).columns
-        )
+        nominal_columns = list(dataset.select_dtypes(include=["object", "category", "bool"]).columns)
     elif nominal_columns == "all":
         nominal_columns = list(dataset.columns)
     elif nominal_columns is None:
         nominal_columns = []
 
     # Initialize correlation matrix
-    corr_matrix = pd.DataFrame(
-        index=dataset.columns, columns=dataset.columns, dtype=float
-    )
+    corr_matrix = pd.DataFrame(index=dataset.columns, columns=dataset.columns, dtype=float)
 
     # Fill diagonal with 1s
     np.fill_diagonal(corr_matrix.values, 1.0)
@@ -370,19 +343,13 @@ def associations(
                     elif not col1_is_nominal and not col2_is_nominal:
                         # Numerical-numerical association
                         if num_num_assoc == "pearson":
-                            assoc_value, _ = stats.pearsonr(
-                                dataset[col1].dropna(), dataset[col2].dropna()
-                            )
+                            assoc_value, _ = stats.pearsonr(dataset[col1].dropna(), dataset[col2].dropna())
                             # Keep original sign for Pearson correlation to match dython behavior
                         elif num_num_assoc == "spearman":
-                            assoc_value, _ = stats.spearmanr(
-                                dataset[col1].dropna(), dataset[col2].dropna()
-                            )
+                            assoc_value, _ = stats.spearmanr(dataset[col1].dropna(), dataset[col2].dropna())
                             assoc_value = abs(assoc_value)
                         elif num_num_assoc == "kendall":
-                            assoc_value, _ = stats.kendalltau(
-                                dataset[col1].dropna(), dataset[col2].dropna()
-                            )
+                            assoc_value, _ = stats.kendalltau(dataset[col1].dropna(), dataset[col2].dropna())
                             assoc_value = abs(assoc_value)
                         else:
                             raise ValueError(f"Unknown num_num_assoc: {num_num_assoc}")
@@ -391,13 +358,9 @@ def associations(
                         # Categorical-numerical association
                         if nom_num_assoc == "correlation_ratio":
                             if col1_is_nominal:
-                                assoc_value = correlation_ratio(
-                                    dataset[col1], dataset[col2]
-                                )
+                                assoc_value = correlation_ratio(dataset[col1], dataset[col2])
                             else:
-                                assoc_value = correlation_ratio(
-                                    dataset[col2], dataset[col1]
-                                )
+                                assoc_value = correlation_ratio(dataset[col2], dataset[col1])
                         else:
                             raise ValueError(f"Unknown nom_num_assoc: {nom_num_assoc}")
 
@@ -426,18 +389,14 @@ def associations(
 
                 # Fill both upper and lower triangles (make symmetric for most cases)
                 corr_matrix.loc[col1, col2] = assoc_value
-                if nom_nom_assoc != "theil" or not (
-                    col1_is_nominal and col2_is_nominal
-                ):
+                if nom_nom_assoc != "theil" or not (col1_is_nominal and col2_is_nominal):
                     # Make symmetric except for Theil's U which is asymmetric
                     corr_matrix.loc[col2, col1] = assoc_value
                 else:
                     # For Theil's U, calculate the reverse direction
                     try:
                         reverse_assoc = theils_u(dataset[col2], dataset[col1])
-                        corr_matrix.loc[col2, col1] = (
-                            reverse_assoc if not np.isnan(reverse_assoc) else 0.0
-                        )
+                        corr_matrix.loc[col2, col1] = reverse_assoc if not np.isnan(reverse_assoc) else 0.0
                     except (ValueError, RuntimeError) as e:
                         warnings.warn(
                             f"Could not calculate reverse Theil's U between {col2} and {col1}: {e}",
@@ -476,17 +435,11 @@ def column_correlations(
     for column in dataset_a.columns.tolist():
         if column in categorical_columns:
             if theil_u:
-                corr[column] = theils_u(
-                    dataset_a[column].sort_values(), dataset_b[column].sort_values()
-                )
+                corr[column] = theils_u(dataset_a[column].sort_values(), dataset_b[column].sort_values())
             else:
-                corr[column] = cramers_v(
-                    dataset_a[column].sort_values(), dataset_b[column].sort_values()
-                )
+                corr[column] = cramers_v(dataset_a[column].sort_values(), dataset_b[column].sort_values())
         else:
-            corr[column], _ = ss.pearsonr(
-                dataset_a[column].sort_values(), dataset_b[column].sort_values()
-            )
+            corr[column], _ = ss.pearsonr(dataset_a[column].sort_values(), dataset_b[column].sort_values())
     corr.fillna(value=np.nan, inplace=True)
     correlation = np.mean(corr.values.flatten())
     return float(correlation)
@@ -496,9 +449,8 @@ def column_correlations(
 # Distribution Comparison Metrics
 # =============================================================================
 
-def js_distance_df(
-    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]
-) -> pd.DataFrame:
+
+def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]) -> pd.DataFrame:
     """
     Calculate Jensen-Shannon distances between real and fake data for numerical columns.
 
@@ -517,21 +469,16 @@ def js_distance_df(
     Raises:
         AssertionError: If the columns in real and fake DataFrames are not identical.
     """
-    assert real.columns.tolist() == fake.columns.tolist(), (
-        "Columns are not identical between `real` and `fake`. "
-    )
+    assert real.columns.tolist() == fake.columns.tolist(), "Columns are not identical between `real` and `fake`. "
     distances = Parallel(n_jobs=-1)(
-        delayed(jensenshannon_distance)(col, real[col], fake[col])
-        for col in numerical_columns
+        delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
     )
 
     distances_df = pd.DataFrame(distances)
     return distances_df.set_index("col_name")
 
 
-def jensenshannon_distance(
-    colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25
-) -> Dict[str, Any]:
+def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25) -> dict[str, Any]:
     """
     Calculate the Jensen-Shannon distance between real and fake data columns.
 
@@ -555,16 +502,12 @@ def jensenshannon_distance(
     bins = min(bins, len(real_col))
     binned_values_real, actual_bins = pd.cut(x=real_col, bins=bins, retbins=True)
     binned_probs_real = binned_values_real.value_counts(normalize=True, sort=False)
-    binned_probs_fake = pd.cut(fake_col, bins=actual_bins).value_counts(
-        normalize=True, sort=False
-    )
+    binned_probs_fake = pd.cut(fake_col, bins=actual_bins).value_counts(normalize=True, sort=False)
     js_distance = jensenshannon(binned_probs_real, binned_probs_fake)
     return {"col_name": colname, "js_distance": js_distance}
 
 
-def kolmogorov_smirnov_test(
-    col_name: str, real_col: pd.Series, fake_col: pd.Series
-) -> Dict[str, Any]:
+def kolmogorov_smirnov_test(col_name: str, real_col: pd.Series, fake_col: pd.Series) -> dict[str, Any]:
     """
     Perform Kolmogorov-Smirnov test on real and fake data columns.
 
@@ -590,16 +533,11 @@ def kolmogorov_smirnov_test(
     }
 
 
-def kolmogorov_smirnov_df(
-    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List
-) -> pd.DataFrame:
+def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list) -> pd.DataFrame:
     """Calculate Kolmogorov-Smirnov test results for numerical columns."""
-    assert real.columns.tolist() == fake.columns.tolist(), (
-        "Columns are not identical between `real` and `fake`. "
-    )
+    assert real.columns.tolist() == fake.columns.tolist(), "Columns are not identical between `real` and `fake`. "
     distances = Parallel(n_jobs=-1)(
-        delayed(kolmogorov_smirnov_test)(col, real[col], fake[col])
-        for col in numerical_columns
+        delayed(kolmogorov_smirnov_test)(col, real[col], fake[col]) for col in numerical_columns
     )
     distances_df = pd.DataFrame(distances)
     return distances_df.set_index("col_name")
@@ -609,12 +547,13 @@ def kolmogorov_smirnov_df(
 # Wasserstein Distance Implementation
 # =============================================================================
 
+
 def _sample_for_performance(
     real_data: np.ndarray,
     fake_data: np.ndarray,
     max_samples: int = 10000,
     random_state: int = 42,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Sample data for performance optimization while maintaining statistical properties.
 
@@ -649,8 +588,8 @@ def _sample_for_performance(
 
 
 def _check_large_dataset_and_warn(
-    real_data: Union[np.ndarray, pd.DataFrame],
-    fake_data: Union[np.ndarray, pd.DataFrame],
+    real_data: np.ndarray | pd.DataFrame,
+    fake_data: np.ndarray | pd.DataFrame,
     threshold: int = 250000,
     operation_name: str = "calculation",
 ) -> None:
@@ -673,9 +612,7 @@ def _check_large_dataset_and_warn(
         )
 
 
-def wasserstein_distance_1d(
-    real_col: pd.Series, fake_col: pd.Series, p: int = 1
-) -> float:
+def wasserstein_distance_1d(real_col: pd.Series, fake_col: pd.Series, p: int = 1) -> float:
     """
     Calculate 1D Wasserstein distance between two distributions.
 
@@ -718,7 +655,7 @@ def wasserstein_distance_1d(
     try:
         return stats.wasserstein_distance(real_clean, fake_clean)
     except Exception as e:
-        raise ValueError(f"Failed to calculate Wasserstein distance: {str(e)}")
+        raise ValueError(f"Failed to calculate Wasserstein distance: {e!s}")
 
 
 def wasserstein_distance_2d(
@@ -779,17 +716,11 @@ def wasserstein_distance_2d(
         raise ValueError("Input data contains infinite values")
 
     # Check for large datasets and warn user
-    _check_large_dataset_and_warn(
-        real_data, fake_data, operation_name="2D Wasserstein distance"
-    )
+    _check_large_dataset_and_warn(real_data, fake_data, operation_name="2D Wasserstein distance")
 
     # Performance optimization: sample large datasets only if enabled
-    if enable_sampling and (
-        len(real_data) > max_samples or len(fake_data) > max_samples
-    ):
-        real_data, fake_data = _sample_for_performance(
-            real_data, fake_data, max_samples
-        )
+    if enable_sampling and (len(real_data) > max_samples or len(fake_data) > max_samples):
+        real_data, fake_data = _sample_for_performance(real_data, fake_data, max_samples)
 
     n, m = len(real_data), len(fake_data)
 
@@ -823,9 +754,7 @@ def wasserstein_distance_2d(
             u = u_new
 
         if not converged:
-            raise ValueError(
-                f"Sinkhorn algorithm did not converge after {max_iter} iterations"
-            )
+            raise ValueError(f"Sinkhorn algorithm did not converge after {max_iter} iterations")
 
         # Calculate optimal transport cost
         transport_cost = np.sum(u[:, None] * K * v[None, :] * C)
@@ -838,13 +767,13 @@ def wasserstein_distance_2d(
     except Exception as e:
         if isinstance(e, ValueError):
             raise
-        raise ValueError(f"Failed to calculate 2D Wasserstein distance: {str(e)}")
+        raise ValueError(f"Failed to calculate 2D Wasserstein distance: {e!s}")
 
 
 def wasserstein_distance_df(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    numerical_columns: List[str],
+    numerical_columns: list[str],
     p: int = 1,
     method: str = "1d",
     enable_sampling: bool = False,
@@ -868,18 +797,14 @@ def wasserstein_distance_df(
     Raises:
         AssertionError: If real and fake DataFrames don't have identical columns
     """
-    assert (
-        real.columns.tolist() == fake.columns.tolist()
-    ), "Columns are not identical between real and fake DataFrames"
+    assert real.columns.tolist() == fake.columns.tolist(), "Columns are not identical between real and fake DataFrames"
 
     distances = []
 
     if method == "1d":
         for col in numerical_columns:
             distance = wasserstein_distance_1d(real[col], fake[col], p=p)
-            distances.append(
-                {"column": col, "wasserstein_distance": distance, "method": f"1D_p{p}"}
-            )
+            distances.append({"column": col, "wasserstein_distance": distance, "method": f"1D_p{p}"})
 
     elif method == "2d" and len(numerical_columns) >= 2:
         # Calculate 2D Wasserstein for all pairs of columns
@@ -909,9 +834,7 @@ def wasserstein_distance_df(
     return pd.DataFrame(distances)
 
 
-def earth_movers_distance_summary(
-    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: List[str]
-) -> dict:
+def earth_movers_distance_summary(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]) -> dict:
     """
     Generate comprehensive Wasserstein distance summary.
 
@@ -934,8 +857,7 @@ def earth_movers_distance_summary(
         distance = row["wasserstein_distance"]
         results["column_distances"][col] = {
             "wasserstein_1": distance,
-            "normalized_distance": distance
-            / (real[col].std() + fake[col].std() + 1e-10),
+            "normalized_distance": distance / (real[col].std() + fake[col].std() + 1e-10),
         }
 
     # Calculate summary statistics
@@ -952,9 +874,7 @@ def earth_movers_distance_summary(
     results["overall_metrics"] = {
         "quality_score": 1.0 / (1.0 + np.mean(distances)),
         "distribution_similarity": np.exp(-np.mean(distances)),
-        "worst_column": distances_1d.loc[
-            distances_1d["wasserstein_distance"].idxmax(), "column"
-        ],
+        "worst_column": distances_1d.loc[distances_1d["wasserstein_distance"].idxmax(), "column"],
     }
 
     return results
@@ -962,7 +882,7 @@ def earth_movers_distance_summary(
 
 def optimal_transport_cost(
     real_col: pd.Series, fake_col: pd.Series, bins: int = 50
-) -> Tuple[float, np.ndarray, np.ndarray]:
+) -> tuple[float, np.ndarray, np.ndarray]:
     """
     Calculate optimal transport cost and transport plan.
 
@@ -1025,9 +945,9 @@ def optimal_transport_cost(
 def mmd_comprehensive_analysis(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    numerical_columns: List[str],
-    kernel_types: List[str] = ["rbf", "polynomial", "linear"],
-) -> Dict:
+    numerical_columns: list[str],
+    kernel_types: list[str] = ["rbf", "polynomial", "linear"],
+) -> dict:
     """
     Comprehensive MMD analysis with multiple kernels.
 
@@ -1044,15 +964,11 @@ def mmd_comprehensive_analysis(
 
     # Column-wise analysis for each kernel
     for kernel_type in kernel_types:
-        results["column_wise"][kernel_type] = mmd_column_wise(
-            real, fake, numerical_columns, kernel_type
-        )
+        results["column_wise"][kernel_type] = mmd_column_wise(real, fake, numerical_columns, kernel_type)
 
     # Multivariate analysis
     for kernel_type in kernel_types:
-        results["multivariate"][kernel_type] = mmd_multivariate(
-            real, fake, numerical_columns, kernel_type
-        )
+        results["multivariate"][kernel_type] = mmd_multivariate(real, fake, numerical_columns, kernel_type)
 
     # Summary statistics
     all_mmds = []
@@ -1075,9 +991,10 @@ def mmd_comprehensive_analysis(
 # Maximum Mean Discrepancy (MMD) Implementation
 # =============================================================================
 
+
 def _sample_for_mmd_performance(
     X: np.ndarray, Y: np.ndarray, max_samples: int = 5000, random_state: int = 42
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Sample data for MMD performance optimization.
 
@@ -1165,19 +1082,13 @@ class RBFKernel(MMDKernel):
             # Use median heuristic for bandwidth selection
             try:
                 if Y is None:
-                    pairwise_dists = np.sqrt(
-                        np.sum((X[:, None] - X[None, :]) ** 2, axis=2)
-                    )
+                    pairwise_dists = np.sqrt(np.sum((X[:, None] - X[None, :]) ** 2, axis=2))
                 else:
-                    pairwise_dists = np.sqrt(
-                        np.sum((X[:, None] - Y[None, :]) ** 2, axis=2)
-                    )
+                    pairwise_dists = np.sqrt(np.sum((X[:, None] - Y[None, :]) ** 2, axis=2))
 
                 valid_dists = pairwise_dists[pairwise_dists > 0]
                 if len(valid_dists) == 0:
-                    raise ValueError(
-                        "All pairwise distances are zero - cannot compute gamma"
-                    )
+                    raise ValueError("All pairwise distances are zero - cannot compute gamma")
 
                 median_dist = np.median(valid_dists)
                 if median_dist == 0:
@@ -1185,14 +1096,12 @@ class RBFKernel(MMDKernel):
 
                 gamma = 1.0 / (2 * median_dist**2)
             except Exception as e:
-                raise ValueError(
-                    f"Failed to compute gamma using median heuristic: {str(e)}"
-                )
+                raise ValueError(f"Failed to compute gamma using median heuristic: {e!s}")
 
         try:
             return rbf_kernel(X, Y, gamma=gamma)
         except Exception as e:
-            raise ValueError(f"Failed to compute RBF kernel: {str(e)}")
+            raise ValueError(f"Failed to compute RBF kernel: {e!s}")
 
 
 class PolynomialKernel(MMDKernel):
@@ -1205,9 +1114,7 @@ class PolynomialKernel(MMDKernel):
         self.coef0 = coef0
 
     def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
-        return polynomial_kernel(
-            X, Y, degree=self.degree, gamma=self.gamma, coef0=self.coef0
-        )
+        return polynomial_kernel(X, Y, degree=self.degree, gamma=self.gamma, coef0=self.coef0)
 
 
 class LinearKernel(MMDKernel):
@@ -1323,15 +1230,15 @@ def mmd_squared(
     except Exception as e:
         if isinstance(e, (ValueError, TypeError)):
             raise
-        raise ValueError(f"Failed to calculate MMD: {str(e)}")
+        raise ValueError(f"Failed to calculate MMD: {e!s}")
 
 
 def mmd_column_wise(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    numerical_columns: List[str],
+    numerical_columns: list[str],
     kernel_type: str = "rbf",
-    kernel_params: Dict | None = None,
+    kernel_params: dict | None = None,
 ) -> pd.DataFrame:
     """
     Calculate MMD for each numerical column independently.
@@ -1384,12 +1291,12 @@ def mmd_column_wise(
 def mmd_multivariate(
     real: pd.DataFrame,
     fake: pd.DataFrame,
-    numerical_columns: List[str],
+    numerical_columns: list[str],
     kernel_type: str = "rbf",
-    kernel_params: Dict | None = None,
+    kernel_params: dict | None = None,
     enable_sampling: bool = False,
     max_samples: int = 5000,
-) -> Dict:
+) -> dict:
     """
     Calculate multivariate MMD using all numerical columns together.
 
@@ -1424,8 +1331,7 @@ def mmd_multivariate(
 
     # Calculate MMD
     mmd_val = mmd_squared(
-        real_data, fake_data, kernel, unbiased=True, 
-        enable_sampling=enable_sampling, max_samples=max_samples
+        real_data, fake_data, kernel, unbiased=True, enable_sampling=enable_sampling, max_samples=max_samples
     )
 
     return {

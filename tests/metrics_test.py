@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 import table_evaluator.metrics as te_metrics
 from table_evaluator.metrics.statistical import associations
 from table_evaluator.utils import load_data, numerical_encoding

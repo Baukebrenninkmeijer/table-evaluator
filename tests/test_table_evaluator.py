@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from pandas.api.types import is_numeric_dtype
-
 from table_evaluator.table_evaluator import TableEvaluator
 
 # Ensure consistent random state

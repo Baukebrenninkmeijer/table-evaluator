@@ -2,7 +2,6 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -19,8 +18,8 @@ class VisualizationManager:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        categorical_columns: List[str],
-        numerical_columns: List[str],
+        categorical_columns: list[str],
+        numerical_columns: list[str],
     ):
         """
         Initialize the visualization manager.
@@ -37,7 +36,7 @@ class VisualizationManager:
         self.numerical_columns = numerical_columns
 
     def plot_mean_std(
-        self, fname: Optional[PathLike] = None, show: bool = True
+        self, fname: PathLike | None = None, show: bool = True
     ) -> None:
         """
         Plot mean and standard deviation comparison between real and fake data.
@@ -49,7 +48,7 @@ class VisualizationManager:
         plot_mean_std(self.real, self.fake, fname=fname, show=show)
 
     def plot_cumsums(
-        self, nr_cols: int = 4, fname: Optional[PathLike] = None, show: bool = True
+        self, nr_cols: int = 4, fname: PathLike | None = None, show: bool = True
     ):
         """
         Plot cumulative sums for all columns in real and fake datasets.
@@ -90,7 +89,7 @@ class VisualizationManager:
             plt.show()
 
     def plot_distributions(
-        self, nr_cols: int = 3, fname: Optional[PathLike] = None, show: bool = True
+        self, nr_cols: int = 3, fname: PathLike | None = None, show: bool = True
     ):
         """
         Plot distributions for all columns, using appropriate plot type per column type.
@@ -131,7 +130,7 @@ class VisualizationManager:
     def plot_correlation_difference(
         self,
         plot_diff: bool = True,
-        fname: Optional[PathLike] = None,
+        fname: PathLike | None = None,
         show: bool = True,
         **kwargs,
     ):
@@ -154,7 +153,7 @@ class VisualizationManager:
             **kwargs,
         )
 
-    def plot_pca(self, fname: Optional[PathLike] = None, show: bool = True) -> None:
+    def plot_pca(self, fname: PathLike | None = None, show: bool = True) -> None:
         """
         Plot PCA comparison between real and fake data.
 
@@ -196,7 +195,7 @@ class VisualizationManager:
             plt.show()
 
     def visual_evaluation(
-        self, save_dir: Optional[PathLike] = None, show: bool = True, **kwargs
+        self, save_dir: PathLike | None = None, show: bool = True, **kwargs
     ):
         """
         Generate all visual evaluation plots.

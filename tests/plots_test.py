@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pandas as pd
-
 from table_evaluator.plots import plot_cumsums, plot_distributions
 
 
