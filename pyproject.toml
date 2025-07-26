@@ -171,10 +171,10 @@ jupyter = [
 
 [tool.ruff.lint.per-file-ignores]
 # Tests: Ignore assertions, type annotations, and unused arguments
-"tests/*" = ["S101", "ANN001", "ANN201", "ANN003", "ANN204", "ARG001", "ARG002", "ARG005"]
+"tests/*" = ["S101", "ANN001", "ANN201", "ANN003", "ANN204", "ARG001", "ARG002", "ARG005", "SLF001"]
 
 # Benchmarks: Allow prints and missing annotations for performance testing
-"benchmarks/*" = ["T201", "ANN001", "ANN201", "ANN204", "INP001", "TRY003"]
+"benchmarks/*" = ["T201", "ANN001", "ANN201", "ANN204", "INP001", "TRY300"]
 
 # Documentation: Allow missing __init__.py and datetime without timezone
 "docs/*" = ["INP001", "DTZ005"]

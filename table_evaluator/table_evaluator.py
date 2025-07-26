@@ -275,9 +275,6 @@ class TableEvaluator:
         self.ml_evaluator = MLEvaluator(comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose)
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
 
-        # Initialize advanced evaluators
-        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(verbose=verbose)
-        self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
         self.textual_evaluator = TextualEvaluator(verbose=verbose)
 
         self.visualization_manager = VisualizationManager(
