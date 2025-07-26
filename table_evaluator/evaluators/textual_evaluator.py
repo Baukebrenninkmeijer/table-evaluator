@@ -1,10 +1,10 @@
 """Textual evaluation functionality for comparing real and synthetic text corpora."""
 
-import logging
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import pandas as pd
 import numpy as np
+from loguru import logger
 
 from table_evaluator.advanced_metrics.textual import (
     text_length_distribution_similarity,
@@ -14,8 +14,21 @@ from table_evaluator.advanced_metrics.textual import (
     comprehensive_textual_analysis,
     SENTENCE_TRANSFORMERS_AVAILABLE,
 )
-
-logger = logging.getLogger(__name__)
+from table_evaluator.models.textual_models import (
+    LexicalDiversityResult,
+    SemanticSimilarityResult,
+    TfidfSimilarityResult,
+    ComprehensiveTextualResult,
+    QuickTextualResult,
+    TextualEvaluationSummary,
+    LexicalDiversitySummary,
+    SemanticSimilaritySummary,
+    TfidfSimilaritySummary,
+    CombinedMetrics,
+    QualityRatings,
+    ConsistencyMetrics,
+    CorpusStatistics,
+)
 
 
 class TextualEvaluator:
@@ -35,7 +48,7 @@ class TextualEvaluator:
         real_texts: pd.Series,
         fake_texts: pd.Series,
         min_frequency: int = 1,
-    ) -> Dict:
+    ) -> LexicalDiversityResult:
         """
         Evaluate lexical diversity including length distributions and vocabulary overlap.
 
@@ -50,40 +63,65 @@ class TextualEvaluator:
         if self.verbose:
             print("Computing lexical diversity metrics...")
 
-        results = {}
-
         try:
             # Length distribution analysis
-            results["word_length_distribution"] = text_length_distribution_similarity(
+            word_length_distribution = text_length_distribution_similarity(
                 real_texts, fake_texts, unit="word"
             )
-            results["char_length_distribution"] = text_length_distribution_similarity(
+            char_length_distribution = text_length_distribution_similarity(
                 real_texts, fake_texts, unit="char"
             )
 
             # Vocabulary overlap analysis
-            results["vocabulary_overlap"] = vocabulary_overlap_analysis(
+            vocabulary_overlap = vocabulary_overlap_analysis(
                 real_texts, fake_texts, min_frequency=min_frequency
             )
 
             # Summary metrics
-            word_similarity = results["word_length_distribution"].get("similarity_score", 0)
-            char_similarity = results["char_length_distribution"].get("similarity_score", 0)
-            vocab_similarity = results["vocabulary_overlap"].get("jaccard_similarity", 0)
+            word_similarity = word_length_distribution.similarity_score
+            char_similarity = char_length_distribution.similarity_score
+            vocab_similarity = vocabulary_overlap.jaccard_similarity
+            overall_similarity = float(np.mean([word_similarity, char_similarity, vocab_similarity]))
 
-            results["summary"] = {
-                "word_length_similarity": float(word_similarity),
-                "char_length_similarity": float(char_similarity),
-                "vocabulary_jaccard_similarity": float(vocab_similarity),
-                "overall_lexical_similarity": float(np.mean([word_similarity, char_similarity, vocab_similarity])),
-                "quality_rating": self._rate_lexical_quality(np.mean([word_similarity, char_similarity, vocab_similarity])),
-            }
+            summary = LexicalDiversitySummary(
+                word_length_similarity=float(word_similarity),
+                char_length_similarity=float(char_similarity),
+                vocabulary_jaccard_similarity=float(vocab_similarity),
+                overall_lexical_similarity=overall_similarity,
+                quality_rating=self._rate_lexical_quality(overall_similarity),
+            )
+
+            return LexicalDiversityResult(
+                word_length_distribution=word_length_distribution,
+                char_length_distribution=char_length_distribution,
+                vocabulary_overlap=vocabulary_overlap,
+                summary=summary
+            )
 
         except Exception as e:
             logger.error(f"Error in lexical diversity evaluation: {e}")
-            results["error"] = str(e)
-
-        return results
+            # Return a default result with error
+            from table_evaluator.models.textual_models import LengthDistributionResult, VocabularyOverlapResult
+            default_length = LengthDistributionResult(
+                similarity_score=0.0, ks_statistic=1.0, ks_p_value=0.0,
+                mean_real=0.0, mean_fake=0.0, std_real=0.0, std_fake=0.0
+            )
+            default_vocab = VocabularyOverlapResult(
+                jaccard_similarity=0.0, vocab_diversity_ratio=0.0,
+                shared_vocab_size=0, real_vocab_size=0, fake_vocab_size=0
+            )
+            default_summary = LexicalDiversitySummary(
+                word_length_similarity=0.0, char_length_similarity=0.0,
+                vocabulary_jaccard_similarity=0.0, overall_lexical_similarity=0.0,
+                quality_rating="Error"
+            )
+            return LexicalDiversityResult(
+                word_length_distribution=default_length,
+                char_length_distribution=default_length,
+                vocabulary_overlap=default_vocab,
+                summary=default_summary,
+                error=str(e)
+            )
 
     def semantic_similarity_evaluation(
         self,
@@ -92,7 +130,7 @@ class TextualEvaluator:
         model_name: str = "all-MiniLM-L6-v2",
         enable_sampling: bool = False,
         max_samples: int = 1000,
-    ) -> Dict:
+    ) -> SemanticSimilarityResult:
         """
         Evaluate semantic similarity using transformer-based embeddings.
 
@@ -107,15 +145,13 @@ class TextualEvaluator:
             Dictionary containing semantic similarity analysis results
         """
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
-            return {
-                "error": "sentence-transformers not available. Install with: pip install sentence-transformers",
-                "available": False,
-            }
+            return SemanticSimilarityResult(
+                available=False,
+                error="sentence-transformers not available. Install with: pip install sentence-transformers"
+            )
 
         if self.verbose:
             print(f"Computing semantic similarity using {model_name}...")
-
-        results = {"available": True}
 
         try:
             semantic_results = semantic_similarity_embeddings(
@@ -126,30 +162,41 @@ class TextualEvaluator:
                 max_samples=max_samples,
             )
 
-            results.update(semantic_results)
-
             # Enhanced analysis
             similarity_score = semantic_results.get("semantic_similarity", 0)
-            results["summary"] = {
-                "semantic_similarity_score": float(similarity_score),
-                "embedding_distance": float(semantic_results.get("embedding_distance", 1.0)),
-                "quality_rating": self._rate_semantic_quality(similarity_score),
-                "model_used": model_name,
-            }
+            embedding_distance = semantic_results.get("embedding_distance", 1.0)
+            samples_used = semantic_results.get("samples_used", 0)
+            
+            summary = SemanticSimilaritySummary(
+                semantic_similarity_score=float(similarity_score),
+                embedding_distance=float(embedding_distance),
+                quality_rating=self._rate_semantic_quality(similarity_score),
+                model_used=model_name,
+            )
+
+            return SemanticSimilarityResult(
+                available=True,
+                semantic_similarity=float(similarity_score),
+                embedding_distance=float(embedding_distance),
+                model_name=model_name,
+                samples_used=samples_used,
+                summary=summary
+            )
 
         except Exception as e:
             logger.error(f"Error in semantic similarity evaluation: {e}")
-            results["error"] = str(e)
-
-        return results
+            return SemanticSimilarityResult(
+                available=True,
+                error=str(e)
+            )
 
     def tfidf_similarity_evaluation(
         self,
         real_texts: pd.Series,
         fake_texts: pd.Series,
         max_features: int = 10000,
-        ngram_range: tuple = (1, 2),
-    ) -> Dict:
+        ngram_range: tuple[int, int] = (1, 2),
+    ) -> TfidfSimilarityResult:
         """
         Evaluate TF-IDF based corpus similarity.
 
@@ -168,31 +215,56 @@ class TextualEvaluator:
         if self.verbose:
             print("Computing TF-IDF corpus similarity...")
 
-        results = {}
-
         try:
             tfidf_results = tfidf_corpus_similarity(
                 real_texts, fake_texts, max_features=max_features, ngram_range=ngram_range
             )
 
-            results.update(tfidf_results)
-
             # Enhanced analysis
             similarity_score = tfidf_results.get("cosine_similarity", 0)
-            results["summary"] = {
-                "tfidf_cosine_similarity": float(similarity_score),
-                "tfidf_distance": float(tfidf_results.get("tfidf_distance", 1.0)),
-                "vocabulary_size": tfidf_results.get("vocabulary_size", 0),
-                "quality_rating": self._rate_tfidf_quality(similarity_score),
-                "features_used": max_features,
-                "ngram_range": ngram_range,
-            }
+            tfidf_distance = tfidf_results.get("tfidf_distance", 1.0)
+            vocabulary_size = tfidf_results.get("vocabulary_size", 0)
+            real_corpus_norm = tfidf_results.get("real_corpus_norm", 0.0)
+            fake_corpus_norm = tfidf_results.get("fake_corpus_norm", 0.0)
+            
+            summary = TfidfSimilaritySummary(
+                tfidf_cosine_similarity=float(similarity_score),
+                tfidf_distance=float(tfidf_distance),
+                vocabulary_size=vocabulary_size,
+                quality_rating=self._rate_tfidf_quality(similarity_score),
+                features_used=max_features,
+                ngram_range=ngram_range,
+            )
+
+            return TfidfSimilarityResult(
+                cosine_similarity=float(similarity_score),
+                tfidf_distance=float(tfidf_distance),
+                vocabulary_size=vocabulary_size,
+                real_corpus_norm=real_corpus_norm,
+                fake_corpus_norm=fake_corpus_norm,
+                summary=summary
+            )
 
         except Exception as e:
             logger.error(f"Error in TF-IDF similarity evaluation: {e}")
-            results["error"] = str(e)
-
-        return results
+            # Return default result with error
+            default_summary = TfidfSimilaritySummary(
+                tfidf_cosine_similarity=0.0,
+                tfidf_distance=1.0,
+                vocabulary_size=0,
+                quality_rating="Error",
+                features_used=max_features,
+                ngram_range=ngram_range,
+            )
+            return TfidfSimilarityResult(
+                cosine_similarity=0.0,
+                tfidf_distance=1.0,
+                vocabulary_size=0,
+                real_corpus_norm=0.0,
+                fake_corpus_norm=0.0,
+                summary=default_summary,
+                error=str(e)
+            )
 
     def comprehensive_evaluation(
         self,
@@ -201,9 +273,9 @@ class TextualEvaluator:
         include_semantic: bool = True,
         enable_sampling: bool = False,
         max_samples: int = 1000,
-        tfidf_config: Optional[Dict] = None,
-        semantic_config: Optional[Dict] = None,
-    ) -> Dict:
+        tfidf_config: Optional[dict] = None,
+        semantic_config: Optional[dict] = None,
+    ) -> ComprehensiveTextualResult:
         """
         Run comprehensive textual evaluation combining all available metrics.
 
@@ -232,55 +304,122 @@ class TextualEvaluator:
         if self.verbose:
             print("Running comprehensive textual evaluation...")
 
-        results = {
-            "lexical_diversity": {},
-            "tfidf_similarity": {},
-            "semantic_similarity": {},
-            "combined_metrics": {},
-            "recommendations": [],
-        }
-
         # Lexical diversity analysis
         try:
-            results["lexical_diversity"] = self.lexical_diversity_evaluation(
+            lexical_diversity = self.lexical_diversity_evaluation(
                 real_texts, fake_texts
             )
         except Exception as e:
             logger.error(f"Lexical diversity evaluation failed: {e}")
-            results["lexical_diversity"] = {"error": str(e)}
+            # Create default result with error
+            from table_evaluator.models.textual_models import LengthDistributionResult, VocabularyOverlapResult, LexicalDiversitySummary
+            default_length = LengthDistributionResult(
+                similarity_score=0.0, ks_statistic=1.0, ks_p_value=0.0,
+                mean_real=0.0, mean_fake=0.0, std_real=0.0, std_fake=0.0
+            )
+            default_vocab = VocabularyOverlapResult(
+                jaccard_similarity=0.0, vocab_diversity_ratio=0.0,
+                shared_vocab_size=0, real_vocab_size=0, fake_vocab_size=0
+            )
+            default_summary = LexicalDiversitySummary(
+                word_length_similarity=0.0, char_length_similarity=0.0,
+                vocabulary_jaccard_similarity=0.0, overall_lexical_similarity=0.0,
+                quality_rating="Error"
+            )
+            lexical_diversity = LexicalDiversityResult(
+                word_length_distribution=default_length,
+                char_length_distribution=default_length,
+                vocabulary_overlap=default_vocab,
+                summary=default_summary,
+                error=str(e)
+            )
 
         # TF-IDF similarity analysis
         try:
-            results["tfidf_similarity"] = self.tfidf_similarity_evaluation(
+            tfidf_similarity = self.tfidf_similarity_evaluation(
                 real_texts, fake_texts, **tfidf_config
             )
         except Exception as e:
             logger.error(f"TF-IDF similarity evaluation failed: {e}")
-            results["tfidf_similarity"] = {"error": str(e)}
+            # Create default result with error
+            default_tfidf_summary = TfidfSimilaritySummary(
+                tfidf_cosine_similarity=0.0,
+                tfidf_distance=1.0,
+                vocabulary_size=0,
+                quality_rating="Error",
+                features_used=tfidf_config.get("max_features", 10000),
+                ngram_range=tfidf_config.get("ngram_range", (1, 2)),
+            )
+            tfidf_similarity = TfidfSimilarityResult(
+                cosine_similarity=0.0,
+                tfidf_distance=1.0,
+                vocabulary_size=0,
+                real_corpus_norm=0.0,
+                fake_corpus_norm=0.0,
+                summary=default_tfidf_summary,
+                error=str(e)
+            )
 
         # Semantic similarity analysis (if enabled and available)
         if include_semantic:
             try:
-                results["semantic_similarity"] = self.semantic_similarity_evaluation(
+                semantic_similarity = self.semantic_similarity_evaluation(
                     real_texts, fake_texts, **semantic_config
                 )
             except Exception as e:
                 logger.error(f"Semantic similarity evaluation failed: {e}")
-                results["semantic_similarity"] = {"error": str(e)}
+                semantic_similarity = SemanticSimilarityResult(
+                    available=True,
+                    error=str(e)
+                )
+        else:
+            semantic_similarity = SemanticSimilarityResult(
+                available=False
+            )
 
         # Combined analysis
         try:
-            results["combined_metrics"] = self._combine_metrics(results, include_semantic)
-            results["recommendations"] = self._generate_recommendations(results)
+            # Convert to dict format for backward compatibility with helper methods
+            results_dict = {
+                "lexical_diversity": lexical_diversity,
+                "tfidf_similarity": tfidf_similarity,
+                "semantic_similarity": semantic_similarity
+            }
+            combined_metrics = self._combine_metrics(results_dict, include_semantic)
+            recommendations = self._generate_recommendations(results_dict)
         except Exception as e:
             logger.error(f"Combined analysis failed: {e}")
-            results["combined_metrics"] = {"error": str(e)}
+            # Create default combined metrics
+            combined_metrics = CombinedMetrics(
+                overall_similarity=0.0,
+                weights_used={"lexical": 0.5, "tfidf": 0.5, "semantic": 0.0},
+                quality_ratings=QualityRatings(
+                    lexical="Error",
+                    tfidf="Error",
+                    semantic="Error",
+                    overall="Error"
+                ),
+                consistency_metrics=ConsistencyMetrics(
+                    score_std=0.0,
+                    score_range=0.0,
+                    consistency_rating="Unknown"
+                ),
+                corpus_statistics=CorpusStatistics(),
+                error=str(e)
+            )
+            recommendations = [f"Error in analysis: {str(e)}"]
 
-        return results
+        return ComprehensiveTextualResult(
+            lexical_diversity=lexical_diversity,
+            tfidf_similarity=tfidf_similarity,
+            semantic_similarity=semantic_similarity,
+            combined_metrics=combined_metrics,
+            recommendations=recommendations
+        )
 
     def quick_evaluation(
         self, real_texts: pd.Series, fake_texts: pd.Series
-    ) -> Dict:
+    ) -> QuickTextualResult:
         """
         Perform quick textual evaluation using only lightweight metrics.
 
@@ -296,31 +435,36 @@ class TextualEvaluator:
         if self.verbose:
             print("Running quick textual evaluation...")
 
-        results = {}
-
         try:
             # Use only lexical diversity and TF-IDF (fast metrics)
             lexical_results = self.lexical_diversity_evaluation(real_texts, fake_texts)
             tfidf_results = self.tfidf_similarity_evaluation(real_texts, fake_texts)
 
             # Extract key metrics
-            lexical_score = lexical_results.get("summary", {}).get("overall_lexical_similarity", 0)
-            tfidf_score = tfidf_results.get("summary", {}).get("tfidf_cosine_similarity", 0)
+            lexical_score = lexical_results.summary.overall_lexical_similarity
+            tfidf_score = tfidf_results.summary.tfidf_cosine_similarity
+            overall_similarity = float((lexical_score + tfidf_score) / 2)
 
-            results = {
-                "lexical_similarity": float(lexical_score),
-                "tfidf_similarity": float(tfidf_score),
-                "overall_similarity": float((lexical_score + tfidf_score) / 2),
-                "quality_rating": self._rate_overall_quality((lexical_score + tfidf_score) / 2),
-                "evaluation_type": "quick",
-                "semantic_analysis_included": False,
-            }
+            return QuickTextualResult(
+                lexical_similarity=float(lexical_score),
+                tfidf_similarity=float(tfidf_score),
+                overall_similarity=overall_similarity,
+                quality_rating=self._rate_overall_quality(overall_similarity),
+                evaluation_type="quick",
+                semantic_analysis_included=False,
+            )
 
         except Exception as e:
             logger.error(f"Error in quick evaluation: {e}")
-            results["error"] = str(e)
-
-        return results
+            return QuickTextualResult(
+                lexical_similarity=0.0,
+                tfidf_similarity=0.0,
+                overall_similarity=0.0,
+                quality_rating="Error",
+                evaluation_type="quick",
+                semantic_analysis_included=False,
+                error=str(e)
+            )
 
     def _rate_lexical_quality(self, similarity_score: float) -> str:
         """Rate lexical quality based on similarity score."""
@@ -374,22 +518,22 @@ class TextualEvaluator:
         else:
             return "Very Poor"
 
-    def _combine_metrics(self, results: Dict, include_semantic: bool) -> Dict:
+    def _combine_metrics(self, results: dict, include_semantic: bool) -> CombinedMetrics:
         """Combine results from different evaluation methods."""
-        combined = {}
+        lexical_result = results.get("lexical_diversity")
+        tfidf_result = results.get("tfidf_similarity")
+        semantic_result = results.get("semantic_similarity")
 
-        # Extract summary scores
-        lexical_summary = results.get("lexical_diversity", {}).get("summary", {})
-        tfidf_summary = results.get("tfidf_similarity", {}).get("summary", {})
-        semantic_summary = results.get("semantic_similarity", {}).get("summary", {})
-
-        # Individual metric scores
-        lexical_score = lexical_summary.get("overall_lexical_similarity", 0)
-        tfidf_score = tfidf_summary.get("tfidf_cosine_similarity", 0)
-        semantic_score = semantic_summary.get("semantic_similarity_score", 0) if include_semantic else None
+        # Extract scores from Pydantic models
+        lexical_score = lexical_result.summary.overall_lexical_similarity if lexical_result and not lexical_result.error else 0
+        tfidf_score = tfidf_result.summary.tfidf_cosine_similarity if tfidf_result and not tfidf_result.error else 0
+        semantic_score = semantic_result.summary.semantic_similarity_score if (
+            include_semantic and semantic_result and semantic_result.available and 
+            semantic_result.summary and not semantic_result.error
+        ) else None
 
         # Combined similarity (weighted average)
-        if include_semantic and semantic_score is not None and "error" not in results.get("semantic_similarity", {}):
+        if include_semantic and semantic_score is not None:
             # Equal weighting: lexical, TF-IDF, semantic
             overall_similarity = (lexical_score + tfidf_score + semantic_score) / 3
             weights_used = {"lexical": 1/3, "tfidf": 1/3, "semantic": 1/3}
@@ -398,62 +542,95 @@ class TextualEvaluator:
             overall_similarity = (lexical_score + tfidf_score) / 2
             weights_used = {"lexical": 0.5, "tfidf": 0.5, "semantic": 0.0}
 
-        combined["overall_similarity"] = float(overall_similarity)
-        combined["weights_used"] = weights_used
+        # Quality ratings
+        lexical_rating = lexical_result.summary.quality_rating if lexical_result and not lexical_result.error else "Unknown"
+        tfidf_rating = tfidf_result.summary.quality_rating if tfidf_result and not tfidf_result.error else "Unknown"
+        semantic_rating = (
+            semantic_result.summary.quality_rating if (
+                include_semantic and semantic_result and semantic_result.available and 
+                semantic_result.summary and not semantic_result.error
+            ) else "N/A"
+        )
 
-        # Quality consensus
-        lexical_rating = lexical_summary.get("quality_rating", "Unknown")
-        tfidf_rating = tfidf_summary.get("quality_rating", "Unknown")
-        semantic_rating = semantic_summary.get("quality_rating", "Unknown") if include_semantic else "N/A"
-
-        combined["quality_ratings"] = {
-            "lexical": lexical_rating,
-            "tfidf": tfidf_rating,
-            "semantic": semantic_rating,
-            "overall": self._rate_overall_quality(overall_similarity),
-        }
+        quality_ratings = QualityRatings(
+            lexical=lexical_rating,
+            tfidf=tfidf_rating,
+            semantic=semantic_rating,
+            overall=self._rate_overall_quality(overall_similarity),
+        )
 
         # Consistency analysis
         scores = [lexical_score, tfidf_score]
         if include_semantic and semantic_score is not None:
             scores.append(semantic_score)
 
-        combined["consistency_metrics"] = {
-            "score_std": float(np.std(scores)),
-            "score_range": float(max(scores) - min(scores)),
-            "consistency_rating": "High" if np.std(scores) < 0.1 else "Medium" if np.std(scores) < 0.2 else "Low",
-        }
+        score_std = float(np.std(scores))
+        consistency_metrics = ConsistencyMetrics(
+            score_std=score_std,
+            score_range=float(max(scores) - min(scores)),
+            consistency_rating="High" if score_std < 0.1 else "Medium" if score_std < 0.2 else "Low",
+        )
 
         # Text corpus statistics
-        combined["corpus_statistics"] = self._extract_corpus_stats(results)
+        corpus_statistics = self._extract_corpus_stats(results)
 
-        return combined
+        return CombinedMetrics(
+            overall_similarity=float(overall_similarity),
+            weights_used=weights_used,
+            quality_ratings=quality_ratings,
+            consistency_metrics=consistency_metrics,
+            corpus_statistics=corpus_statistics
+        )
 
-    def _extract_corpus_stats(self, results: Dict) -> Dict:
+    def _extract_corpus_stats(self, results: dict) -> CorpusStatistics:
         """Extract corpus-level statistics from evaluation results."""
-        stats = {}
+        lexical_result = results.get("lexical_diversity")
+        tfidf_result = results.get("tfidf_similarity")
 
         # From vocabulary analysis
-        vocab_results = results.get("lexical_diversity", {}).get("vocabulary_overlap", {})
-        if vocab_results and "error" not in vocab_results:
-            stats["vocabulary_diversity_ratio"] = vocab_results.get("vocab_diversity_ratio", 0)
-            stats["shared_vocabulary_size"] = vocab_results.get("shared_vocab_size", 0)
-            stats["real_vocabulary_size"] = vocab_results.get("real_vocab_size", 0)
-            stats["fake_vocabulary_size"] = vocab_results.get("fake_vocab_size", 0)
+        vocabulary_diversity_ratio = None
+        shared_vocabulary_size = None
+        real_vocabulary_size = None
+        fake_vocabulary_size = None
+        
+        if lexical_result and not lexical_result.error:
+            vocab_overlap = lexical_result.vocabulary_overlap
+            vocabulary_diversity_ratio = vocab_overlap.vocab_diversity_ratio
+            shared_vocabulary_size = vocab_overlap.shared_vocab_size
+            real_vocabulary_size = vocab_overlap.real_vocab_size
+            fake_vocabulary_size = vocab_overlap.fake_vocab_size
 
         # From TF-IDF analysis
-        tfidf_results = results.get("tfidf_similarity", {})
-        if tfidf_results and "error" not in tfidf_results:
-            stats["tfidf_vocabulary_size"] = tfidf_results.get("vocabulary_size", 0)
+        tfidf_vocabulary_size = None
+        if tfidf_result and not tfidf_result.error:
+            tfidf_vocabulary_size = tfidf_result.vocabulary_size
 
-        return stats
+        return CorpusStatistics(
+            vocabulary_diversity_ratio=vocabulary_diversity_ratio,
+            shared_vocabulary_size=shared_vocabulary_size,
+            real_vocabulary_size=real_vocabulary_size,
+            fake_vocabulary_size=fake_vocabulary_size,
+            tfidf_vocabulary_size=tfidf_vocabulary_size
+        )
 
-    def _generate_recommendations(self, results: Dict) -> List[str]:
+    def _generate_recommendations(self, results: dict) -> list[str]:
         """Generate actionable recommendations based on evaluation results."""
         recommendations = []
+        
+        lexical_result = results.get("lexical_diversity")
+        tfidf_result = results.get("tfidf_similarity")
+        semantic_result = results.get("semantic_similarity")
 
-        combined = results.get("combined_metrics", {})
-        overall_similarity = combined.get("overall_similarity", 0)
+        # Calculate overall similarity for recommendations
+        scores = []
+        if lexical_result and not lexical_result.error:
+            scores.append(lexical_result.summary.overall_lexical_similarity)
+        if tfidf_result and not tfidf_result.error:
+            scores.append(tfidf_result.summary.tfidf_cosine_similarity)
+        if semantic_result and semantic_result.available and semantic_result.summary and not semantic_result.error:
+            scores.append(semantic_result.summary.semantic_similarity_score)
+            
+        overall_similarity = np.mean(scores) if scores else 0.0
 
         # Overall similarity recommendations
         if overall_similarity < 0.4:
@@ -470,17 +647,16 @@ class TextualEvaluator:
             )
 
         # Specific metric recommendations
-        lexical_results = results.get("lexical_diversity", {})
-        if lexical_results and "error" not in lexical_results:
-            vocab_overlap = lexical_results.get("vocabulary_overlap", {})
-            jaccard_sim = vocab_overlap.get("jaccard_similarity", 0)
+        if lexical_result and not lexical_result.error:
+            vocab_overlap = lexical_result.vocabulary_overlap
+            jaccard_sim = vocab_overlap.jaccard_similarity
 
             if jaccard_sim < 0.3:
                 recommendations.append(
                     "Low vocabulary overlap detected. The synthetic text may not capture the full vocabulary diversity of the real text."
                 )
 
-            vocab_diversity = vocab_overlap.get("vocab_diversity_ratio", 1.0)
+            vocab_diversity = vocab_overlap.vocab_diversity_ratio
             if vocab_diversity < 0.5 or vocab_diversity > 2.0:
                 recommendations.append(
                     "Vocabulary diversity ratio is significantly different from real data. "
@@ -488,9 +664,8 @@ class TextualEvaluator:
                 )
 
         # TF-IDF specific recommendations
-        tfidf_results = results.get("tfidf_similarity", {})
-        if tfidf_results and "error" not in tfidf_results:
-            tfidf_sim = tfidf_results.get("cosine_similarity", 0)
+        if tfidf_result and not tfidf_result.error:
+            tfidf_sim = tfidf_result.cosine_similarity
             if tfidf_sim < 0.5:
                 recommendations.append(
                     "Low TF-IDF similarity suggests differences in word usage patterns. "
@@ -498,25 +673,25 @@ class TextualEvaluator:
                 )
 
         # Semantic analysis recommendations
-        semantic_results = results.get("semantic_similarity", {})
-        if semantic_results and "error" not in semantic_results and semantic_results.get("available", False):
-            semantic_sim = semantic_results.get("semantic_similarity", 0)
+        if semantic_result and semantic_result.available and semantic_result.summary and not semantic_result.error:
+            semantic_sim = semantic_result.summary.semantic_similarity_score
             if semantic_sim < 0.7:
                 recommendations.append(
                     "Low semantic similarity indicates the synthetic text may not capture the meaning and context of the real text effectively."
                 )
 
-        # Consistency recommendations
-        consistency = combined.get("consistency_metrics", {})
-        if consistency.get("consistency_rating") == "Low":
-            recommendations.append(
-                "Inconsistent results across different metrics suggest the synthetic text has mixed quality. "
-                "Focus on the lowest-scoring metrics for improvement."
-            )
+        # Consistency recommendations based on score variation
+        if len(scores) > 1:
+            score_std = float(np.std(scores))
+            if score_std > 0.2:  # High variance
+                recommendations.append(
+                    "Inconsistent results across different metrics suggest the synthetic text has mixed quality. "
+                    "Focus on the lowest-scoring metrics for improvement."
+                )
 
         return recommendations
 
-    def get_summary_for_integration(self, evaluation_results: Dict) -> Dict:
+    def get_summary_for_integration(self, evaluation_results: Union[ComprehensiveTextualResult, QuickTextualResult]) -> TextualEvaluationSummary:
         """
         Extract key metrics for integration with TableEvaluator.
 
@@ -526,20 +701,40 @@ class TextualEvaluator:
         Returns:
             Dictionary with key metrics for main evaluation integration
         """
-        if "error" in evaluation_results:
-            return {"textual_similarity": 0.0, "error": evaluation_results["error"]}
-
-        # Extract overall similarity score
-        if "combined_metrics" in evaluation_results:
-            overall_similarity = evaluation_results["combined_metrics"].get("overall_similarity", 0.0)
-            quality_rating = evaluation_results["combined_metrics"]["quality_ratings"].get("overall", "Unknown")
-        else:
-            # From quick evaluation
-            overall_similarity = evaluation_results.get("overall_similarity", 0.0)
-            quality_rating = evaluation_results.get("quality_rating", "Unknown")
-
-        return {
-            "textual_similarity": float(overall_similarity),
-            "quality_rating": quality_rating,
-            "evaluation_type": evaluation_results.get("evaluation_type", "comprehensive"),
-        }
+        if isinstance(evaluation_results, ComprehensiveTextualResult):
+            if evaluation_results.combined_metrics.error:
+                return TextualEvaluationSummary(
+                    textual_similarity=0.0,
+                    quality_rating="Error",
+                    evaluation_type="comprehensive",
+                    error=evaluation_results.combined_metrics.error
+                )
+            
+            return TextualEvaluationSummary(
+                textual_similarity=evaluation_results.combined_metrics.overall_similarity,
+                quality_rating=evaluation_results.combined_metrics.quality_ratings.overall,
+                evaluation_type="comprehensive"
+            )
+        
+        elif isinstance(evaluation_results, QuickTextualResult):
+            if evaluation_results.error:
+                return TextualEvaluationSummary(
+                    textual_similarity=0.0,
+                    quality_rating="Error",
+                    evaluation_type="quick",
+                    error=evaluation_results.error
+                )
+            
+            return TextualEvaluationSummary(
+                textual_similarity=evaluation_results.overall_similarity,
+                quality_rating=evaluation_results.quality_rating,
+                evaluation_type=evaluation_results.evaluation_type
+            )
+        
+        # Fallback for unexpected input
+        return TextualEvaluationSummary(
+            textual_similarity=0.0,
+            quality_rating="Error",
+            evaluation_type="unknown",
+            error="Unexpected evaluation result type"
+        )

@@ -1,7 +1,8 @@
-import logging
 import warnings
 from os import PathLike
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
+
+from loguru import logger
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,6 @@ from table_evaluator.visualization.visualization_manager import VisualizationMan
 # Import metrics module directly
 from table_evaluator import metrics as te_metrics
 
-logger = logging.getLogger(__name__)
 
 
 class TableEvaluator:
@@ -41,8 +41,8 @@ class TableEvaluator:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        cat_cols: Optional[List[str]] = None,
-        text_cols: Optional[List[str]] = None,
+        cat_cols: Optional[list[str]] = None,
+        text_cols: Optional[list[str]] = None,
         unique_thresh: int = 0,
         metric: str | Callable = "pearsonr",
         verbose: bool = False,
@@ -969,8 +969,8 @@ class TableEvaluator:
         self,
         include_k_anonymity: bool = True,
         include_membership_inference: bool = True,
-        quasi_identifiers: Optional[List[str]] = None,
-        sensitive_attributes: Optional[List[str]] = None,
+        quasi_identifiers: Optional[list[str]] = None,
+        sensitive_attributes: Optional[list[str]] = None,
     ) -> Dict:
         """
         Run advanced privacy evaluation including k-anonymity and membership inference.
@@ -1112,9 +1112,9 @@ class TableEvaluator:
         include_semantic: bool = True,
         enable_sampling: bool = False,
         max_samples: int = 1000,
-        tfidf_config: Optional[Dict] = None,
-        semantic_config: Optional[Dict] = None,
-    ) -> Dict:
+        tfidf_config: Optional[dict] = None,
+        semantic_config: Optional[dict] = None,
+    ) -> dict:
         """
         Run comprehensive textual evaluation on specified text columns.
 
@@ -1202,7 +1202,7 @@ class TableEvaluator:
 
     def basic_textual_evaluation(
         self, enable_sampling: bool = False, max_samples: int = 1000
-    ) -> Dict:
+    ) -> dict:
         """
         Run basic (quick) textual evaluation using only lightweight metrics.
 
@@ -1243,9 +1243,14 @@ class TableEvaluator:
         # Calculate overall metrics
         column_similarities = []
         for col, col_results in results.items():
-            if "error" not in col_results:
-                similarity = col_results.get("overall_similarity", 0)
-                column_similarities.append(similarity)
+            if col != "overall_basic_metrics" and "error" not in col_results:
+                # Handle new Pydantic model structure
+                if hasattr(col_results, 'overall_similarity'):
+                    similarity = col_results.overall_similarity
+                    column_similarities.append(similarity)
+                elif isinstance(col_results, dict) and "overall_similarity" in col_results:
+                    similarity = col_results.get("overall_similarity", 0)
+                    column_similarities.append(similarity)
 
         if column_similarities:
             results["overall_basic_metrics"] = {
@@ -1264,9 +1269,9 @@ class TableEvaluator:
         include_advanced_statistical: bool = True,
         include_advanced_privacy: bool = True,
         include_textual: bool = True,
-        textual_config: Optional[Dict] = None,
+        textual_config: Optional[dict] = None,
         **kwargs,
-    ) -> Dict:
+    ) -> dict:
         """
         Run comprehensive evaluation combining tabular and textual analysis.
 

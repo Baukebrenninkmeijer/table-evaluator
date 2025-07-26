@@ -1,16 +1,20 @@
 """Textual data comparison metrics for corpus-level analysis."""
 
-import logging
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy import stats
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-logger = logging.getLogger(__name__)
+from table_evaluator.models.textual_models import (
+    LengthDistributionResult,
+    VocabularyOverlapResult,
+    TfidfSimilarityResult,
+)
 
 # Optional dependencies for advanced semantic analysis
 try:
@@ -44,7 +48,7 @@ def _check_large_dataset_warning(real_texts: pd.Series, fake_texts: pd.Series, t
         )
 
 
-def _safe_tokenize(text: str, use_nltk: bool = True) -> List[str]:
+def _safe_tokenize(text: str, use_nltk: bool = True) -> list[str]:
     """
     Safely tokenize text with fallback options.
     
@@ -74,7 +78,7 @@ def _safe_tokenize(text: str, use_nltk: bool = True) -> List[str]:
 
 def text_length_distribution_similarity(
     real_texts: pd.Series, fake_texts: pd.Series, unit: str = "word"
-) -> Dict[str, float]:
+) -> LengthDistributionResult:
     """
     Compare character/word length distributions between real and synthetic text.
     
@@ -107,7 +111,15 @@ def text_length_distribution_similarity(
     
     if len(real_clean) == 0 or len(fake_clean) == 0:
         logger.warning("Empty text data detected, returning default similarity")
-        return {"ks_statistic": 1.0, "ks_pvalue": 0.0, "mean_diff": np.inf, "std_diff": np.inf}
+        return LengthDistributionResult(
+            similarity_score=0.0,
+            ks_statistic=1.0,
+            ks_p_value=0.0,
+            mean_real=0.0,
+            mean_fake=0.0,
+            std_real=0.0,
+            std_fake=0.0
+        )
     
     # Calculate lengths
     if unit == "word":
@@ -123,28 +135,39 @@ def text_length_distribution_similarity(
     
     if len(real_lengths) == 0 or len(fake_lengths) == 0:
         logger.warning("No valid text lengths found, returning default similarity")
-        return {"ks_statistic": 1.0, "ks_pvalue": 0.0, "mean_diff": np.inf, "std_diff": np.inf}
+        return LengthDistributionResult(
+            similarity_score=0.0,
+            ks_statistic=1.0,
+            ks_p_value=0.0,
+            mean_real=0.0,
+            mean_fake=0.0,
+            std_real=0.0,
+            std_fake=0.0
+        )
     
     # Kolmogorov-Smirnov test for distribution similarity
     ks_stat, ks_pvalue = stats.ks_2samp(real_lengths.values, fake_lengths.values)
     
-    # Basic distribution statistics comparison
-    mean_diff = abs(real_lengths.mean() - fake_lengths.mean())
-    std_diff = abs(real_lengths.std() - fake_lengths.std())
+    # Basic distribution statistics
+    real_mean = real_lengths.mean()
+    fake_mean = fake_lengths.mean()
+    real_std = real_lengths.std()
+    fake_std = fake_lengths.std()
     
-    return {
-        "ks_statistic": float(ks_stat),
-        "ks_pvalue": float(ks_pvalue),
-        "mean_diff": float(mean_diff),
-        "std_diff": float(std_diff),
-        "unit": unit,
-        "similarity_score": float(1.0 - ks_stat)  # Higher is better
-    }
+    return LengthDistributionResult(
+        similarity_score=float(1.0 - ks_stat),
+        ks_statistic=float(ks_stat),
+        ks_p_value=float(ks_pvalue),
+        mean_real=float(real_mean),
+        mean_fake=float(fake_mean),
+        std_real=float(real_std),
+        std_fake=float(fake_std)
+    )
 
 
 def vocabulary_overlap_analysis(
     real_texts: pd.Series, fake_texts: pd.Series, min_frequency: int = 1
-) -> Dict[str, Union[float, int]]:
+) -> VocabularyOverlapResult:
     """
     Analyze vocabulary overlap and diversity between real and synthetic text corpora.
     
@@ -173,7 +196,13 @@ def vocabulary_overlap_analysis(
     
     if len(real_clean) == 0 or len(fake_clean) == 0:
         logger.warning("Empty text data detected, returning default metrics")
-        return {"jaccard_similarity": 0.0, "coverage_real_to_fake": 0.0, "coverage_fake_to_real": 0.0}
+        return VocabularyOverlapResult(
+            jaccard_similarity=0.0,
+            vocab_diversity_ratio=0.0,
+            shared_vocab_size=0,
+            real_vocab_size=0,
+            fake_vocab_size=0
+        )
     
     # Build vocabularies
     real_vocab = {}
@@ -197,10 +226,22 @@ def vocabulary_overlap_analysis(
     fake_words = set(fake_vocab_filtered.keys())
     
     if len(real_words) == 0 and len(fake_words) == 0:
-        return {"jaccard_similarity": 1.0, "coverage_real_to_fake": 1.0, "coverage_fake_to_real": 1.0}
+        return VocabularyOverlapResult(
+            jaccard_similarity=1.0,
+            vocab_diversity_ratio=1.0,
+            shared_vocab_size=0,
+            real_vocab_size=0,
+            fake_vocab_size=0
+        )
     
     if len(real_words) == 0 or len(fake_words) == 0:
-        return {"jaccard_similarity": 0.0, "coverage_real_to_fake": 0.0, "coverage_fake_to_real": 0.0}
+        return VocabularyOverlapResult(
+            jaccard_similarity=0.0,
+            vocab_diversity_ratio=0.0 if len(real_words) == 0 else float('inf'),
+            shared_vocab_size=0,
+            real_vocab_size=len(real_words),
+            fake_vocab_size=len(fake_words)
+        )
     
     # Calculate metrics
     intersection = real_words.intersection(fake_words)
@@ -210,25 +251,23 @@ def vocabulary_overlap_analysis(
     coverage_real_to_fake = len(intersection) / len(real_words) if len(real_words) > 0 else 0.0
     coverage_fake_to_real = len(intersection) / len(fake_words) if len(fake_words) > 0 else 0.0
     
-    return {
-        "jaccard_similarity": float(jaccard_similarity),
-        "coverage_real_to_fake": float(coverage_real_to_fake),
-        "coverage_fake_to_real": float(coverage_fake_to_real),
-        "real_vocab_size": len(real_words),
-        "fake_vocab_size": len(fake_words),
-        "shared_vocab_size": len(intersection),
-        "vocab_diversity_ratio": float(len(fake_words) / len(real_words)) if len(real_words) > 0 else 0.0
-    }
+    return VocabularyOverlapResult(
+        jaccard_similarity=float(jaccard_similarity),
+        vocab_diversity_ratio=float(len(fake_words) / len(real_words)) if len(real_words) > 0 else 0.0,
+        shared_vocab_size=len(intersection),
+        real_vocab_size=len(real_words),
+        fake_vocab_size=len(fake_words)
+    )
 
 
 def tfidf_corpus_similarity(
     real_texts: pd.Series, 
     fake_texts: pd.Series,
     max_features: int = 10000,
-    ngram_range: Tuple[int, int] = (1, 2),
+    ngram_range: tuple[int, int] = (1, 2),
     min_df: int = 2,
     max_df: float = 0.95
-) -> Dict[str, float]:
+) -> dict[str, Union[float, int]]:
     """
     Calculate TF-IDF based corpus-level similarity using cosine distance.
     
@@ -290,11 +329,16 @@ def tfidf_corpus_similarity(
         cos_sim = cosine_similarity(real_corpus_vec, fake_corpus_vec)[0, 0]
         tfidf_distance = 1.0 - cos_sim
         
+        # Calculate corpus norms for additional metrics
+        real_corpus_norm = float(np.linalg.norm(real_corpus_vec))
+        fake_corpus_norm = float(np.linalg.norm(fake_corpus_vec))
+        
         return {
             "cosine_similarity": float(cos_sim),
             "tfidf_distance": float(tfidf_distance),
             "vocabulary_size": len(vectorizer.vocabulary_),
-            "similarity_score": float(cos_sim)  # Higher is better
+            "real_corpus_norm": real_corpus_norm,
+            "fake_corpus_norm": fake_corpus_norm
         }
         
     except Exception as e:
@@ -309,7 +353,7 @@ def semantic_similarity_embeddings(
     batch_size: int = 32,
     enable_sampling: bool = False,
     max_samples: int = 1000
-) -> Dict[str, float]:
+) -> dict[str, Union[float, str, int]]:
     """
     Calculate semantic similarity using sentence transformer embeddings.
     
@@ -380,8 +424,8 @@ def semantic_similarity_embeddings(
         return {
             "semantic_similarity": float(cos_sim),
             "embedding_distance": float(embedding_distance),
-            "model_used": model_name,
-            "similarity_score": float(cos_sim)  # Higher is better
+            "model_name": model_name,
+            "samples_used": len(real_clean) + len(fake_clean)
         }
         
     except Exception as e:
@@ -395,7 +439,7 @@ def comprehensive_textual_analysis(
     include_semantic: bool = True,
     enable_sampling: bool = False,
     max_samples: int = 1000
-) -> Dict[str, Dict]:
+) -> dict[str, dict]:
     """
     Perform comprehensive textual analysis combining all available metrics.
     
