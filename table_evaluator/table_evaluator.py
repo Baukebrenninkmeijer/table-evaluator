@@ -178,35 +178,6 @@ class TableEvaluator:
             sample=sample,
         )
 
-        if len(real) == 0:
-            raise ValueError('real DataFrame cannot be empty')
-        if len(fake) == 0:
-            raise ValueError('fake DataFrame cannot be empty')
-
-        if len(real.columns) == 0:
-            raise ValueError('real DataFrame must have at least one column')
-        if len(fake.columns) == 0:
-            raise ValueError('fake DataFrame must have at least one column')
-
-        # Check column alignment
-        if set(real.columns) != set(fake.columns):
-            missing_in_fake = set(real.columns) - set(fake.columns)
-            missing_in_real = set(fake.columns) - set(real.columns)
-            error_msg = 'real and fake DataFrames must have the same columns.'
-            if missing_in_fake:
-                error_msg += f' Missing in fake: {missing_in_fake}.'
-            if missing_in_real:
-                error_msg += f' Missing in real: {missing_in_real}.'
-            raise ValueError(error_msg)
-
-        # Validate categorical columns
-        if cat_cols is not None:
-            if not isinstance(cat_cols, list):
-                raise TypeError('cat_cols must be a list of strings or None')
-            invalid_cols = set(cat_cols) - set(real.columns)
-            if invalid_cols:
-                raise ValueError(f'cat_cols contains columns not in DataFrames: {invalid_cols}')
-
         # Validate textual columns
         if text_cols is not None:
             if not isinstance(text_cols, list):
@@ -388,7 +359,7 @@ class TableEvaluator:
             nominal_columns=self.categorical_columns,
             nom_nom_assoc='theil',
         )['corr']  # type: ignore
-        return distance_func(real_corr.values, fake_corr.values)  # type: ignore
+        return float(distance_func(real_corr.values, fake_corr.values))
 
     def plot_pca(self, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
@@ -739,7 +710,7 @@ class TableEvaluator:
         }
         all_results_dict['Similarity Score'] = np.mean(list(all_results_dict.values()))
 
-        summary = EvaluationResult(name='Overview Results', content=dict_to_df(all_results_dict))
+        summary = EvaluationResult(name='Overview Results', content=dict_to_df(all_results_dict).to_string())
         overview_tab = [summary]
 
         return all_results_dict, overview_tab
@@ -771,7 +742,6 @@ class TableEvaluator:
 
         if notebook:
             visualize_notebook(
-                self,
                 overview=overview_tab,
                 privacy_metrics=privacy_tab,
                 ml_efficacy=ml_efficacy_tab,
@@ -782,13 +752,13 @@ class TableEvaluator:
             logger.info(self.estimators_scores.to_string())
 
             logger.info('\nPrivacy results:')
-            logger.info(privacy_results['privacy_report'].content.to_string())
+            logger.info(privacy_results['privacy_report'].content)
 
             logger.info('\nMiscellaneous results:')
             logger.info(statistical_results['miscellaneous'].to_string())
 
             logger.info('\nResults:')
-            logger.info(summary.content.to_string())
+            logger.info(summary.content)
 
         return all_results_dict
 
@@ -873,7 +843,7 @@ class TableEvaluator:
             all_results_dict=all_results_dict,
         )
 
-    def _calculate_statistical_metrics(self) -> tuple[dict, str]:
+    def _calculate_statistical_metrics(self) -> tuple[dict, list]:
         basic_statistical = self.basic_statistical_evaluation()
         correlation_correlation = self.correlation_correlation()
         column_correlation = self.column_correlations()
@@ -885,7 +855,7 @@ class TableEvaluator:
 
         miscellaneous = pd.DataFrame(
             {'Result': list(miscellaneous_dict.values())},
-            index=list(miscellaneous_dict.keys()),
+            index=pd.Index(miscellaneous_dict.keys()),
         )
 
         js_df = te_metrics.js_distance_df(self.real, self.fake, self.numerical_columns)
@@ -893,12 +863,12 @@ class TableEvaluator:
         statistical_tab = [
             EvaluationResult(
                 name='Jensen-Shannon distance',
-                content=js_df,
+                content=js_df.to_string(),
                 appendix=f'### Mean: {js_df.js_distance.mean(): .3f}',
             ),
             EvaluationResult(
                 name='Kolmogorov-Smirnov statistic',
-                content=te_metrics.kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns),
+                content=te_metrics.kolmogorov_smirnov_df(self.real, self.fake, self.numerical_columns).to_string(),
             ),
         ]
         return {
@@ -908,19 +878,19 @@ class TableEvaluator:
             'miscellaneous': miscellaneous,
         }, statistical_tab
 
-    def _calculate_ml_efficacy(self, target_col: str, target_type: str, *, kfold: bool) -> tuple[dict, str]:
+    def _calculate_ml_efficacy(self, target_col: str, target_type: str, *, kfold: bool) -> tuple[dict, list]:
         estimators = self.estimator_evaluation(target_col=target_col, target_type=target_type, kfold=kfold)
         efficacy_title = (
             'Classifier F1-scores and their Jaccard similarities:' if target_type == 'class' else 'Regressor MSE-scores'
         )
 
-        ml_efficacy_tab = [EvaluationResult(name=efficacy_title, content=self.estimators_scores)]
+        ml_efficacy_tab = [EvaluationResult(name=efficacy_title, content=self.estimators_scores.to_string())]
         return {
             'estimators': estimators,
             'efficacy_title': efficacy_title,
         }, ml_efficacy_tab
 
-    def _calculate_privacy_metrics(self, n_samples_distance: int) -> tuple[dict, str]:
+    def _calculate_privacy_metrics(self, n_samples_distance: int) -> tuple[dict, list]:
         nearest_neighbor = self.row_distance(max_samples=n_samples_distance)
         privacy_metrics_dict = {
             'Duplicate rows between sets (real/fake)': self.get_duplicates(return_values=False),
@@ -930,7 +900,7 @@ class TableEvaluator:
 
         privacy_report = EvaluationResult(
             name='Privacy Results',
-            content=dict_to_df(privacy_metrics_dict),
+            content=dict_to_df(privacy_metrics_dict).to_string(),
         )
 
         privacy_tab = [privacy_report]
@@ -994,10 +964,10 @@ class TableEvaluator:
             )
             # Return only the advanced parts
             return {
-                'wasserstein': unified_results.get('wasserstein', {}),
-                'mmd': unified_results.get('mmd', {}),
-                'combined_metrics': unified_results.get('combined_metrics', {}),
-                'recommendations': unified_results.get('recommendations', []),
+                'wasserstein': unified_results.wasserstein,
+                'mmd': unified_results.mmd,
+                'combined_metrics': unified_results.combined_metrics,
+                'recommendations': unified_results.recommendations,
             }
         except Exception as e:
             logger.error(f'Advanced statistical evaluation failed: {e}')
@@ -1055,10 +1025,10 @@ class TableEvaluator:
             )
             # Return the structure expected by the old API
             return {
-                'k_anonymity': unified_results.get('k_anonymity', {}),
-                'membership_inference': unified_results.get('membership_inference', {}),
-                'overall_assessment': unified_results.get('overall_assessment', {}),
-                'combined_recommendations': unified_results.get('recommendations', []),
+                'k_anonymity': unified_results.k_anonymity,
+                'membership_inference': unified_results.membership_inference,
+                'overall_assessment': unified_results.overall_assessment,
+                'combined_recommendations': unified_results.recommendations,
             }
         except Exception as e:
             logger.error(f'Advanced privacy evaluation failed: {e}')
@@ -1137,10 +1107,14 @@ class TableEvaluator:
                 'Performance optimizations will be applied automatically.'
             )
 
-    def _run_basic_evaluation(self, target_col: str, target_type: str, **kwargs: dict) -> dict:
+    def _run_basic_evaluation(self, target_col: str, target_type: str, **kwargs: object) -> dict:
         """Run basic evaluation with error handling."""
         try:
-            return self.evaluate(target_col, target_type, return_outputs=True, **kwargs)
+            # Filter kwargs to only include parameters that evaluate() accepts
+            allowed_kwargs = {'metric', 'n_samples_distance', 'verbose', 'kfold', 'notebook'}
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in allowed_kwargs}
+            result = self.evaluate(target_col, target_type, return_outputs=True, **filtered_kwargs)
+            return result if result is not None else {'error': 'Evaluation returned None'}
         except Exception as e:
             logger.exception(f'Basic evaluation failed: {e}')
             return {'error': str(e)}
@@ -1268,9 +1242,11 @@ class TableEvaluator:
                 print(f'\nEvaluating text column: {col}')
 
             try:
+                real_series = self.real[col] if isinstance(self.real[col], pd.Series) else pd.Series(self.real[col])
+                fake_series = self.fake[col] if isinstance(self.fake[col], pd.Series) else pd.Series(self.fake[col])
                 col_results = self.textual_evaluator.comprehensive_evaluation(
-                    self.real[col],
-                    self.fake[col],
+                    real_series,
+                    fake_series,
                     include_semantic=include_semantic,
                     enable_sampling=enable_sampling,
                     max_samples=max_samples,
@@ -1332,7 +1308,9 @@ class TableEvaluator:
                 print(f'\nBasic evaluation of text column: {col}')
 
             try:
-                col_results = self.textual_evaluator.quick_evaluation(self.real[col], self.fake[col])
+                real_series = self.real[col] if isinstance(self.real[col], pd.Series) else pd.Series(self.real[col])
+                fake_series = self.fake[col] if isinstance(self.fake[col], pd.Series) else pd.Series(self.fake[col])
+                col_results = self.textual_evaluator.quick_evaluation(real_series, fake_series)
                 results[col] = col_results
 
             except Exception as e:

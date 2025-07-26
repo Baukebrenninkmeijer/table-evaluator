@@ -1,5 +1,11 @@
 """Evaluator result models."""
 
+from table_evaluator.evaluators.models.comprehensive_models import (
+    BasicEvaluationResults,
+    CombinedEvaluationSummary,
+    ComprehensiveEvaluationResults,
+)
+
 # Statistical models
 # ML models
 from table_evaluator.evaluators.models.ml_models import (
@@ -26,14 +32,26 @@ from table_evaluator.evaluators.models.statistical_models import (
     WassersteinResults,
     WassersteinSummary,
 )
+from table_evaluator.evaluators.models.textual_models import (
+    CombinedTextualMetrics,
+    LexicalDiversityResults,
+    SemanticSimilarityResults,
+    TextualEvaluationResults,
+    TfidfSimilarityResults,
+)
 
 __all__ = [
+    'BasicEvaluationResults',
     'BasicStatisticalResults',
     'BestKernel',
     'ClassificationResults',
     'ClassificationSummary',
     'ColumnDetail',
+    'CombinedEvaluationSummary',
     'CombinedStatisticalMetrics',
+    'CombinedTextualMetrics',
+    'ComprehensiveEvaluationResults',
+    'LexicalDiversityResults',
     'MLEvaluationResults',
     'MLSummary',
     'MMDQualityMetrics',
@@ -41,9 +59,12 @@ __all__ = [
     'MMDSummary',
     'RegressionResults',
     'RegressionSummary',
+    'SemanticSimilarityResults',
     'StatisticalEvaluationResults',
     'StatisticalSignificance',
     'TargetsEvaluated',
+    'TextualEvaluationResults',
+    'TfidfSimilarityResults',
     'WassersteinOverallMetrics',
     'WassersteinQualityMetrics',
     'WassersteinResults',
