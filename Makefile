@@ -58,7 +58,10 @@ publish: build
 	poetry publish
 
 setup-dev: install
-	poetry run pre-commit install
+	uv venv
+	source .venv/bin/activate
+	uv sync
+	pre-commit install
 	@echo "Development environment setup complete!"
 	@echo "Run 'make test' to verify everything works."
 

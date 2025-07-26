@@ -1,8 +1,6 @@
 [project]
 name = "table-evaluator"
-version = "1.9.0"
-# Alternative: Use setuptools_scm for automatic versioning
-# dynamic = ["version"]
+dynamic = ["version"]
 description = "A package to evaluate how close a synthetic data set is to real data."
 authors = [
     { name = "Bauke Brenninkmeijer", email = "bauke.brenninkmeijer@gmail.com" }
@@ -38,6 +36,11 @@ dependencies = [
     "setuptools",
     "sphinx-rtd-theme==2.0.0",
     "tomli>=1.2.0;python_version<'3.11'",
+    "loguru>=0.7.0",
+    "ruff>=0.12.5",
+    "pydantic>=2.11.7",
+    "setuptools-scm>=8.3.1",
+    "pendulum>=3.1.0",
 ]
 
 
@@ -48,9 +51,6 @@ dev = [
     "ipywidgets>=8.1.7",
     "psutil>=5.9.0",
     "pytest-benchmark>=4.0.0",
-]
-polars = [
-    "polars>=0.20.0,<2.0.0",
 ]
 text = [
     "sentence-transformers>=2.2.0",
@@ -72,16 +72,14 @@ all = [
 ]
 
 
-# Alternative setuptools_scm configuration (commented out)
-# [tool.setuptools_scm]
-# write_to = "table_evaluator/_version.py"
+[tool.setuptools_scm]
 
 [project.urls]
 "Homepage" = "https://github.com/Baukebrenninkmeijer/Table-Evaluator"
 "Documentation" = "https://baukebrenninkmeijer.github.io/table-evaluator/index.html"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 
@@ -95,6 +93,7 @@ minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
 norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "data_loading: marks tests as data loading benchmarks",
     "evaluation: marks tests as evaluation benchmarks",
@@ -142,3 +141,53 @@ exclude_lines = [
 [tool.bandit]
 exclude_dirs = ["tests", "docs"]
 skips = ["B101", "B601"]
+
+[tool.ruff]
+exclude = []
+line-length = 120
+
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT', 'ISC', 'LOG', 'ICN', 'G', 'INP', 'PIE', 'T20', 'PYI', 'PT', 'Q', 'RSE', 'RET', 'SLF', 'SIM', 'TID', 'TC', 'ARG', 'PTH', 'FLY', 'I', 'C90', 'NPY', 'PD', 'PERF', 'DOC', 'UP', 'FURB', 'RUF', 'TRY']
+lint.ignore = ['G001', 'G002', 'Q000', 'TRY003', 'G004', 'T201', 'Q000', 'TRY300', 'TC003']
+
+# Allow unused variables when underscore-prefixed.
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+
+[tool.ruff.format]
+quote-style = "single"
+skip-magic-trailing-comma = false
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+[dependency-groups]
+jupyter = [
+    "ipython>=8.28.0",
+    "ipywidgets>=8.1.7",
+]
+
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: Ignore assertions, type annotations, and unused arguments
+"tests/*" = ["S101", "ANN001", "ANN201", "ANN003", "ANN204", "ARG001", "ARG002", "ARG005"]
+
+# Benchmarks: Allow prints and missing annotations for performance testing
+"benchmarks/*" = ["T201", "ANN001", "ANN201", "ANN204", "INP001", "TRY003"]
+
+# Documentation: Allow missing __init__.py and datetime without timezone
+"docs/*" = ["INP001", "DTZ005"]
+
+# Examples and notebooks: Allow prints, missing imports, and relaxed formatting
+"example*.py" = ["T201", "ANN001", "ANN201"]
+"*.ipynb" = ["T201", "F821", "ANN001", "ANN201", "ANN204", "E501", "A004"]
+"notebooks/*" = ["T201", "F821", "ANN001", "ANN201", "ANN204", "E501", "A004", "S101"]
+
+# Main package: Allow some specific patterns
+"table_evaluator/__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"table_evaluator/notebook.py" = ["T201"]  # Allow prints in notebook utilities
+
+# Additional reasonable ignores
+"*/visualization/*" = ["ANN001", "ANN201"]  # Visualization functions often have matplotlib types
+"table_evaluator/plots.py" = ["S101", "ANN001", "ANN201", "RET503"]  # Plotting utilities
