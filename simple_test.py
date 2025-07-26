@@ -26,12 +26,9 @@ def test_basic_creation():
         evaluator = TableEvaluator(real_data, synthetic_data, verbose=False)
         print("✅ TableEvaluator creation successful")
 
-        # Test if advanced methods exist
-        if hasattr(evaluator, "advanced_statistical_evaluation"):
-            print("✅ Advanced statistical evaluation method available")
-
-        if hasattr(evaluator, "advanced_privacy_evaluation"):
-            print("✅ Advanced privacy evaluation method available")
+        # Test if textual methods exist
+        if hasattr(evaluator, "textual_evaluation"):
+            print("✅ Textual evaluation method available")
 
         if hasattr(evaluator, "get_available_advanced_metrics"):
             print("✅ Advanced metrics info method available")

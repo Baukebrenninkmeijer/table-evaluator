@@ -13,8 +13,6 @@ from sklearn.metrics import f1_score, jaccard_score
 from table_evaluator.association_metrics import associations
 from table_evaluator.core.evaluation_config import EvaluationConfig
 from table_evaluator.data.data_converter import DataConverter
-from table_evaluator.evaluators.advanced_privacy import AdvancedPrivacyEvaluator
-from table_evaluator.evaluators.advanced_statistical import AdvancedStatisticalEvaluator
 from table_evaluator.evaluators.ml_evaluator import MLEvaluator
 from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
@@ -181,11 +179,7 @@ class TableEvaluator:
         )
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
 
-        # Initialize advanced evaluators
-        self.advanced_statistical_evaluator = AdvancedStatisticalEvaluator(
-            verbose=verbose
-        )
-        self.advanced_privacy_evaluator = AdvancedPrivacyEvaluator(verbose=verbose)
+        # Initialize textual evaluator
         self.textual_evaluator = TextualEvaluator(verbose=verbose)
 
         self.visualization_manager = VisualizationManager(
@@ -895,132 +889,7 @@ class TableEvaluator:
 
         return {"privacy_report": privacy_report}, privacy_tab
 
-    def advanced_statistical_evaluation(
-        self,
-        include_wasserstein: bool = True,
-        include_mmd: bool = True,
-        wasserstein_config: Optional[Dict] = None,
-        mmd_config: Optional[Dict] = None,
-    ) -> Dict:
-        """
-        Run advanced statistical evaluation using Wasserstein distance and MMD.
 
-        Args:
-            include_wasserstein: Whether to include Wasserstein distance analysis
-            include_mmd: Whether to include Maximum Mean Discrepancy analysis
-            wasserstein_config: Configuration for Wasserstein evaluation
-            mmd_config: Configuration for MMD evaluation
-
-        Returns:
-            Dictionary with advanced statistical evaluation results
-        """
-        # Input validation
-        if not isinstance(include_wasserstein, bool):
-            raise TypeError("include_wasserstein must be a boolean")
-        if not isinstance(include_mmd, bool):
-            raise TypeError("include_mmd must be a boolean")
-
-        if not include_wasserstein and not include_mmd:
-            raise ValueError(
-                "At least one of include_wasserstein or include_mmd must be True"
-            )
-
-        if wasserstein_config is not None and not isinstance(wasserstein_config, dict):
-            raise TypeError("wasserstein_config must be a dictionary or None")
-        if mmd_config is not None and not isinstance(mmd_config, dict):
-            raise TypeError("mmd_config must be a dictionary or None")
-
-        if wasserstein_config is None:
-            wasserstein_config = {"include_2d": False}
-        if mmd_config is None:
-            mmd_config = {
-                "kernel_types": ["rbf", "polynomial"],
-                "include_multivariate": True,
-            }
-
-        results = {}
-
-        if include_wasserstein:
-            try:
-                results["wasserstein"] = (
-                    self.advanced_statistical_evaluator.wasserstein_evaluation(
-                        self.real,
-                        self.fake,
-                        self.numerical_columns,
-                        **wasserstein_config,
-                    )
-                )
-            except Exception as e:
-                logger.error(f"Wasserstein evaluation failed: {e}")
-                results["wasserstein"] = {"error": str(e)}
-
-        if include_mmd:
-            try:
-                results["mmd"] = self.advanced_statistical_evaluator.mmd_evaluation(
-                    self.real, self.fake, self.numerical_columns, **mmd_config
-                )
-            except Exception as e:
-                logger.error(f"MMD evaluation failed: {e}")
-                results["mmd"] = {"error": str(e)}
-
-        return results
-
-    def advanced_privacy_evaluation(
-        self,
-        include_k_anonymity: bool = True,
-        include_membership_inference: bool = True,
-        quasi_identifiers: Optional[list[str]] = None,
-        sensitive_attributes: Optional[list[str]] = None,
-    ) -> Dict:
-        """
-        Run advanced privacy evaluation including k-anonymity and membership inference.
-
-        Args:
-            include_k_anonymity: Whether to include k-anonymity analysis
-            include_membership_inference: Whether to include membership inference analysis
-            quasi_identifiers: List of quasi-identifier columns
-            sensitive_attributes: List of sensitive attribute columns
-
-        Returns:
-            Dictionary with advanced privacy evaluation results
-        """
-        # Input validation
-        if not isinstance(include_k_anonymity, bool):
-            raise TypeError("include_k_anonymity must be a boolean")
-        if not isinstance(include_membership_inference, bool):
-            raise TypeError("include_membership_inference must be a boolean")
-
-        if not include_k_anonymity and not include_membership_inference:
-            raise ValueError(
-                "At least one of include_k_anonymity or include_membership_inference must be True"
-            )
-
-        if quasi_identifiers is not None:
-            if not isinstance(quasi_identifiers, list):
-                raise TypeError("quasi_identifiers must be a list or None")
-            invalid_cols = set(quasi_identifiers) - set(self.real.columns)
-            if invalid_cols:
-                raise ValueError(
-                    f"quasi_identifiers contains invalid columns: {invalid_cols}"
-                )
-
-        if sensitive_attributes is not None:
-            if not isinstance(sensitive_attributes, list):
-                raise TypeError("sensitive_attributes must be a list or None")
-            invalid_cols = set(sensitive_attributes) - set(self.real.columns)
-            if invalid_cols:
-                raise ValueError(
-                    f"sensitive_attributes contains invalid columns: {invalid_cols}"
-                )
-
-        return self.advanced_privacy_evaluator.comprehensive_privacy_evaluation(
-            self.real,
-            self.fake,
-            quasi_identifiers=quasi_identifiers,
-            sensitive_attributes=sensitive_attributes,
-            include_k_anonymity=include_k_anonymity,
-            include_membership_inference=include_membership_inference,
-        )
 
     def comprehensive_advanced_evaluation(
         self,
@@ -1089,21 +958,15 @@ class TableEvaluator:
                 logger.error(f"Basic evaluation failed: {e}")
                 results["basic"] = {"error": str(e)}
 
-        # Advanced statistical evaluation
+        # Note: Advanced statistical and privacy evaluators removed in master
+        # These features are now integrated into the basic evaluators
         if include_advanced_statistical:
-            try:
-                results["advanced_statistical"] = self.advanced_statistical_evaluation()
-            except Exception as e:
-                logger.error(f"Advanced statistical evaluation failed: {e}")
-                results["advanced_statistical"] = {"error": str(e)}
+            logger.warning("Advanced statistical evaluation is no longer available as a separate method")
+            results["advanced_statistical"] = {"warning": "Feature integrated into basic statistical evaluation"}
 
-        # Advanced privacy evaluation
         if include_advanced_privacy:
-            try:
-                results["advanced_privacy"] = self.advanced_privacy_evaluation()
-            except Exception as e:
-                logger.error(f"Advanced privacy evaluation failed: {e}")
-                results["advanced_privacy"] = {"error": str(e)}
+            logger.warning("Advanced privacy evaluation is no longer available as a separate method")
+            results["advanced_privacy"] = {"warning": "Feature integrated into basic privacy evaluation"}
 
         return results
 
