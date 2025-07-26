@@ -49,7 +49,6 @@ from .ml import (
 
 # Privacy metrics
 from .privacy import (
-    analyze_l_diversity,
     assess_overall_privacy_risk,
     calculate_k_anonymity,
     calculate_privacy_score,
@@ -126,12 +125,11 @@ __all__ = [  # noqa: RUF022
     # Privacy metrics
     'identify_quasi_identifiers',
     'calculate_k_anonymity',
-    'analyze_l_diversity',
+    'assess_overall_privacy_risk',
     'simulate_membership_inference_attack',
     'comprehensive_privacy_analysis',
-    'assess_overall_privacy_risk',
-    'calculate_privacy_score',
     'generate_comprehensive_recommendations',
+    'calculate_privacy_score',
     # ML metrics
     'MLEvaluator',
     'evaluate_ml_utility',

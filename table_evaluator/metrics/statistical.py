@@ -15,7 +15,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics.pairwise import linear_kernel, polynomial_kernel, rbf_kernel
 
 from table_evaluator.constants import RANDOM_SEED
-from table_evaluator.utils import set_random_seed
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ def euclidean_distance(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.S
     return np.sqrt(np.sum(np.power(np.subtract(y_true, y_pred), 2)))
 
 
-def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series):
+def mean_absolute_percentage_error(y_true: np.ndarray | pd.Series, y_pred: np.ndarray | pd.Series) -> float:
     """
     Returns the mean absolute percentage error between y_true and y_pred.
 
@@ -96,6 +95,7 @@ def cosine_similarity(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 def cramers_v(
     x: list | np.ndarray | pd.Series,
     y: list | np.ndarray | pd.Series,
+    *,
     bias_correction: bool = True,
 ) -> float:
     """
@@ -165,10 +165,7 @@ def cramers_v(
         r_corrected = r - (r - 1) ** 2 / (n - 1)
 
         min_dim_corrected = min(k_corrected - 1, r_corrected - 1)
-        if min_dim_corrected > 0:
-            cramers_v_val = np.sqrt(phi_corrected / min_dim_corrected)
-        else:
-            cramers_v_val = 0.0
+        cramers_v_val = np.sqrt(phi_corrected / min_dim_corrected) if min_dim_corrected > 0 else 0.0
 
     return min(1.0, cramers_v_val)
 
@@ -291,6 +288,145 @@ def correlation_ratio(
     return np.sqrt(max(0.0, min(1.0, eta_squared)))  # Clamp for numerical stability
 
 
+def _determine_nominal_columns(dataset: pd.DataFrame, nominal_columns: list[str] | str | None) -> list[str]:
+    """Determine which columns should be treated as nominal/categorical."""
+    if nominal_columns == 'auto':
+        # Auto-detect categorical columns based on dtype
+        return list(dataset.select_dtypes(include=['object', 'category', 'bool']).columns)
+    if nominal_columns == 'all':
+        return list(dataset.columns)
+    if nominal_columns is None:
+        return []
+    return nominal_columns
+
+
+def _calculate_categorical_categorical_association(col1_data: pd.Series, col2_data: pd.Series, method: str) -> float:
+    """Calculate association between two categorical variables."""
+    if method == 'cramer':
+        return cramers_v(col1_data, col2_data)
+    if method == 'theil':
+        return theils_u(col1_data, col2_data)
+    raise ValueError(f'Unknown nom_nom_assoc: {method}')
+
+
+def _calculate_numerical_numerical_association(col1_data: pd.Series, col2_data: pd.Series, method: str) -> float:
+    """Calculate association between two numerical variables."""
+    col1_clean = col1_data.dropna()
+    col2_clean = col2_data.dropna()
+
+    if method == 'pearson':
+        assoc_value, _ = stats.pearsonr(col1_clean, col2_clean)
+        # Keep original sign for Pearson correlation to match dython behavior
+        return assoc_value
+    if method == 'spearman':
+        assoc_value, _ = stats.spearmanr(col1_clean, col2_clean)
+        return abs(assoc_value)
+    if method == 'kendall':
+        assoc_value, _ = stats.kendalltau(col1_clean, col2_clean)
+        return abs(assoc_value)
+    raise ValueError(f'Unknown num_num_assoc: {method}')
+
+
+def _calculate_categorical_numerical_association(
+    categorical_data: pd.Series, numerical_data: pd.Series, method: str
+) -> float:
+    """Calculate association between categorical and numerical variables."""
+    if method == 'correlation_ratio':
+        return correlation_ratio(categorical_data, numerical_data)
+    raise ValueError(f'Unknown nom_num_assoc: {method}')
+
+
+def _calculate_association_between_columns(
+    dataset: pd.DataFrame,
+    col1: str,
+    col2: str,
+    nominal_columns: list[str],
+    nom_nom_assoc: str,
+    num_num_assoc: str,
+    nom_num_assoc: str,
+) -> float:
+    """Calculate association value between two specific columns."""
+    col1_is_nominal = col1 in nominal_columns
+    col2_is_nominal = col2 in nominal_columns
+
+    if col1_is_nominal and col2_is_nominal:
+        # Categorical-categorical association
+        return _calculate_categorical_categorical_association(dataset[col1], dataset[col2], nom_nom_assoc)
+    if not col1_is_nominal and not col2_is_nominal:
+        # Numerical-numerical association
+        return _calculate_numerical_numerical_association(dataset[col1], dataset[col2], num_num_assoc)
+    # Categorical-numerical association
+    if col1_is_nominal:
+        return _calculate_categorical_numerical_association(dataset[col1], dataset[col2], nom_num_assoc)
+    return _calculate_categorical_numerical_association(dataset[col2], dataset[col1], nom_num_assoc)
+
+
+def _handle_association_calculation(
+    dataset: pd.DataFrame,
+    col1: str,
+    col2: str,
+    nominal_columns: list[str],
+    nom_nom_assoc: str,
+    num_num_assoc: str,
+    nom_num_assoc: str,
+) -> float:
+    """Handle association calculation with error handling."""
+    try:
+        assoc_value = _calculate_association_between_columns(
+            dataset, col1, col2, nominal_columns, nom_nom_assoc, num_num_assoc, nom_num_assoc
+        )
+        # Handle NaN results
+        return 0.0 if np.isnan(assoc_value) else assoc_value
+    except (ValueError, RuntimeError, np.linalg.LinAlgError, TypeError) as e:
+        warnings.warn(
+            f'Could not calculate association between {col1} and {col2}: {e}',
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return 0.0
+    except Exception as e:
+        # Log unexpected errors but don't crash - return 0 association
+        warnings.warn(
+            f'Unexpected error calculating association between {col1} and {col2}: {e}',
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return 0.0
+
+
+def _fill_correlation_matrix_entry(
+    corr_matrix: pd.DataFrame,
+    dataset: pd.DataFrame,
+    col1: str,
+    col2: str,
+    nominal_columns: list[str],
+    nom_nom_assoc: str,
+    assoc_value: float,
+) -> None:
+    """Fill correlation matrix entries, handling asymmetric cases like Theil's U."""
+    col1_is_nominal = col1 in nominal_columns
+    col2_is_nominal = col2 in nominal_columns
+
+    # Fill the main entry
+    corr_matrix.loc[col1, col2] = assoc_value
+
+    if nom_nom_assoc != 'theil' or not (col1_is_nominal and col2_is_nominal):
+        # Make symmetric except for Theil's U which is asymmetric
+        corr_matrix.loc[col2, col1] = assoc_value
+    else:
+        # For Theil's U, calculate the reverse direction
+        try:
+            reverse_assoc = theils_u(dataset[col2], dataset[col1])
+            corr_matrix.loc[col2, col1] = reverse_assoc if not np.isnan(reverse_assoc) else 0.0
+        except (ValueError, RuntimeError) as e:
+            warnings.warn(
+                f"Could not calculate reverse Theil's U between {col2} and {col1}: {e}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            corr_matrix.loc[col2, col1] = 0.0
+
+
 def associations(
     dataset: pd.DataFrame,
     nominal_columns: list[str] | str | None = 'auto',
@@ -307,18 +443,12 @@ def associations(
         nom_nom_assoc: Method for categorical-categorical associations ('cramer' or 'theil')
         num_num_assoc: Method for numerical-numerical associations ('pearson', 'spearman', 'kendall')
         nom_num_assoc: Method for categorical-numerical associations ('correlation_ratio')
-        compute_only: If True, skip plotting and only return correlation matrix
 
     Returns:
         dict: Dictionary containing 'corr' key with correlation DataFrame
     """
-    if nominal_columns == 'auto':
-        # Auto-detect categorical columns based on dtype
-        nominal_columns = list(dataset.select_dtypes(include=['object', 'category', 'bool']).columns)
-    elif nominal_columns == 'all':
-        nominal_columns = list(dataset.columns)
-    elif nominal_columns is None:
-        nominal_columns = []
+    # Determine which columns are nominal/categorical
+    nominal_cols = _determine_nominal_columns(dataset, nominal_columns)
 
     # Initialize correlation matrix
     corr_matrix = pd.DataFrame(index=dataset.columns, columns=dataset.columns, dtype=float)
@@ -330,82 +460,15 @@ def associations(
     for i, col1 in enumerate(dataset.columns):
         for j, col2 in enumerate(dataset.columns):
             if i < j:  # Only calculate upper triangle, then mirror
-                col1_is_nominal = col1 in nominal_columns
-                col2_is_nominal = col2 in nominal_columns
+                # Calculate association value with error handling
+                assoc_value = _handle_association_calculation(
+                    dataset, col1, col2, nominal_cols, nom_nom_assoc, num_num_assoc, nom_num_assoc
+                )
 
-                try:
-                    if col1_is_nominal and col2_is_nominal:
-                        # Categorical-categorical association
-                        if nom_nom_assoc == 'cramer':
-                            assoc_value = cramers_v(dataset[col1], dataset[col2])
-                        elif nom_nom_assoc == 'theil':
-                            assoc_value = theils_u(dataset[col1], dataset[col2])
-                        else:
-                            raise ValueError(f'Unknown nom_nom_assoc: {nom_nom_assoc}')
-
-                    elif not col1_is_nominal and not col2_is_nominal:
-                        # Numerical-numerical association
-                        if num_num_assoc == 'pearson':
-                            assoc_value, _ = stats.pearsonr(dataset[col1].dropna(), dataset[col2].dropna())
-                            # Keep original sign for Pearson correlation to match dython behavior
-                        elif num_num_assoc == 'spearman':
-                            assoc_value, _ = stats.spearmanr(dataset[col1].dropna(), dataset[col2].dropna())
-                            assoc_value = abs(assoc_value)
-                        elif num_num_assoc == 'kendall':
-                            assoc_value, _ = stats.kendalltau(dataset[col1].dropna(), dataset[col2].dropna())
-                            assoc_value = abs(assoc_value)
-                        else:
-                            raise ValueError(f'Unknown num_num_assoc: {num_num_assoc}')
-
-                    else:
-                        # Categorical-numerical association
-                        if nom_num_assoc == 'correlation_ratio':
-                            if col1_is_nominal:
-                                assoc_value = correlation_ratio(dataset[col1], dataset[col2])
-                            else:
-                                assoc_value = correlation_ratio(dataset[col2], dataset[col1])
-                        else:
-                            raise ValueError(f'Unknown nom_num_assoc: {nom_num_assoc}')
-
-                    # Handle NaN results
-                    if np.isnan(assoc_value):
-                        assoc_value = 0.0
-
-                except (
-                    ValueError,
-                    RuntimeError,
-                    np.linalg.LinAlgError,
-                    TypeError,
-                ) as e:
-                    warnings.warn(
-                        f'Could not calculate association between {col1} and {col2}: {e}',
-                        RuntimeWarning,
-                    )
-                    assoc_value = 0.0
-                except Exception as e:
-                    # Log unexpected errors but don't crash - return 0 association
-                    warnings.warn(
-                        f'Unexpected error calculating association between {col1} and {col2}: {e}',
-                        RuntimeWarning,
-                    )
-                    assoc_value = 0.0
-
-                # Fill both upper and lower triangles (make symmetric for most cases)
-                corr_matrix.loc[col1, col2] = assoc_value
-                if nom_nom_assoc != 'theil' or not (col1_is_nominal and col2_is_nominal):
-                    # Make symmetric except for Theil's U which is asymmetric
-                    corr_matrix.loc[col2, col1] = assoc_value
-                else:
-                    # For Theil's U, calculate the reverse direction
-                    try:
-                        reverse_assoc = theils_u(dataset[col2], dataset[col1])
-                        corr_matrix.loc[col2, col1] = reverse_assoc if not np.isnan(reverse_assoc) else 0.0
-                    except (ValueError, RuntimeError) as e:
-                        warnings.warn(
-                            f"Could not calculate reverse Theil's U between {col2} and {col1}: {e}",
-                            RuntimeWarning,
-                        )
-                        corr_matrix.loc[col2, col1] = 0.0
+                # Fill matrix entries (handles symmetric and asymmetric cases)
+                _fill_correlation_matrix_entry(
+                    corr_matrix, dataset, col1, col2, nominal_cols, nom_nom_assoc, assoc_value
+                )
 
     return {'corr': corr_matrix.astype(float)}
 
@@ -414,7 +477,8 @@ def column_correlations(
     dataset_a: pd.DataFrame,
     dataset_b: pd.DataFrame,
     categorical_columns: list[str] | None,
-    theil_u=True,
+    *,
+    theil_u: bool = True,
 ) -> float:
     """
     Column-wise correlation calculation between ``dataset_a`` and ``dataset_b``.
@@ -432,7 +496,10 @@ def column_correlations(
         categorical_columns = list()
     elif categorical_columns == 'all':
         categorical_columns = dataset_a.columns
-    assert dataset_a.columns.tolist() == dataset_b.columns.tolist()
+
+    if dataset_a.columns.tolist() != dataset_b.columns.tolist():
+        raise ValueError('Columns in dataset_a and dataset_b must be identical')
+
     corr = pd.DataFrame(columns=dataset_a.columns, index=['correlation'])
 
     for column in dataset_a.columns.tolist():
@@ -443,8 +510,8 @@ def column_correlations(
                 corr[column] = cramers_v(dataset_a[column].sort_values(), dataset_b[column].sort_values())
         else:
             corr[column], _ = ss.pearsonr(dataset_a[column].sort_values(), dataset_b[column].sort_values())
-    corr.fillna(value=np.nan, inplace=True)
-    correlation = np.mean(corr.values.flatten())
+    corr = corr.fillna(value=np.nan)
+    correlation = np.mean(corr.to_numpy().flatten())
     return float(correlation)
 
 
@@ -472,7 +539,9 @@ def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: li
     Raises:
         AssertionError: If the columns in real and fake DataFrames are not identical.
     """
-    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between `real` and `fake`. '
+    if real.columns.tolist() != fake.columns.tolist():
+        raise ValueError('Columns are not identical between `real` and `fake`.')
+
     distances = Parallel(n_jobs=-1)(
         delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
     )
@@ -540,7 +609,9 @@ def kolmogorov_smirnov_test(
 
 def kolmogorov_smirnov_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list) -> pd.DataFrame:
     """Calculate Kolmogorov-Smirnov test results for numerical columns."""
-    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between `real` and `fake`. '
+    if real.columns.tolist() != fake.columns.tolist():
+        raise ValueError('Columns are not identical between `real` and `fake`.')
+
     distances = Parallel(n_jobs=-1)(
         delayed(kolmogorov_smirnov_test)(col, real[col], fake[col]) for col in numerical_columns
     )
@@ -571,11 +642,11 @@ def _sample_for_performance(
     Returns:
         Tuple of sampled real and fake data
     """
-    set_random_seed(random_state)
+    rng = np.random.default_rng(random_state)
 
     # Sample real data if needed
     if len(real_data) > max_samples:
-        indices = np.random.choice(len(real_data), max_samples, replace=False)
+        indices = rng.choice(len(real_data), max_samples, replace=False)
         real_sampled = real_data[indices]
         logger.info(f'Sampled real data from {len(real_data)} to {max_samples} rows')
     else:
@@ -583,7 +654,7 @@ def _sample_for_performance(
 
     # Sample fake data if needed
     if len(fake_data) > max_samples:
-        indices = np.random.choice(len(fake_data), max_samples, replace=False)
+        indices = rng.choice(len(fake_data), max_samples, replace=False)
         fake_sampled = fake_data[indices]
         logger.info(f'Sampled fake data from {len(fake_data)} to {max_samples} rows')
     else:
@@ -645,8 +716,8 @@ def wasserstein_distance_1d(real_col: pd.Series, fake_col: pd.Series, p: int = 1
         raise ValueError('p must be 1 or 2')
 
     # Remove NaN values and validate
-    real_clean = real_col.dropna().values
-    fake_clean = fake_col.dropna().values
+    real_clean = real_col.dropna().to_numpy()
+    fake_clean = fake_col.dropna().to_numpy()
 
     if len(real_clean) == 0:
         raise ValueError('real_col contains no valid (non-NaN) values')
@@ -660,7 +731,125 @@ def wasserstein_distance_1d(real_col: pd.Series, fake_col: pd.Series, p: int = 1
     try:
         return stats.wasserstein_distance(real_clean, fake_clean)
     except Exception as e:
-        raise ValueError(f'Failed to calculate Wasserstein distance: {e!s}')
+        raise ValueError(f'Failed to calculate Wasserstein distance: {e!s}') from e
+
+
+def _validate_array_types_and_shapes(real_data: np.ndarray, fake_data: np.ndarray) -> None:
+    """Validate array types and shapes."""
+    if not isinstance(real_data, np.ndarray):
+        raise TypeError('real_data must be a numpy array')
+    if not isinstance(fake_data, np.ndarray):
+        raise TypeError('fake_data must be a numpy array')
+
+    if real_data.ndim != 2 or fake_data.ndim != 2:
+        raise ValueError('Input data must be 2D arrays')
+    if real_data.shape[1] != 2 or fake_data.shape[1] != 2:
+        raise ValueError('Input data must have exactly 2 features')
+    if len(real_data) == 0 or len(fake_data) == 0:
+        raise ValueError('Input arrays cannot be empty')
+
+
+def _validate_algorithm_parameters(reg: float, max_iter: int, convergence_threshold: float) -> None:
+    """Validate algorithm parameters."""
+    if reg <= 0:
+        raise ValueError('Regularization parameter must be positive')
+    if max_iter <= 0:
+        raise ValueError('Maximum iterations must be positive')
+    if convergence_threshold <= 0:
+        raise ValueError('Convergence threshold must be positive')
+
+
+def _validate_array_values(real_data: np.ndarray, fake_data: np.ndarray) -> None:
+    """Validate array values for NaN and infinite values."""
+    if np.any(np.isnan(real_data)) or np.any(np.isnan(fake_data)):
+        raise ValueError('Input data contains NaN values')
+    if np.any(np.isinf(real_data)) or np.any(np.isinf(fake_data)):
+        raise ValueError('Input data contains infinite values')
+
+
+def _validate_2d_wasserstein_inputs(
+    real_data: np.ndarray,
+    fake_data: np.ndarray,
+    reg: float,
+    max_iter: int,
+    convergence_threshold: float,
+) -> None:
+    """Validate inputs for 2D Wasserstein distance calculation."""
+    _validate_array_types_and_shapes(real_data, fake_data)
+    _validate_algorithm_parameters(reg, max_iter, convergence_threshold)
+    _validate_array_values(real_data, fake_data)
+
+
+def _prepare_wasserstein_data(
+    real_data: np.ndarray,
+    fake_data: np.ndarray,
+    *,
+    enable_sampling: bool,
+    max_samples: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Prepare data for Wasserstein calculation, including optional sampling."""
+    # Check for large datasets and warn user
+    _check_large_dataset_and_warn(real_data, fake_data, operation_name='2D Wasserstein distance')
+
+    # Performance optimization: sample large datasets only if enabled
+    if enable_sampling and (len(real_data) > max_samples or len(fake_data) > max_samples):
+        return _sample_for_performance(real_data, fake_data, max_samples)
+
+    return real_data, fake_data
+
+
+def _calculate_cost_matrix(real_data: np.ndarray, fake_data: np.ndarray) -> np.ndarray:
+    """Calculate and validate the cost matrix for optimal transport."""
+    # Cost matrix (squared Euclidean distance)
+    C = cdist(real_data, fake_data, metric='sqeuclidean')
+
+    # Check for numerical issues in cost matrix
+    if np.any(np.isnan(C)) or np.any(np.isinf(C)):
+        raise ValueError('Cost matrix contains invalid values')
+
+    return C
+
+
+def _run_sinkhorn_algorithm(
+    C: np.ndarray,
+    a: np.ndarray,
+    b: np.ndarray,
+    reg: float,
+    max_iter: int,
+    convergence_threshold: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Run the Sinkhorn algorithm to find optimal transport plan."""
+    # Sinkhorn algorithm with improved numerical stability
+    K = np.exp(-C / reg)
+    u = np.ones(len(a)) / len(a)
+
+    converged = False
+    for _iteration in range(max_iter):
+        # Add small epsilon for numerical stability
+        epsilon = 1e-16
+        v = b / (K.T @ u + epsilon)
+        u_new = a / (K @ v + epsilon)
+
+        # Check convergence
+        if np.allclose(u, u_new, rtol=convergence_threshold, atol=1e-12):
+            converged = True
+            break
+        u = u_new
+
+    if not converged:
+        raise ValueError(f'Sinkhorn algorithm did not converge after {max_iter} iterations')
+
+    return u, v
+
+
+def _calculate_transport_cost(u: np.ndarray, v: np.ndarray, K: np.ndarray, C: np.ndarray) -> float:
+    """Calculate the final transport cost from Sinkhorn results."""
+    transport_cost = np.sum(u[:, None] * K * v[None, :] * C)
+
+    if np.isnan(transport_cost) or np.isinf(transport_cost):
+        raise ValueError('Transport cost calculation resulted in invalid value')
+
+    return float(transport_cost)
 
 
 def wasserstein_distance_2d(
@@ -669,6 +858,7 @@ def wasserstein_distance_2d(
     reg: float = 0.1,
     max_iter: int = 1000,
     convergence_threshold: float = 1e-6,
+    *,
     enable_sampling: bool = False,
     max_samples: int = 5000,
 ) -> float:
@@ -694,38 +884,13 @@ def wasserstein_distance_2d(
         ValueError: If input data is invalid or algorithm parameters are incorrect
         TypeError: If inputs are not numpy arrays
     """
-    # Input validation
-    if not isinstance(real_data, np.ndarray):
-        raise TypeError('real_data must be a numpy array')
-    if not isinstance(fake_data, np.ndarray):
-        raise TypeError('fake_data must be a numpy array')
+    # Validate all inputs
+    _validate_2d_wasserstein_inputs(real_data, fake_data, reg, max_iter, convergence_threshold)
 
-    if real_data.ndim != 2 or fake_data.ndim != 2:
-        raise ValueError('Input data must be 2D arrays')
-    if real_data.shape[1] != 2 or fake_data.shape[1] != 2:
-        raise ValueError('Input data must have exactly 2 features')
-    if len(real_data) == 0 or len(fake_data) == 0:
-        raise ValueError('Input arrays cannot be empty')
-
-    if reg <= 0:
-        raise ValueError('Regularization parameter must be positive')
-    if max_iter <= 0:
-        raise ValueError('Maximum iterations must be positive')
-    if convergence_threshold <= 0:
-        raise ValueError('Convergence threshold must be positive')
-
-    # Check for NaN or infinite values
-    if np.any(np.isnan(real_data)) or np.any(np.isnan(fake_data)):
-        raise ValueError('Input data contains NaN values')
-    if np.any(np.isinf(real_data)) or np.any(np.isinf(fake_data)):
-        raise ValueError('Input data contains infinite values')
-
-    # Check for large datasets and warn user
-    _check_large_dataset_and_warn(real_data, fake_data, operation_name='2D Wasserstein distance')
-
-    # Performance optimization: sample large datasets only if enabled
-    if enable_sampling and (len(real_data) > max_samples or len(fake_data) > max_samples):
-        real_data, fake_data = _sample_for_performance(real_data, fake_data, max_samples)
+    # Prepare data (including optional sampling)
+    real_data, fake_data = _prepare_wasserstein_data(
+        real_data, fake_data, enable_sampling=enable_sampling, max_samples=max_samples
+    )
 
     n, m = len(real_data), len(fake_data)
 
@@ -734,45 +899,20 @@ def wasserstein_distance_2d(
         a = np.ones(n) / n
         b = np.ones(m) / m
 
-        # Cost matrix (squared Euclidean distance)
-        C = cdist(real_data, fake_data, metric='sqeuclidean')
+        # Calculate cost matrix
+        C = _calculate_cost_matrix(real_data, fake_data)
 
-        # Check for numerical issues in cost matrix
-        if np.any(np.isnan(C)) or np.any(np.isinf(C)):
-            raise ValueError('Cost matrix contains invalid values')
+        # Run Sinkhorn algorithm
+        u, v = _run_sinkhorn_algorithm(C, a, b, reg, max_iter, convergence_threshold)
 
-        # Sinkhorn algorithm with improved numerical stability
+        # Calculate and return transport cost
         K = np.exp(-C / reg)
-        u = np.ones(n) / n
-
-        converged = False
-        for iteration in range(max_iter):
-            # Add small epsilon for numerical stability
-            epsilon = 1e-16
-            v = b / (K.T @ u + epsilon)
-            u_new = a / (K @ v + epsilon)
-
-            # Check convergence
-            if np.allclose(u, u_new, rtol=convergence_threshold, atol=1e-12):
-                converged = True
-                break
-            u = u_new
-
-        if not converged:
-            raise ValueError(f'Sinkhorn algorithm did not converge after {max_iter} iterations')
-
-        # Calculate optimal transport cost
-        transport_cost = np.sum(u[:, None] * K * v[None, :] * C)
-
-        if np.isnan(transport_cost) or np.isinf(transport_cost):
-            raise ValueError('Transport cost calculation resulted in invalid value')
-
-        return float(transport_cost)
+        return _calculate_transport_cost(u, v, K, C)
 
     except Exception as e:
         if isinstance(e, ValueError):
             raise
-        raise ValueError(f'Failed to calculate 2D Wasserstein distance: {e!s}')
+        raise ValueError(f'Failed to calculate 2D Wasserstein distance: {e!s}') from e
 
 
 def wasserstein_distance_df(
@@ -781,6 +921,7 @@ def wasserstein_distance_df(
     numerical_columns: list[str],
     p: int = 1,
     method: str = '1d',
+    *,
     enable_sampling: bool = False,
     max_samples_2d: int = 5000,
 ) -> pd.DataFrame:
@@ -802,7 +943,8 @@ def wasserstein_distance_df(
     Raises:
         AssertionError: If real and fake DataFrames don't have identical columns
     """
-    assert real.columns.tolist() == fake.columns.tolist(), 'Columns are not identical between real and fake DataFrames'
+    if real.columns.tolist() != fake.columns.tolist():
+        raise ValueError('Columns are not identical between real and fake DataFrames')
 
     distances = []
 
@@ -814,9 +956,9 @@ def wasserstein_distance_df(
     elif method == '2d' and len(numerical_columns) >= 2:
         # Calculate 2D Wasserstein for all pairs of columns
         for i, col1 in enumerate(numerical_columns):
-            for j, col2 in enumerate(numerical_columns[i + 1 :], i + 1):
-                real_2d = real[[col1, col2]].dropna().values
-                fake_2d = fake[[col1, col2]].dropna().values
+            for _j, col2 in enumerate(numerical_columns[i + 1 :], i + 1):
+                real_2d = real[[col1, col2]].dropna().to_numpy()
+                fake_2d = fake[[col1, col2]].dropna().to_numpy()
 
                 if len(real_2d) > 0 and len(fake_2d) > 0:
                     distance = wasserstein_distance_2d(
@@ -866,7 +1008,7 @@ def earth_movers_distance_summary(real: pd.DataFrame, fake: pd.DataFrame, numeri
         }
 
     # Calculate summary statistics
-    distances = distances_1d['wasserstein_distance'].values
+    distances = distances_1d['wasserstein_distance'].to_numpy()
     results['summary_stats'] = {
         'mean_distance': np.mean(distances),
         'median_distance': np.median(distances),
@@ -900,8 +1042,8 @@ def optimal_transport_cost(
         Tuple of (transport_cost, transport_plan, bin_edges)
     """
     # Remove NaN values
-    real_clean = real_col.dropna().values
-    fake_clean = fake_col.dropna().values
+    real_clean = real_col.dropna().to_numpy()
+    fake_clean = fake_col.dropna().to_numpy()
 
     # Create common bins
     combined_data = np.concatenate([real_clean, fake_clean])
@@ -951,7 +1093,7 @@ def mmd_comprehensive_analysis(
     real: pd.DataFrame,
     fake: pd.DataFrame,
     numerical_columns: list[str],
-    kernel_types: list[str] = ['rbf', 'polynomial', 'linear'],
+    kernel_types: list[str] | None = None,
 ) -> dict:
     """
     Comprehensive MMD analysis with multiple kernels.
@@ -965,6 +1107,9 @@ def mmd_comprehensive_analysis(
     Returns:
         Dictionary with comprehensive MMD analysis results
     """
+    if kernel_types is None:
+        kernel_types = ['rbf', 'polynomial', 'linear']
+
     results = {'column_wise': {}, 'multivariate': {}, 'summary': {}}
 
     # Column-wise analysis for each kernel
@@ -979,8 +1124,8 @@ def mmd_comprehensive_analysis(
     all_mmds = []
 
     for kernel_type in kernel_types:
-        df = results['column_wise'][kernel_type]
-        all_mmds.extend(df['mmd_squared'].dropna().tolist())
+        column_results = results['column_wise'][kernel_type]
+        all_mmds.extend(column_results['mmd_squared'].dropna().tolist())
 
     results['summary'] = {
         'mean_mmd': np.mean(all_mmds) if all_mmds else np.nan,
@@ -1012,11 +1157,11 @@ def _sample_for_mmd_performance(
     Returns:
         Tuple of sampled X and Y data
     """
-    np.random.seed(random_state)
+    rng = np.random.default_rng(random_state)
 
     # Sample X if needed
     if len(X) > max_samples:
-        indices = np.random.choice(len(X), max_samples, replace=False)
+        indices = rng.choice(len(X), max_samples, replace=False)
         X_sampled = X[indices]
         logger.info(f'Sampled X data from {len(X)} to {max_samples} rows')
     else:
@@ -1024,7 +1169,7 @@ def _sample_for_mmd_performance(
 
     # Sample Y if needed
     if len(Y) > max_samples:
-        indices = np.random.choice(len(Y), max_samples, replace=False)
+        indices = rng.choice(len(Y), max_samples, replace=False)
         Y_sampled = Y[indices]
         logger.info(f'Sampled Y data from {len(Y)} to {max_samples} rows')
     else:
@@ -1061,7 +1206,7 @@ def _check_large_dataset_and_warn_mmd(
 class MMDKernel:
     """Base class for MMD kernel functions."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
@@ -1072,7 +1217,7 @@ class MMDKernel:
 class RBFKernel(MMDKernel):
     """Radial Basis Function (Gaussian) kernel."""
 
-    def __init__(self, gamma: float | None = None):
+    def __init__(self, gamma: float | None = None) -> None:
         super().__init__('rbf')
         self.gamma = gamma
 
@@ -1092,27 +1237,27 @@ class RBFKernel(MMDKernel):
                     pairwise_dists = np.sqrt(np.sum((X[:, None] - Y[None, :]) ** 2, axis=2))
 
                 valid_dists = pairwise_dists[pairwise_dists > 0]
-                if len(valid_dists) == 0:
-                    raise ValueError('All pairwise distances are zero - cannot compute gamma')
-
                 median_dist = np.median(valid_dists)
-                if median_dist == 0:
-                    raise ValueError('Median distance is zero - cannot compute gamma')
-
                 gamma = 1.0 / (2 * median_dist**2)
             except Exception as e:
-                raise ValueError(f'Failed to compute gamma using median heuristic: {e!s}')
+                raise ValueError(f'Failed to compute gamma using median heuristic: {e!s}') from e
+
+            # Validate computed values
+            if len(valid_dists) == 0:
+                raise ValueError('All pairwise distances are zero - cannot compute gamma')
+            if median_dist == 0:
+                raise ValueError('Median distance is zero - cannot compute gamma')
 
         try:
             return rbf_kernel(X, Y, gamma=gamma)
         except Exception as e:
-            raise ValueError(f'Failed to compute RBF kernel: {e!s}')
+            raise ValueError(f'Failed to compute RBF kernel: {e!s}') from e
 
 
 class PolynomialKernel(MMDKernel):
     """Polynomial kernel."""
 
-    def __init__(self, degree: int = 3, gamma: float | None = None, coef0: float = 1.0):
+    def __init__(self, degree: int = 3, gamma: float | None = None, coef0: float = 1.0) -> None:
         super().__init__('polynomial')
         self.degree = degree
         self.gamma = gamma
@@ -1125,17 +1270,112 @@ class PolynomialKernel(MMDKernel):
 class LinearKernel(MMDKernel):
     """Linear kernel."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('linear')
 
     def __call__(self, X: np.ndarray, Y: np.ndarray | None = None) -> np.ndarray:
         return linear_kernel(X, Y)
 
 
+def _validate_mmd_inputs(X: np.ndarray, Y: np.ndarray, kernel: 'MMDKernel') -> None:
+    """Validate inputs for MMD calculation."""
+    if not isinstance(X, np.ndarray):
+        raise TypeError('X must be a numpy array')
+    if not isinstance(Y, np.ndarray):
+        raise TypeError('Y must be a numpy array')
+    if not isinstance(kernel, MMDKernel):
+        raise TypeError('kernel must be an instance of MMDKernel')
+
+    if X.ndim != 2 or Y.ndim != 2:
+        raise ValueError('Input arrays must be 2D')
+    if X.shape[1] != Y.shape[1]:
+        raise ValueError('X and Y must have the same number of features')
+    if len(X) == 0 or len(Y) == 0:
+        raise ValueError('Input arrays cannot be empty')
+
+    # Check for NaN or infinite values
+    if np.any(np.isnan(X)) or np.any(np.isnan(Y)):
+        raise ValueError('Input data contains NaN values')
+    if np.any(np.isinf(X)) or np.any(np.isinf(Y)):
+        raise ValueError('Input data contains infinite values')
+
+
+def _prepare_mmd_data(
+    X: np.ndarray, Y: np.ndarray, *, enable_sampling: bool, max_samples: int, unbiased: bool
+) -> tuple[np.ndarray, np.ndarray]:
+    """Prepare data for MMD calculation, including validation and optional sampling."""
+    # Check for large datasets and warn user
+    _check_large_dataset_and_warn_mmd(X, Y, operation_name='MMD calculation')
+
+    # Performance optimization: sample large datasets only if enabled
+    if enable_sampling and (len(X) > max_samples or len(Y) > max_samples):
+        X, Y = _sample_for_mmd_performance(X, Y, max_samples)
+
+    # Check minimum sample sizes for unbiased estimator
+    n, m = len(X), len(Y)
+    if unbiased and (n < 2 or m < 2):
+        raise ValueError('Unbiased estimator requires at least 2 samples in each group')
+
+    return X, Y
+
+
+def _compute_kernel_matrices(
+    X: np.ndarray, Y: np.ndarray, kernel: 'MMDKernel'
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute and validate kernel matrices."""
+    # Compute kernel matrices
+    Kxx = kernel(X, X)
+    Kyy = kernel(Y, Y)
+    Kxy = kernel(X, Y)
+
+    # Validate kernel matrices
+    if np.any(np.isnan(Kxx)) or np.any(np.isnan(Kyy)) or np.any(np.isnan(Kxy)):
+        raise ValueError('Kernel computation resulted in NaN values')
+    if np.any(np.isinf(Kxx)) or np.any(np.isinf(Kyy)) or np.any(np.isinf(Kxy)):
+        raise ValueError('Kernel computation resulted in infinite values')
+
+    return Kxx, Kyy, Kxy
+
+
+def _calculate_mmd_terms(
+    Kxx: np.ndarray, Kyy: np.ndarray, Kxy: np.ndarray, *, unbiased: bool
+) -> tuple[float, float, float]:
+    """Calculate the three terms of the MMD estimator."""
+    n, m = Kxx.shape[0], Kyy.shape[0]
+
+    if unbiased:
+        # Unbiased estimator (removes diagonal elements)
+        # E[k(x,x')] for x ≠ x'
+        Kxx_sum = np.sum(Kxx) - np.trace(Kxx)
+        term1 = Kxx_sum / (n * (n - 1))
+
+        # E[k(y,y')] for y ≠ y'
+        Kyy_sum = np.sum(Kyy) - np.trace(Kyy)
+        term3 = Kyy_sum / (m * (m - 1))
+    else:
+        # Biased estimator
+        term1 = np.mean(Kxx)
+        term3 = np.mean(Kyy)
+
+    # E[k(x,y)]
+    term2 = np.mean(Kxy)
+
+    return term1, term2, term3
+
+
+def _validate_and_finalize_mmd(mmd_sq: float) -> float:
+    """Validate and finalize the MMD calculation result."""
+    if np.isnan(mmd_sq) or np.isinf(mmd_sq):
+        raise ValueError('MMD computation resulted in invalid value')
+
+    return max(0.0, float(mmd_sq))  # Ensure non-negative
+
+
 def mmd_squared(
     X: np.ndarray,
     Y: np.ndarray,
     kernel: MMDKernel,
+    *,
     unbiased: bool = True,
     enable_sampling: bool = False,
     max_samples: int = 5000,
@@ -1161,81 +1401,29 @@ def mmd_squared(
         ValueError: If input data is invalid
         TypeError: If inputs are not numpy arrays or kernel is invalid
     """
-    # Input validation
-    if not isinstance(X, np.ndarray):
-        raise TypeError('X must be a numpy array')
-    if not isinstance(Y, np.ndarray):
-        raise TypeError('Y must be a numpy array')
-    if not isinstance(kernel, MMDKernel):
-        raise TypeError('kernel must be an instance of MMDKernel')
+    # Validate inputs
+    _validate_mmd_inputs(X, Y, kernel)
 
-    if X.ndim != 2 or Y.ndim != 2:
-        raise ValueError('Input arrays must be 2D')
-    if X.shape[1] != Y.shape[1]:
-        raise ValueError('X and Y must have the same number of features')
-    if len(X) == 0 or len(Y) == 0:
-        raise ValueError('Input arrays cannot be empty')
-
-    # Check for NaN or infinite values
-    if np.any(np.isnan(X)) or np.any(np.isnan(Y)):
-        raise ValueError('Input data contains NaN values')
-    if np.any(np.isinf(X)) or np.any(np.isinf(Y)):
-        raise ValueError('Input data contains infinite values')
-
-    # Check for large datasets and warn user
-    _check_large_dataset_and_warn_mmd(X, Y, operation_name='MMD calculation')
-
-    # Performance optimization: sample large datasets only if enabled
-    if enable_sampling and (len(X) > max_samples or len(Y) > max_samples):
-        X, Y = _sample_for_mmd_performance(X, Y, max_samples)
-
-    n, m = len(X), len(Y)
-
-    # Check minimum sample sizes for unbiased estimator
-    if unbiased and (n < 2 or m < 2):
-        raise ValueError('Unbiased estimator requires at least 2 samples in each group')
+    # Prepare data (validation and optional sampling)
+    X, Y = _prepare_mmd_data(X, Y, enable_sampling=enable_sampling, max_samples=max_samples, unbiased=unbiased)
 
     try:
         # Compute kernel matrices
-        Kxx = kernel(X, X)
-        Kyy = kernel(Y, Y)
-        Kxy = kernel(X, Y)
+        Kxx, Kyy, Kxy = _compute_kernel_matrices(X, Y, kernel)
 
-        # Validate kernel matrices
-        if np.any(np.isnan(Kxx)) or np.any(np.isnan(Kyy)) or np.any(np.isnan(Kxy)):
-            raise ValueError('Kernel computation resulted in NaN values')
-        if np.any(np.isinf(Kxx)) or np.any(np.isinf(Kyy)) or np.any(np.isinf(Kxy)):
-            raise ValueError('Kernel computation resulted in infinite values')
+        # Calculate MMD terms
+        term1, term2, term3 = _calculate_mmd_terms(Kxx, Kyy, Kxy, unbiased=unbiased)
 
-        if unbiased:
-            # Unbiased estimator (removes diagonal elements)
-            # E[k(x,x')] for x ≠ x'
-            Kxx_sum = np.sum(Kxx) - np.trace(Kxx)
-            term1 = Kxx_sum / (n * (n - 1))
-
-            # E[k(y,y')] for y ≠ y'
-            Kyy_sum = np.sum(Kyy) - np.trace(Kyy)
-            term3 = Kyy_sum / (m * (m - 1))
-        else:
-            # Biased estimator
-            term1 = np.mean(Kxx)
-            term3 = np.mean(Kyy)
-
-        # E[k(x,y)]
-        term2 = np.mean(Kxy)
-
+        # Calculate final MMD squared value
         mmd_sq = term1 - 2 * term2 + term3
 
-        # Validate result
-        if np.isnan(mmd_sq) or np.isinf(mmd_sq):
-            raise ValueError('MMD computation resulted in invalid value')
-
-        return max(0.0, float(mmd_sq))  # Ensure non-negative
+        # Validate and return result
+        return _validate_and_finalize_mmd(mmd_sq)
 
     except Exception as e:
-        if isinstance(e, (ValueError, TypeError)):
+        if isinstance(e, ValueError | TypeError):
             raise
-        raise ValueError(f'Failed to calculate MMD: {e!s}')
+        raise ValueError(f'Failed to calculate MMD: {e!s}') from e
 
 
 def mmd_column_wise(
@@ -1274,8 +1462,8 @@ def mmd_column_wise(
     results = []
 
     for col in numerical_columns:
-        real_col = real[col].dropna().values.reshape(-1, 1)
-        fake_col = fake[col].dropna().values.reshape(-1, 1)
+        real_col = real[col].dropna().to_numpy().reshape(-1, 1)
+        fake_col = fake[col].dropna().to_numpy().reshape(-1, 1)
 
         if len(real_col) == 0 or len(fake_col) == 0:
             mmd_val = np.nan
@@ -1299,6 +1487,7 @@ def mmd_multivariate(
     numerical_columns: list[str],
     kernel_type: str = 'rbf',
     kernel_params: dict | None = None,
+    *,
     enable_sampling: bool = False,
     max_samples: int = 5000,
 ) -> dict:
@@ -1331,8 +1520,8 @@ def mmd_multivariate(
         raise ValueError(f'Unknown kernel type: {kernel_type}')
 
     # Prepare data
-    real_data = real[numerical_columns].dropna().values
-    fake_data = fake[numerical_columns].dropna().values
+    real_data = real[numerical_columns].dropna().to_numpy()
+    fake_data = fake[numerical_columns].dropna().to_numpy()
 
     # Calculate MMD
     mmd_val = mmd_squared(

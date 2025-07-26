@@ -121,7 +121,7 @@ def plot_correlation_difference(
     return None
 
 
-def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, show: bool = True):
+def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=None, *, show: bool = True):
     """
     Plot the distribution plots for all columns in the real and fake dataset.
     Height of each row of plots scales with the length of the labels. Each plot
@@ -138,9 +138,9 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
     max_len = 0
     # Increase the length of plots if the labels are long
     if not real.select_dtypes(include=['object']).empty:
-        lengths = []
-        for d in real.select_dtypes(include=['object']):
-            lengths.append(max([len(x.strip()) for x in real[d].unique().tolist()]))
+        lengths = [
+            max([len(x.strip()) for x in real[d].unique().tolist()]) for d in real.select_dtypes(include=['object'])
+        ]
         max_len = max(lengths)
 
     row_height = 6 + (max_len // 30)
@@ -207,7 +207,7 @@ def plot_distributions(real: pd.DataFrame, fake: pd.DataFrame, nr_cols=3, fname=
         plt.close(fig)
 
 
-def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show: bool = False):
+def plot_correlation_comparison(evaluators: Sequence, *, annot: bool = False, show: bool = False):
     """
     Plot the correlation differences of multiple TableEvaluator objects.
 
@@ -231,7 +231,7 @@ def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show:
         ax=flat_ax[0],
     )['corr']
     for i in range(1, nr_plots):
-        cbar = True if i % (nr_plots - 1) == 0 else False
+        cbar = i % (nr_plots - 1) == 0
         fake_corr.append(
             associations(
                 evaluators[i - 1].fake,
@@ -250,7 +250,7 @@ def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show:
             cbar.ax.tick_params(labelsize=20)
 
     for i in range(1, nr_plots):
-        cbar = True if i % (nr_plots - 1) == 0 else False
+        cbar = i % (nr_plots - 1) == 0
         diff = abs(real_corr - fake_corr[i - 1])
         sns.set(style='white')
         az = sns.heatmap(
@@ -283,7 +283,7 @@ def plot_correlation_comparison(evaluators: Sequence, annot: bool = False, show:
         return fig
 
 
-def plot_cumsums(real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, show: bool = True):
+def plot_cumsums(real: pd.DataFrame, fake: pd.DataFrame, fname: str | None = None, *, show: bool = True):
     """
     Plot cumulative sum plots for all columns in the dataframes.
 
@@ -334,6 +334,7 @@ def cdf(
     xlabel: str = 'Values',
     ylabel: str = 'Cumulative Sum',
     ax=None,
+    *,
     show: bool = True,
     fname: str | None = None,
 ):
@@ -386,7 +387,7 @@ def cdf(
             return local_ax
 
 
-def plot_mean_std_comparison(evaluators: list, show: bool = True):
+def plot_mean_std_comparison(evaluators: list, *, show: bool = True):
     """
     Plot comparison between the means and standard deviations from each evaluator in evaluators.
 
@@ -409,7 +410,7 @@ def plot_mean_std_comparison(evaluators: list, show: bool = True):
         return fig
 
 
-def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, show: bool = True):
+def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, *, show: bool = True):
     """
     Plot the means and standard deviations of each dataset.
 
@@ -422,8 +423,8 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
         fig.suptitle('Absolute Log Mean and STDs of numeric data\n', fontsize=16)
 
-    ax[0].grid(True)
-    ax[1].grid(True)
+    ax[0].grid(visible=True)
+    ax[1].grid(visible=True)
     real = real.select_dtypes(include='number')
     fake = fake.select_dtypes(include='number')
     real_mean = np.log(np.add(abs(real.mean()).values, 1e-5))
@@ -451,7 +452,7 @@ def plot_mean_std(real: pd.DataFrame, fake: pd.DataFrame, ax=None, fname=None, s
     if fname is not None:
         plt.savefig(fname)
         plt.close(fig)
-    elif ax is None:
+    elif ax is None and show:
         plt.show()
     else:
         return ax

@@ -26,7 +26,7 @@ class MLEvaluator:
         random_seed: int = RANDOM_SEED,
         *,
         verbose: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the ML evaluator.
 
@@ -71,9 +71,8 @@ class MLEvaluator:
         real_x = real.drop([target_col], axis=1)
         fake_x = fake.drop([target_col], axis=1)
 
-        assert real_x.columns.tolist() == fake_x.columns.tolist(), (
-            f'Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}'
-        )
+        if real_x.columns.tolist() != fake_x.columns.tolist():
+            raise ValueError(f'Real and fake columns are different: \n{real_x.columns}\n{fake_x.columns}')
 
         real_y = real[target_col]
         fake_y = fake[target_col]
@@ -179,7 +178,7 @@ class MLEvaluator:
         x_train: pd.DataFrame,
         y_train: pd.Series,
         data_type: str,
-    ):
+    ) -> None:
         """Fit estimators to training data."""
         if self.verbose:
             print(f'\nFitting {data_type}')
@@ -297,7 +296,7 @@ def evaluate_ml_utility(
     task_type: str = 'auto',
     test_size: float = 0.2,
     random_state: int = RANDOM_SEED,
-    models: list[str] = None,
+    models: list[str] | None = None,
 ) -> dict:
     """
     Evaluate the machine learning utility of synthetic data.
@@ -430,7 +429,7 @@ def _evaluate_single_model(
             synthetic_recall = recall_score(y_real_test, pred_synthetic, average='weighted')
             real_f1 = f1_score(y_real_test, pred_real, average='weighted')
             synthetic_f1 = f1_score(y_real_test, pred_synthetic, average='weighted')
-        except:
+        except ValueError:
             # Handle cases with single class predictions
             real_precision = real_accuracy
             synthetic_precision = synthetic_accuracy
