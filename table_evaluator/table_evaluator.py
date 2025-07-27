@@ -17,6 +17,11 @@ from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.evaluators.textual_evaluator import TextualEvaluator
 from table_evaluator.metrics.statistical import associations
+from table_evaluator.models.textual_models import (
+    BasicTextualEvaluationResults,
+    ComprehensiveEvaluationWithTextResults,
+    TextualEvaluationResults,
+)
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
 from table_evaluator.visualization.visualization_manager import VisualizationManager
@@ -1004,7 +1009,7 @@ class TableEvaluator:
         *,
         include_semantic: bool = True,
         enable_sampling: bool = False,
-    ) -> dict:
+    ) -> TextualEvaluationResults:
         """
         Run comprehensive textual evaluation on specified text columns.
 
@@ -1016,7 +1021,7 @@ class TableEvaluator:
             semantic_config: Configuration for semantic evaluation
 
         Returns:
-            Dictionary with comprehensive textual evaluation results
+            TextualEvaluationResults with comprehensive textual evaluation results
 
         Raises:
             ValueError: If no text columns are specified
@@ -1081,7 +1086,7 @@ class TableEvaluator:
                 column_similarities.append(similarity)
 
         if column_similarities:
-            results['overall_textual_metrics'] = {
+            overall_textual_metrics = {
                 'mean_similarity': float(np.mean(column_similarities)),
                 'median_similarity': float(np.median(column_similarities)),
                 'min_similarity': float(np.min(column_similarities)),
@@ -1089,11 +1094,24 @@ class TableEvaluator:
                 'num_text_columns': len(column_similarities),
             }
         else:
-            results['overall_textual_metrics'] = {'error': 'No successful text evaluations completed'}
+            overall_textual_metrics = {
+                'error_message': 'No successful text evaluations completed',
+                'mean_similarity': 0.0,
+                'median_similarity': 0.0,
+                'min_similarity': 0.0,
+                'max_similarity': 0.0,
+                'num_text_columns': 0,
+            }
 
-        return results
+        return TextualEvaluationResults(
+            column_results=results,
+            overall_textual_metrics=overall_textual_metrics,
+            success=len(column_similarities) > 0,
+        )
 
-    def basic_textual_evaluation(self, max_samples: int = 1000, *, enable_sampling: bool = False) -> dict:
+    def basic_textual_evaluation(
+        self, max_samples: int = 1000, *, enable_sampling: bool = False
+    ) -> BasicTextualEvaluationResults:
         """
         Run basic (quick) textual evaluation using only lightweight metrics.
 
@@ -1102,7 +1120,7 @@ class TableEvaluator:
             max_samples: Maximum samples per dataset when sampling is enabled
 
         Returns:
-            Dictionary with basic textual evaluation results
+            BasicTextualEvaluationResults with basic textual evaluation results
 
         Raises:
             ValueError: If no text columns are specified
@@ -1115,7 +1133,7 @@ class TableEvaluator:
         if not isinstance(max_samples, int) or max_samples <= 0:
             raise ValueError('max_samples must be a positive integer')
 
-        results = {}
+        column_results = {}
 
         for col in self.text_cols:
             if self.verbose:
@@ -1125,31 +1143,37 @@ class TableEvaluator:
                 real_series = self.real[col] if isinstance(self.real[col], pd.Series) else pd.Series(self.real[col])
                 fake_series = self.fake[col] if isinstance(self.fake[col], pd.Series) else pd.Series(self.fake[col])
                 col_results = self.textual_evaluator.quick_evaluation(real_series, fake_series)
-                results[col] = col_results
+                column_results[col] = col_results
 
             except Exception as e:
                 logger.error(f'Error in basic evaluation of text column {col}: {e}')
-                results[col] = {'error': str(e)}
+                # TODO: Create proper error result model when we standardize error handling
+                column_results[col] = {'error': str(e)}
 
         # Calculate overall metrics
         column_similarities = []
-        for col, col_results in results.items():
-            if col != 'overall_basic_metrics' and 'error' not in col_results:
-                # Handle new Pydantic model structure
-                if hasattr(col_results, 'overall_similarity'):
-                    similarity = col_results.overall_similarity
-                    column_similarities.append(similarity)
-                elif isinstance(col_results, dict) and 'overall_similarity' in col_results:
-                    similarity = col_results.get('overall_similarity', 0)
-                    column_similarities.append(similarity)
+        for col, col_results in column_results.items():
+            if isinstance(col_results, dict) and 'error' in col_results:
+                continue  # Skip error results
+            # Handle Pydantic model structure
+            if hasattr(col_results, 'overall_similarity'):
+                similarity = col_results.overall_similarity
+                column_similarities.append(similarity)
 
-        if column_similarities:
-            results['overall_basic_metrics'] = {
-                'mean_similarity': float(np.mean(column_similarities)),
-                'num_text_columns': len(column_similarities),
-            }
+        overall_basic_metrics = {
+            'mean_similarity': float(np.mean(column_similarities)) if column_similarities else 0.0,
+            'num_text_columns': len(self.text_cols),
+            'successful_evaluations': len(column_similarities),
+        }
 
-        return results
+        if self.verbose:
+            print(f'\nOverall basic metrics: {overall_basic_metrics}')
+
+        return BasicTextualEvaluationResults(
+            column_results=column_results,
+            overall_basic_metrics=overall_basic_metrics,
+            success=len(column_similarities) > 0,
+        )
 
     def comprehensive_evaluation_with_text(
         self,
@@ -1163,7 +1187,7 @@ class TableEvaluator:
         include_textual: bool = True,
         textual_config: dict | None = None,
         **kwargs: dict,
-    ) -> dict:
+    ) -> ComprehensiveEvaluationWithTextResults:
         """
         Run comprehensive evaluation combining tabular and textual analysis.
 
@@ -1179,7 +1203,7 @@ class TableEvaluator:
             **kwargs: Additional parameters
 
         Returns:
-            Dictionary with comprehensive evaluation results including textual analysis
+            ComprehensiveEvaluationWithTextResults with comprehensive evaluation results including textual analysis
         """
         # Input validation
         if not isinstance(text_weight, int | float) or not 0.0 <= text_weight <= 1.0:
@@ -1222,7 +1246,14 @@ class TableEvaluator:
         elif include_textual and not self.text_cols:
             results['textual'] = {'error': 'No text columns specified. Use text_cols parameter in constructor.'}
 
-        return results
+        return ComprehensiveEvaluationWithTextResults(
+            basic=results.get('basic'),
+            advanced_statistical=results.get('advanced_statistical'),
+            advanced_privacy=results.get('advanced_privacy'),
+            textual=results.get('textual'),
+            combined_similarity=results.get('combined_similarity'),
+            success=bool(results.get('basic') or results.get('textual')),
+        )
 
     def _calculate_combined_similarity(self, results: dict, text_weight: float) -> dict:
         """

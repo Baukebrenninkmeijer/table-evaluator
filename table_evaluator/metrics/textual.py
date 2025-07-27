@@ -7,7 +7,9 @@ from scipy import stats
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from table_evaluator.models.error_models import create_error_result
 from table_evaluator.models.textual_models import (
+    ComprehensiveTextualAnalysisResult,
     LengthDistributionResult,
     SemanticRawResult,
     TfidfRawResult,
@@ -456,7 +458,7 @@ def comprehensive_textual_analysis(
     include_semantic: bool = True,
     enable_sampling: bool = False,
     max_samples: int = 1000,
-) -> dict:
+) -> ComprehensiveTextualAnalysisResult:
     """
     Perform comprehensive textual analysis combining all available metrics.
 
@@ -468,7 +470,7 @@ def comprehensive_textual_analysis(
         max_samples: Maximum samples per dataset when sampling is enabled
 
     Returns:
-        Dictionary with comprehensive textual analysis results
+        ComprehensiveTextualAnalysisResult with comprehensive textual analysis results
     """
     # Input validation
     if not isinstance(real_texts, pd.Series):
@@ -476,60 +478,91 @@ def comprehensive_textual_analysis(
     if not isinstance(fake_texts, pd.Series):
         raise TypeError('fake_texts must be a pandas Series')
 
-    results = {}
-
     # Length distribution analysis
     try:
-        results['word_length_dist'] = text_length_distribution_similarity(real_texts, fake_texts, unit='word')
-        results['char_length_dist'] = text_length_distribution_similarity(real_texts, fake_texts, unit='char')
+        word_length_dist = text_length_distribution_similarity(real_texts, fake_texts, unit='word')
     except Exception as e:
-        logger.error(f'Length distribution analysis failed: {e!s}')
-        results['word_length_dist'] = {'error': str(e)}
-        results['char_length_dist'] = {'error': str(e)}
+        logger.error(f'Word length distribution analysis failed: {e!s}')
+        word_length_dist = create_error_result(
+            e, 'text_length_distribution_similarity', args=(real_texts, fake_texts), kwargs={'unit': 'word'}
+        )
+
+    try:
+        char_length_dist = text_length_distribution_similarity(real_texts, fake_texts, unit='char')
+    except Exception as e:
+        logger.error(f'Char length distribution analysis failed: {e!s}')
+        char_length_dist = create_error_result(
+            e, 'text_length_distribution_similarity', args=(real_texts, fake_texts), kwargs={'unit': 'char'}
+        )
 
     # Vocabulary analysis
     try:
-        results['vocabulary_overlap'] = vocabulary_overlap_analysis(real_texts, fake_texts)
+        vocabulary_overlap = vocabulary_overlap_analysis(real_texts, fake_texts)
     except Exception as e:
         logger.error(f'Vocabulary analysis failed: {e!s}')
-        results['vocabulary_overlap'] = {'error': str(e)}
+        vocabulary_overlap = create_error_result(e, 'vocabulary_overlap_analysis', args=(real_texts, fake_texts))
 
     # TF-IDF similarity
     try:
-        results['tfidf_similarity'] = tfidf_corpus_similarity(real_texts, fake_texts)
+        tfidf_similarity = tfidf_corpus_similarity(real_texts, fake_texts)
     except Exception as e:
         logger.error(f'TF-IDF analysis failed: {e!s}')
-        results['tfidf_similarity'] = {'error': str(e)}
+        tfidf_similarity = create_error_result(e, 'tfidf_corpus_similarity', args=(real_texts, fake_texts))
 
     # Semantic similarity (optional)
+    semantic_similarity = None
     if include_semantic and SENTENCE_TRANSFORMERS_AVAILABLE:
         try:
-            results['semantic_similarity'] = semantic_similarity_embeddings(
+            semantic_similarity = semantic_similarity_embeddings(
                 real_texts, fake_texts, enable_sampling=enable_sampling, max_samples=max_samples
             )
         except Exception as e:
             logger.error(f'Semantic similarity analysis failed: {e!s}')
-            results['semantic_similarity'] = {'error': str(e)}
+            semantic_similarity = create_error_result(
+                e,
+                'semantic_similarity_embeddings',
+                args=(real_texts, fake_texts),
+                kwargs={'enable_sampling': enable_sampling, 'max_samples': max_samples},
+            )
     elif include_semantic and not SENTENCE_TRANSFORMERS_AVAILABLE:
-        results['semantic_similarity'] = {
-            'error': 'sentence-transformers not available. Install with: pip install sentence-transformers'
-        }
+        semantic_similarity = create_error_result(
+            ImportError('sentence-transformers not available'),
+            'semantic_similarity_embeddings',
+            context={'message': 'Install with: pip install sentence-transformers'},
+        )
 
     # Calculate overall similarity score
     similarity_scores = []
-    if 'word_length_dist' in results and hasattr(results['word_length_dist'], 'similarity_score'):
-        similarity_scores.append(results['word_length_dist'].similarity_score)
-    if 'char_length_dist' in results and hasattr(results['char_length_dist'], 'similarity_score'):
-        similarity_scores.append(results['char_length_dist'].similarity_score)
-    if 'vocabulary_overlap' in results and hasattr(results['vocabulary_overlap'], 'jaccard_similarity'):
-        similarity_scores.append(results['vocabulary_overlap'].jaccard_similarity)
-    if 'tfidf_similarity' in results and hasattr(results['tfidf_similarity'], 'cosine_similarity'):
-        similarity_scores.append(results['tfidf_similarity'].cosine_similarity)
-    if 'semantic_similarity' in results and hasattr(results['semantic_similarity'], 'semantic_similarity'):
-        similarity_scores.append(results['semantic_similarity'].semantic_similarity)
+    if hasattr(word_length_dist, 'similarity_score'):
+        similarity_scores.append(word_length_dist.similarity_score)
+    if hasattr(char_length_dist, 'similarity_score'):
+        similarity_scores.append(char_length_dist.similarity_score)
+    if hasattr(vocabulary_overlap, 'jaccard_similarity'):
+        similarity_scores.append(vocabulary_overlap.jaccard_similarity)
+    if hasattr(tfidf_similarity, 'cosine_similarity'):
+        similarity_scores.append(tfidf_similarity.cosine_similarity)
+    if semantic_similarity and hasattr(semantic_similarity, 'semantic_similarity'):
+        similarity_scores.append(semantic_similarity.semantic_similarity)
 
     overall_similarity = float(np.mean(similarity_scores)) if similarity_scores else 0.0
-    results['overall_similarity'] = overall_similarity
-    results['num_metrics'] = len(similarity_scores)
+    num_metrics = len(similarity_scores)
+    # Determine success status - check if any component is ErrorResult
+    from table_evaluator.models.error_models import ErrorResult
 
-    return results
+    success = (
+        not isinstance(word_length_dist, ErrorResult)
+        and not isinstance(char_length_dist, ErrorResult)
+        and not isinstance(vocabulary_overlap, ErrorResult)
+        and not isinstance(tfidf_similarity, ErrorResult)
+    )
+
+    return ComprehensiveTextualAnalysisResult(
+        word_length_dist=word_length_dist,
+        char_length_dist=char_length_dist,
+        vocabulary_overlap=vocabulary_overlap,
+        tfidf_similarity=tfidf_similarity,
+        semantic_similarity=semantic_similarity,
+        overall_similarity=overall_similarity,
+        num_metrics=num_metrics,
+        success=success,
+    )

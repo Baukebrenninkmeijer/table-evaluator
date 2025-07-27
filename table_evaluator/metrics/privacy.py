@@ -17,6 +17,10 @@ from table_evaluator.models.privacy_models import (
     MembershipInferenceAnalysis,
     StatisticalDistribution,
 )
+from table_evaluator.models.privacy_result_models import (
+    ComprehensivePrivacyAnalysisResult,
+    OverallPrivacyRiskResult,
+)
 
 
 def _convert_statistical_distribution(describe_dict: dict) -> StatisticalDistribution:
@@ -432,7 +436,7 @@ def comprehensive_privacy_analysis(
     synthetic_data: pd.DataFrame,
     quasi_identifiers: list[str] | None = None,
     sensitive_attributes: list[str] | None = None,
-) -> dict:
+) -> ComprehensivePrivacyAnalysisResult:
     """
     Comprehensive privacy analysis combining k-anonymity and membership inference.
 
@@ -443,7 +447,7 @@ def comprehensive_privacy_analysis(
         sensitive_attributes: List of sensitive attribute columns
 
     Returns:
-        Dictionary with comprehensive privacy analysis results
+        ComprehensivePrivacyAnalysisResult with comprehensive privacy analysis results
     """
     results = {'k_anonymity': None, 'membership_inference': None, 'overall_assessment': {}}
 
@@ -469,15 +473,31 @@ def comprehensive_privacy_analysis(
 
     # Overall privacy assessment
     try:
-        results['overall_assessment'] = assess_overall_privacy_risk(results)
+        overall_assessment = assess_overall_privacy_risk(results)
     except Exception as e:
         logger.error(f'Overall assessment failed: {e}')
-        results['overall_assessment'] = {'error': str(e)}
+        from table_evaluator.models.error_models import create_error_result
 
-    return results
+        overall_assessment = create_error_result(e, 'assess_overall_privacy_risk', args=(results,))
+
+    # Check success status
+    from table_evaluator.models.error_models import ErrorResult
+
+    success = (
+        not isinstance(overall_assessment, ErrorResult)
+        and not (isinstance(results['k_anonymity'], dict) and 'error' in results['k_anonymity'])
+        and not (isinstance(results['membership_inference'], dict) and 'error' in results['membership_inference'])
+    )
+
+    return ComprehensivePrivacyAnalysisResult(
+        k_anonymity=results['k_anonymity'],
+        membership_inference=results['membership_inference'],
+        overall_assessment=overall_assessment,
+        success=success,
+    )
 
 
-def assess_overall_privacy_risk(privacy_results: dict) -> dict:
+def assess_overall_privacy_risk(privacy_results: dict) -> OverallPrivacyRiskResult:
     """Assess overall privacy risk based on multiple analyses."""
     k_anon = privacy_results.get('k_anonymity', {})
     membership = privacy_results.get('membership_inference', {})
@@ -506,12 +526,27 @@ def assess_overall_privacy_risk(privacy_results: dict) -> dict:
     else:
         overall_risk = 'Low'
 
-    return {
-        'overall_risk_level': overall_risk,
-        'identified_risks': risks,
-        'privacy_score': calculate_privacy_score(k_anon, membership),
-        'recommendations': generate_comprehensive_recommendations(risks),
-    }
+    privacy_score = calculate_privacy_score(k_anon, membership)
+    recommendations = generate_comprehensive_recommendations(risks)
+
+    # Calculate component scores
+    k_anonymity_score = None
+    if k_value > 0:
+        k_anonymity_score = min(1.0, k_value / 10.0)  # Normalize k-value to 0-1 scale
+
+    membership_inference_score = None
+    if max_accuracy > 0:
+        membership_inference_score = max(0.0, 1.0 - (max_accuracy - 0.5) * 2)  # Convert accuracy to privacy score
+
+    return OverallPrivacyRiskResult(
+        risk_level=overall_risk,
+        risk_factors=risks,
+        recommendations=recommendations,
+        privacy_score=privacy_score,
+        k_anonymity_score=k_anonymity_score,
+        membership_inference_score=membership_inference_score,
+        success=True,
+    )
 
 
 def calculate_privacy_score(k_anon: dict, membership: dict) -> float:

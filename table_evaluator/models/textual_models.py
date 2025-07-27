@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .error_models import ErrorResult
+
 
 class VocabularyOverlapResult(BaseModel):
     """Model for vocabulary overlap analysis results."""
@@ -210,6 +212,46 @@ class MetricWeights(BaseModel):
     lexical: float = Field(ge=0, le=1, description='Weight for lexical metrics')
     tfidf: float = Field(ge=0, le=1, description='Weight for TF-IDF metrics')
     semantic: float = Field(ge=0, le=1, description='Weight for semantic metrics')
+
+
+class ComprehensiveTextualAnalysisResult(BaseModel):
+    """Model for comprehensive textual analysis results."""
+
+    word_length_dist: LengthDistributionResult | ErrorResult
+    char_length_dist: LengthDistributionResult | ErrorResult
+    vocabulary_overlap: VocabularyOverlapResult | ErrorResult
+    tfidf_similarity: TfidfRawResult | ErrorResult
+    semantic_similarity: SemanticRawResult | ErrorResult | None = None
+    overall_similarity: float = Field(ge=0, le=1)
+    num_metrics: int = Field(ge=0)
+    success: bool = True
+
+
+class TextualEvaluationResults(BaseModel):
+    """Model for TableEvaluator textual evaluation results."""
+
+    column_results: dict[str, ComprehensiveTextualResult | QuickTextualResult]
+    overall_textual_metrics: dict[str, float] = Field(description='Overall metrics across all text columns')
+    success: bool = True
+
+
+class BasicTextualEvaluationResults(BaseModel):
+    """Model for TableEvaluator basic textual evaluation results."""
+
+    column_results: dict[str, QuickTextualResult]
+    overall_basic_metrics: dict[str, float] = Field(description='Overall basic metrics across all text columns')
+    success: bool = True
+
+
+class ComprehensiveEvaluationWithTextResults(BaseModel):
+    """Model for TableEvaluator comprehensive evaluation with text results."""
+
+    basic: dict | None = None
+    advanced_statistical: dict | None = None
+    advanced_privacy: dict | None = None
+    textual: TextualEvaluationResults | dict | None = None
+    combined_similarity: dict | None = None
+    success: bool = True
 
 
 class TextualEvaluationSummary(BaseModel):

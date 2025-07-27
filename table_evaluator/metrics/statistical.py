@@ -15,6 +15,12 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics.pairwise import linear_kernel, polynomial_kernel, rbf_kernel
 
 from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.models.statistical_result_models import (
+    JensenShannonResult,
+    MMDAnalysisResult,
+    MultivariateMMDResult,
+    WassersteinDistanceSummaryResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -546,11 +552,15 @@ def js_distance_df(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: li
         delayed(jensenshannon_distance)(col, real[col], fake[col]) for col in numerical_columns
     )
 
-    distances_df = pd.DataFrame(distances)
+    # Convert Pydantic models to dictionaries for DataFrame creation
+    distances_dicts = [result.model_dump() for result in distances]
+    distances_df = pd.DataFrame(distances_dicts)
     return distances_df.set_index('col_name')
 
 
-def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25) -> dict[str, Any]:
+def jensenshannon_distance(
+    colname: str, real_col: pd.Series, fake_col: pd.Series, bins: int = 25
+) -> JensenShannonResult:
     """
     Calculate the Jensen-Shannon distance between real and fake data columns.
 
@@ -576,7 +586,11 @@ def jensenshannon_distance(colname: str, real_col: pd.Series, fake_col: pd.Serie
     binned_probs_real = binned_values_real.value_counts(normalize=True, sort=False)
     binned_probs_fake = pd.cut(fake_col, bins=actual_bins).value_counts(normalize=True, sort=False)
     js_distance = jensenshannon(binned_probs_real, binned_probs_fake)
-    return {'col_name': colname, 'js_distance': js_distance}
+    return JensenShannonResult(
+        col_name=colname,
+        js_distance=float(js_distance),
+        success=True,
+    )
 
 
 def kolmogorov_smirnov_test(
@@ -981,7 +995,9 @@ def wasserstein_distance_df(
     return pd.DataFrame(distances)
 
 
-def earth_movers_distance_summary(real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]) -> dict:
+def earth_movers_distance_summary(
+    real: pd.DataFrame, fake: pd.DataFrame, numerical_columns: list[str]
+) -> WassersteinDistanceSummaryResult:
     """
     Generate comprehensive Wasserstein distance summary.
 
@@ -1024,7 +1040,12 @@ def earth_movers_distance_summary(real: pd.DataFrame, fake: pd.DataFrame, numeri
         'worst_column': distances_1d.loc[distances_1d['wasserstein_distance'].idxmax(), 'column'],
     }
 
-    return results
+    return WassersteinDistanceSummaryResult(
+        summary_stats=results['summary_stats'],
+        column_distances=results['column_distances'],
+        overall_metrics=results['overall_metrics'],
+        success=True,
+    )
 
 
 def optimal_transport_cost(
@@ -1094,7 +1115,7 @@ def mmd_comprehensive_analysis(
     fake: pd.DataFrame,
     numerical_columns: list[str],
     kernel_types: list[str] | None = None,
-) -> dict:
+) -> MMDAnalysisResult:
     """
     Comprehensive MMD analysis with multiple kernels.
 
@@ -1134,7 +1155,12 @@ def mmd_comprehensive_analysis(
         'overall_quality_score': 1.0 / (1.0 + np.mean(all_mmds)) if all_mmds else 0.0,
     }
 
-    return results
+    return MMDAnalysisResult(
+        column_wise=results['column_wise'],
+        multivariate=results['multivariate'],
+        summary=results['summary'],
+        success=True,
+    )
 
 
 # =============================================================================
@@ -1490,7 +1516,7 @@ def mmd_multivariate(
     *,
     enable_sampling: bool = False,
     max_samples: int = 5000,
-) -> dict:
+) -> MultivariateMMDResult:
     """
     Calculate multivariate MMD using all numerical columns together.
 
@@ -1504,7 +1530,7 @@ def mmd_multivariate(
         max_samples: Maximum samples to use when sampling is enabled
 
     Returns:
-        Dictionary with multivariate MMD results
+        MultivariateMMDResult with multivariate MMD results
     """
     if kernel_params is None:
         kernel_params = {}
@@ -1528,10 +1554,11 @@ def mmd_multivariate(
         real_data, fake_data, kernel, unbiased=True, enable_sampling=enable_sampling, max_samples=max_samples
     )
 
-    return {
-        'mmd_squared': mmd_val,
-        'kernel': kernel_type,
-        'n_real_samples': len(real_data),
-        'n_fake_samples': len(fake_data),
-        'dimensions': len(numerical_columns),
-    }
+    return MultivariateMMDResult(
+        mmd_value=float(mmd_val),
+        kernel_type=kernel_type,
+        kernel_params=kernel_params,
+        n_samples_real=len(real_data),
+        n_samples_fake=len(fake_data),
+        success=True,
+    )

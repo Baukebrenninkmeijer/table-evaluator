@@ -14,6 +14,13 @@ from sklearn.tree import DecisionTreeClassifier
 
 from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
+from table_evaluator.models.error_models import ErrorResult, create_error_result
+from table_evaluator.models.ml_result_models import (
+    MLUtilityEvaluationResult,
+    MLUtilityEvaluationSummary,
+    SingleModelEvaluationResult,
+    TrainTestSyntheticResult,
+)
 from table_evaluator.utils import set_random_seed
 
 
@@ -297,7 +304,7 @@ def evaluate_ml_utility(
     test_size: float = 0.2,
     random_state: int = RANDOM_SEED,
     models: list[str] | None = None,
-) -> dict:
+) -> MLUtilityEvaluationResult:
     """
     Evaluate the machine learning utility of synthetic data.
 
@@ -311,7 +318,7 @@ def evaluate_ml_utility(
         models: List of model types to use for evaluation
 
     Returns:
-        Dictionary with ML utility evaluation results
+        MLUtilityEvaluationResult with ML utility evaluation results
     """
     from sklearn.model_selection import train_test_split
 
@@ -336,41 +343,91 @@ def evaluate_ml_utility(
         X_real, y_real, test_size=test_size, random_state=random_state
     )
 
-    results = {'task_type': task_type, 'model_results': {}, 'summary': {}}
+    model_results = {}
 
     # Train models and evaluate
     for model_name in models:
-        model_results = _evaluate_single_model(
-            model_name,
-            task_type,
-            X_real_train,
-            y_real_train,
-            X_real_test,
-            y_real_test,
-            X_synthetic,
-            y_synthetic,
-            random_state,
-        )
-        results['model_results'][model_name] = model_results
+        try:
+            model_result = _evaluate_single_model(
+                model_name,
+                task_type,
+                X_real_train,
+                y_real_train,
+                X_real_test,
+                y_real_test,
+                X_synthetic,
+                y_synthetic,
+                random_state,
+            )
+            model_results[model_name] = model_result
+        except Exception as e:
+            model_results[model_name] = create_error_result(
+                e, '_evaluate_single_model', args=(model_name, task_type), context={'model_name': model_name}
+            )
 
     # Calculate summary statistics
-    if task_type == 'classification':
-        real_scores = [results['model_results'][model]['real_accuracy'] for model in models]
-        synthetic_scores = [results['model_results'][model]['synthetic_accuracy'] for model in models]
-        metric_name = 'accuracy'
-    else:
-        real_scores = [results['model_results'][model]['real_r2'] for model in models]
-        synthetic_scores = [results['model_results'][model]['synthetic_r2'] for model in models]
-        metric_name = 'r2_score'
+    try:
+        if task_type == 'classification':
+            real_scores = []
+            synthetic_scores = []
+            for model in models:
+                result = model_results[model]
+                if isinstance(result, SingleModelEvaluationResult):
+                    if result.real_accuracy is not None:
+                        real_scores.append(result.real_accuracy)
+                    if result.synthetic_accuracy is not None:
+                        synthetic_scores.append(result.synthetic_accuracy)
 
-    results['summary'] = {
-        f'mean_real_{metric_name}': np.mean(real_scores),
-        f'mean_synthetic_{metric_name}': np.mean(synthetic_scores),
-        'utility_score': np.mean(synthetic_scores) / np.mean(real_scores) if np.mean(real_scores) > 0 else 0,
-        'score_difference': np.mean(real_scores) - np.mean(synthetic_scores),
-    }
+            if real_scores and synthetic_scores:
+                summary = MLUtilityEvaluationSummary(
+                    mean_real_accuracy=float(np.mean(real_scores)),
+                    mean_synthetic_accuracy=float(np.mean(synthetic_scores)),
+                    utility_score=float(np.mean(synthetic_scores) / np.mean(real_scores))
+                    if np.mean(real_scores) > 0
+                    else 0.0,
+                    score_difference=float(np.mean(real_scores) - np.mean(synthetic_scores)),
+                )
+            else:
+                summary = create_error_result(
+                    ValueError('No valid classification results found'),
+                    'evaluate_ml_utility',
+                    context={'task_type': task_type, 'models': models},
+                )
+        else:
+            real_scores = []
+            synthetic_scores = []
+            for model in models:
+                result = model_results[model]
+                if isinstance(result, SingleModelEvaluationResult):
+                    if result.real_r2 is not None:
+                        real_scores.append(result.real_r2)
+                    if result.synthetic_r2 is not None:
+                        synthetic_scores.append(result.synthetic_r2)
 
-    return results
+            if real_scores and synthetic_scores:
+                summary = MLUtilityEvaluationSummary(
+                    mean_real_r2_score=float(np.mean(real_scores)),
+                    mean_synthetic_r2_score=float(np.mean(synthetic_scores)),
+                    utility_score=float(np.mean(synthetic_scores) / np.mean(real_scores))
+                    if np.mean(real_scores) > 0
+                    else 0.0,
+                    score_difference=float(np.mean(real_scores) - np.mean(synthetic_scores)),
+                )
+            else:
+                summary = create_error_result(
+                    ValueError('No valid regression results found'),
+                    'evaluate_ml_utility',
+                    context={'task_type': task_type, 'models': models},
+                )
+    except Exception as e:
+        summary = create_error_result(e, 'evaluate_ml_utility', context={'task_type': task_type, 'models': models})
+
+    return MLUtilityEvaluationResult(
+        task_type=task_type,
+        model_results=model_results,
+        summary=summary,
+        success=not isinstance(summary, ErrorResult),
+    )
 
 
 def _evaluate_single_model(
@@ -383,7 +440,7 @@ def _evaluate_single_model(
     X_synthetic: pd.DataFrame,
     y_synthetic: pd.Series,
     random_state: int,
-) -> dict:
+) -> SingleModelEvaluationResult:
     """Evaluate a single model for ML utility assessment."""
     # Get model
     if task_type == 'classification':
@@ -438,16 +495,17 @@ def _evaluate_single_model(
             real_f1 = real_accuracy
             synthetic_f1 = synthetic_accuracy
 
-        return {
-            'real_accuracy': real_accuracy,
-            'synthetic_accuracy': synthetic_accuracy,
-            'real_precision': real_precision,
-            'synthetic_precision': synthetic_precision,
-            'real_recall': real_recall,
-            'synthetic_recall': synthetic_recall,
-            'real_f1': real_f1,
-            'synthetic_f1': synthetic_f1,
-        }
+        return SingleModelEvaluationResult(
+            real_accuracy=real_accuracy,
+            synthetic_accuracy=synthetic_accuracy,
+            real_precision=real_precision,
+            synthetic_precision=synthetic_precision,
+            real_recall=real_recall,
+            synthetic_recall=synthetic_recall,
+            real_f1=real_f1,
+            synthetic_f1=synthetic_f1,
+            success=True,
+        )
     # regression
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -458,14 +516,15 @@ def _evaluate_single_model(
     real_r2 = r2_score(y_real_test, pred_real)
     synthetic_r2 = r2_score(y_real_test, pred_synthetic)
 
-    return {
-        'real_mse': real_mse,
-        'synthetic_mse': synthetic_mse,
-        'real_mae': real_mae,
-        'synthetic_mae': synthetic_mae,
-        'real_r2': real_r2,
-        'synthetic_r2': synthetic_r2,
-    }
+    return SingleModelEvaluationResult(
+        real_mse=real_mse,
+        synthetic_mse=synthetic_mse,
+        real_mae=real_mae,
+        synthetic_mae=synthetic_mae,
+        real_r2=real_r2,
+        synthetic_r2=synthetic_r2,
+        success=True,
+    )
 
 
 def train_test_on_synthetic(
@@ -475,7 +534,7 @@ def train_test_on_synthetic(
     model_type: str = 'random_forest',
     task_type: str = 'auto',
     random_state: int = RANDOM_SEED,
-) -> dict:
+) -> TrainTestSyntheticResult:
     """
     Train a model on synthetic data and test on real data.
 
@@ -491,7 +550,7 @@ def train_test_on_synthetic(
         random_state: Random seed for reproducibility
 
     Returns:
-        Dictionary with evaluation results
+        TrainTestSyntheticResult with evaluation results
     """
     from sklearn.model_selection import train_test_split
 
@@ -550,16 +609,17 @@ def train_test_on_synthetic(
         synthetic_accuracy = accuracy_score(y_real_test, pred_synthetic)
         real_accuracy = accuracy_score(y_real_test, pred_real)
 
-        return {
-            'task_type': task_type,
-            'model_type': model_type,
-            'synthetic_model_accuracy': synthetic_accuracy,
-            'real_model_accuracy': real_accuracy,
-            'accuracy_ratio': synthetic_accuracy / real_accuracy if real_accuracy > 0 else 0,
-            'accuracy_difference': real_accuracy - synthetic_accuracy,
-            'classification_report_synthetic': classification_report(y_real_test, pred_synthetic, output_dict=True),
-            'classification_report_real': classification_report(y_real_test, pred_real, output_dict=True),
-        }
+        return TrainTestSyntheticResult(
+            task_type=task_type,
+            model_type=model_type,
+            synthetic_model_accuracy=synthetic_accuracy,
+            real_model_accuracy=real_accuracy,
+            accuracy_ratio=synthetic_accuracy / real_accuracy if real_accuracy > 0 else 0,
+            accuracy_difference=real_accuracy - synthetic_accuracy,
+            classification_report_synthetic=classification_report(y_real_test, pred_synthetic, output_dict=True),
+            classification_report_real=classification_report(y_real_test, pred_real, output_dict=True),
+            success=True,
+        )
     # regression
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -570,15 +630,16 @@ def train_test_on_synthetic(
     synthetic_mae = mean_absolute_error(y_real_test, pred_synthetic)
     real_mae = mean_absolute_error(y_real_test, pred_real)
 
-    return {
-        'task_type': task_type,
-        'model_type': model_type,
-        'synthetic_model_mse': synthetic_mse,
-        'real_model_mse': real_mse,
-        'synthetic_model_r2': synthetic_r2,
-        'real_model_r2': real_r2,
-        'synthetic_model_mae': synthetic_mae,
-        'real_model_mae': real_mae,
-        'mse_ratio': synthetic_mse / real_mse if real_mse > 0 else float('inf'),
-        'r2_ratio': synthetic_r2 / real_r2 if real_r2 > 0 else 0,
-    }
+    return TrainTestSyntheticResult(
+        task_type=task_type,
+        model_type=model_type,
+        synthetic_model_mse=synthetic_mse,
+        real_model_mse=real_mse,
+        synthetic_model_r2=synthetic_r2,
+        real_model_r2=real_r2,
+        synthetic_model_mae=synthetic_mae,
+        real_model_mae=real_mae,
+        mse_ratio=synthetic_mse / real_mse if real_mse > 0 else float('inf'),
+        r2_ratio=synthetic_r2 / real_r2 if real_r2 > 0 else 0,
+        success=True,
+    )

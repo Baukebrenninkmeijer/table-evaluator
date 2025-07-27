@@ -16,6 +16,7 @@ from table_evaluator.metrics.textual import (
     vocabulary_overlap_analysis,
 )
 from table_evaluator.models.textual_models import (
+    ComprehensiveTextualAnalysisResult,
     ComprehensiveTextualResult,
     LengthDistributionResult,
     LexicalDiversityResult,
@@ -287,12 +288,13 @@ class TestComprehensiveTextualAnalysis:
         real_texts, fake_texts = sample_texts
         result = comprehensive_textual_analysis(real_texts, fake_texts, include_semantic=False)
 
-        assert isinstance(result, dict)
-        assert 'word_length_dist' in result
-        assert 'char_length_dist' in result
-        assert 'vocabulary_overlap' in result
-        assert 'tfidf_similarity' in result
-        assert 'overall_similarity' in result
+        assert isinstance(result, ComprehensiveTextualAnalysisResult)
+        assert hasattr(result, 'word_length_dist')
+        assert hasattr(result, 'char_length_dist')
+        assert hasattr(result, 'vocabulary_overlap')
+        assert hasattr(result, 'tfidf_similarity')
+        assert hasattr(result, 'overall_similarity')
+        assert result.success is True
 
     @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason='sentence-transformers not available')
     def test_analysis_with_semantic(self, sample_texts):
@@ -300,14 +302,15 @@ class TestComprehensiveTextualAnalysis:
         real_texts, fake_texts = sample_texts
         result = comprehensive_textual_analysis(real_texts, fake_texts, include_semantic=True)
 
-        assert 'semantic_similarity' in result
+        assert hasattr(result, 'semantic_similarity')
+        assert result.semantic_similarity is not None
 
     def test_analysis_without_semantic(self, sample_texts):
         """Test comprehensive analysis without semantic similarity."""
         real_texts, fake_texts = sample_texts
         result = comprehensive_textual_analysis(real_texts, fake_texts, include_semantic=False)
 
-        assert 'semantic_similarity' not in result
+        assert result.semantic_similarity is None
 
     def test_error_handling_in_analysis(self):
         """Test error handling in comprehensive analysis."""
@@ -318,7 +321,9 @@ class TestComprehensiveTextualAnalysis:
         result = comprehensive_textual_analysis(real_texts, fake_texts)
 
         # Should handle errors gracefully
-        assert isinstance(result, dict)
+        assert isinstance(result, ComprehensiveTextualAnalysisResult)
+        # Some metrics might fail with empty strings, but result should still be valid
+        assert hasattr(result, 'overall_similarity')
 
 
 class TestTextualEvaluator:

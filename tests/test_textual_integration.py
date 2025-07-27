@@ -136,12 +136,15 @@ class TestTextualEvaluationMethods:
 
         result = evaluator.textual_evaluation(include_semantic=False)
 
-        assert isinstance(result, dict)
-        assert 'text_col' in result
-        assert 'overall_textual_metrics' in result
+        from table_evaluator.models.textual_models import TextualEvaluationResults
+
+        assert isinstance(result, TextualEvaluationResults)
+        assert 'text_col' in result.column_results
+        assert hasattr(result, 'overall_textual_metrics')
+        assert result.success is True
 
         # Check column-specific results
-        col_result = result['text_col']
+        col_result = result.column_results['text_col']
         assert hasattr(col_result, 'lexical_diversity')
         assert hasattr(col_result, 'tfidf_similarity')
         assert hasattr(col_result, 'combined_metrics')
@@ -154,8 +157,10 @@ class TestTextualEvaluationMethods:
 
         result = evaluator.textual_evaluation(include_semantic=True)
 
-        assert isinstance(result, dict)
-        col_result = result['text_col']
+        from table_evaluator.models.textual_models import TextualEvaluationResults
+
+        assert isinstance(result, TextualEvaluationResults)
+        col_result = result.column_results['text_col']
 
         if SENTENCE_TRANSFORMERS_AVAILABLE:
             assert hasattr(col_result, 'semantic_similarity')
@@ -171,12 +176,12 @@ class TestTextualEvaluationMethods:
 
         result = evaluator.textual_evaluation(include_semantic=False)
 
-        assert 'text_col1' in result
-        assert 'text_col2' in result
-        assert 'overall_textual_metrics' in result
+        assert 'text_col1' in result.column_results
+        assert 'text_col2' in result.column_results
+        assert hasattr(result, 'overall_textual_metrics')
 
         # Check overall metrics
-        overall = result['overall_textual_metrics']
+        overall = result.overall_textual_metrics
         assert 'mean_similarity' in overall
         assert overall['num_text_columns'] == 2
 
@@ -197,8 +202,10 @@ class TestTextualEvaluationMethods:
 
         result = evaluator.textual_evaluation(enable_sampling=True, max_samples=3)
 
-        assert isinstance(result, dict)
-        assert 'text_col' in result
+        from table_evaluator.models.textual_models import TextualEvaluationResults
+
+        assert isinstance(result, TextualEvaluationResults)
+        assert 'text_col' in result.column_results
 
     def test_basic_textual_evaluation(self, sample_dataframes_with_text):
         """Test basic (quick) textual evaluation."""
@@ -208,12 +215,15 @@ class TestTextualEvaluationMethods:
 
         result = evaluator.basic_textual_evaluation()
 
-        assert isinstance(result, dict)
-        assert 'text_col' in result
-        assert 'overall_basic_metrics' in result
+        from table_evaluator.models.textual_models import BasicTextualEvaluationResults
+
+        assert isinstance(result, BasicTextualEvaluationResults)
+        assert 'text_col' in result.column_results
+        assert hasattr(result, 'overall_basic_metrics')
+        assert result.success is True
 
         # Check that it's a quick evaluation
-        col_result = result['text_col']
+        col_result = result.column_results['text_col']
         assert hasattr(col_result, 'evaluation_type')
         assert col_result.evaluation_type == 'quick'
 
@@ -240,13 +250,15 @@ class TestComprehensiveEvaluationWithText:
             target_col='target', target_type='class', include_textual=True, textual_config={'include_semantic': False}
         )
 
-        assert isinstance(result, dict)
-        assert 'basic' in result
-        assert 'textual' in result
-        assert 'combined_similarity' in result
+        from table_evaluator.models.textual_models import ComprehensiveEvaluationWithTextResults
+
+        assert isinstance(result, ComprehensiveEvaluationWithTextResults)
+        assert result.basic is not None
+        assert result.textual is not None
+        assert result.combined_similarity is not None
 
         # Check combined similarity calculation
-        combined = result['combined_similarity']
+        combined = result.combined_similarity
         assert 'overall_similarity' in combined
         assert 'text_weight' in combined
         assert 'tabular_weight' in combined
@@ -261,7 +273,7 @@ class TestComprehensiveEvaluationWithText:
             target_col='target', text_weight=0.7, include_textual=True, textual_config={'include_semantic': False}
         )
 
-        combined = result['combined_similarity']
+        combined = result.combined_similarity
         assert combined['text_weight'] == 0.7
         assert combined['tabular_weight'] == pytest.approx(0.3)
 
@@ -273,8 +285,8 @@ class TestComprehensiveEvaluationWithText:
 
         result = evaluator.comprehensive_evaluation_with_text(target_col='target', include_textual=False)
 
-        assert 'basic' in result
-        assert 'textual' not in result or 'error' in result.get('textual', {})
+        assert result.basic is not None
+        assert result.textual is None or ('error' in result.textual if isinstance(result.textual, dict) else False)
 
     def test_comprehensive_evaluation_no_text_cols(self, sample_dataframes_with_text):
         """Test comprehensive evaluation when no text columns specified."""
@@ -284,9 +296,9 @@ class TestComprehensiveEvaluationWithText:
 
         result = evaluator.comprehensive_evaluation_with_text(target_col='target', include_textual=True)
 
-        assert 'textual' in result
-        assert 'error' in result['textual']
-        assert 'No text columns specified' in result['textual']['error']
+        assert result.textual is not None
+        assert isinstance(result.textual, dict) and 'error' in result.textual
+        assert 'No text columns specified' in result.textual['error']
 
     def test_invalid_text_weight(self, sample_dataframes_with_text):
         """Test comprehensive evaluation with invalid text weight."""
