@@ -7,7 +7,7 @@ We welcome contributions to the Table Evaluator project! This document provides 
 ### Prerequisites
 
 - Python 3.10 or higher
-- Poetry for dependency management
+- uv for dependency management
 - Git
 
 ### Setting up the Development Environment

@@ -1,8 +1,8 @@
 """Visualization manager for coordinating all table evaluation plots."""
 
+import logging
 from os import PathLike
 from pathlib import Path
-from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,6 +10,8 @@ import seaborn as sns
 from sklearn.decomposition import PCA
 
 from table_evaluator.plots import cdf, plot_correlation_difference, plot_mean_std
+
+logger = logging.getLogger(__name__)
 
 
 class VisualizationManager:
@@ -19,9 +21,9 @@ class VisualizationManager:
         self,
         real: pd.DataFrame,
         fake: pd.DataFrame,
-        categorical_columns: List[str],
-        numerical_columns: List[str],
-    ):
+        categorical_columns: list[str] | None = None,
+        numerical_columns: list[str] | None = None,
+    ) -> None:
         """
         Initialize the visualization manager.
 
@@ -36,9 +38,7 @@ class VisualizationManager:
         self.categorical_columns = categorical_columns
         self.numerical_columns = numerical_columns
 
-    def plot_mean_std(
-        self, fname: Optional[PathLike] = None, show: bool = True
-    ) -> None:
+    def plot_mean_std(self, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
         Plot mean and standard deviation comparison between real and fake data.
 
@@ -48,9 +48,7 @@ class VisualizationManager:
         """
         plot_mean_std(self.real, self.fake, fname=fname, show=show)
 
-    def plot_cumsums(
-        self, nr_cols: int = 4, fname: Optional[PathLike] = None, show: bool = True
-    ):
+    def plot_cumsums(self, nr_cols: int = 4, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
         Plot cumulative sums for all columns in real and fake datasets.
 
@@ -70,17 +68,20 @@ class VisualizationManager:
         row_height = self._calculate_label_based_height()
 
         fig, ax = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
-        fig.suptitle("Cumulative Sums per feature", fontsize=16)
+        fig.suptitle('Cumulative Sums per feature', fontsize=16)
         axes = ax.flatten()
 
-        for i, col in enumerate(self.real.columns):
+        def _plot_column_safe(i: int, col: str) -> None:
             try:
                 real_col = self.real[col]
                 fake_col = self.fake.iloc[:, self.real.columns.tolist().index(col)]
-                cdf(real_col, fake_col, col, "Cumsum", ax=axes[i])
-            except Exception as e:
-                print(f"Error while plotting column {col}")
-                raise e
+                cdf(real_col, fake_col, col, 'Cumsum', ax=axes[i])
+            except Exception:
+                logger.exception(f'Error while plotting column {col}')
+                raise
+
+        for i, col in enumerate(self.real.columns):
+            _plot_column_safe(i, col)
 
         plt.tight_layout(rect=(0.0, 0.02, 1.0, 0.98))
 
@@ -89,9 +90,7 @@ class VisualizationManager:
         if show:
             plt.show()
 
-    def plot_distributions(
-        self, nr_cols: int = 3, fname: Optional[PathLike] = None, show: bool = True
-    ):
+    def plot_distributions(self, nr_cols: int = 3, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
         Plot distributions for all columns, using appropriate plot type per column type.
 
@@ -108,7 +107,7 @@ class VisualizationManager:
         row_height = self._calculate_label_based_height()
 
         fig, axes = plt.subplots(nr_rows, nr_cols, figsize=(16, row_height * nr_rows))
-        fig.suptitle("Distribution per feature", fontsize=16)
+        fig.suptitle('Distribution per feature', fontsize=16)
         axes = axes.flatten()
 
         for i, col in enumerate(self.real.columns):
@@ -130,11 +129,12 @@ class VisualizationManager:
 
     def plot_correlation_difference(
         self,
+        *,
         plot_diff: bool = True,
-        fname: Optional[PathLike] = None,
+        fname: PathLike | None = None,
         show: bool = True,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
         Plot correlation matrix difference between real and fake data.
 
@@ -154,7 +154,7 @@ class VisualizationManager:
             **kwargs,
         )
 
-    def plot_pca(self, fname: Optional[PathLike] = None, show: bool = True) -> None:
+    def plot_pca(self, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
         Plot PCA comparison between real and fake data.
 
@@ -166,9 +166,7 @@ class VisualizationManager:
         from table_evaluator.data.data_converter import DataConverter
 
         converter = DataConverter()
-        real_num, fake_num = converter.to_numerical(
-            self.real, self.fake, self.categorical_columns
-        )
+        real_num, fake_num = converter.factorize(self.real, self.fake, self.categorical_columns)
 
         pca = PCA(n_components=2)
         real_pca = pca.fit_transform(real_num)
@@ -178,15 +176,15 @@ class VisualizationManager:
 
         # Plot real data PCA
         sns.scatterplot(x=real_pca[:, 0], y=real_pca[:, 1], ax=ax1, alpha=0.7)
-        ax1.set_title("Real Data PCA")
-        ax1.set_xlabel("First Principal Component")
-        ax1.set_ylabel("Second Principal Component")
+        ax1.set_title('Real Data PCA')
+        ax1.set_xlabel('First Principal Component')
+        ax1.set_ylabel('Second Principal Component')
 
         # Plot fake data PCA
         sns.scatterplot(x=fake_pca[:, 0], y=fake_pca[:, 1], ax=ax2, alpha=0.7)
-        ax2.set_title("Fake Data PCA")
-        ax2.set_xlabel("First Principal Component")
-        ax2.set_ylabel("Second Principal Component")
+        ax2.set_title('Fake Data PCA')
+        ax2.set_xlabel('First Principal Component')
+        ax2.set_ylabel('Second Principal Component')
 
         plt.tight_layout()
 
@@ -195,9 +193,7 @@ class VisualizationManager:
         if show:
             plt.show()
 
-    def visual_evaluation(
-        self, save_dir: Optional[PathLike] = None, show: bool = True, **kwargs
-    ):
+    def visual_evaluation(self, save_dir: PathLike | None = None, *, show: bool = True, **kwargs: object) -> None:
         """
         Generate all visual evaluation plots.
 
@@ -219,13 +215,11 @@ class VisualizationManager:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
 
-            self.plot_mean_std(fname=save_dir / "mean_std.png", show=show)
-            self.plot_cumsums(fname=save_dir / "cumsums.png", show=show)
-            self.plot_distributions(fname=save_dir / "distributions.png", show=show)
-            self.plot_correlation_difference(
-                fname=save_dir / "correlation_difference.png", show=show, **kwargs
-            )
-            self.plot_pca(fname=save_dir / "pca.png", show=show)
+            self.plot_mean_std(fname=save_dir / 'mean_std.png', show=show)
+            self.plot_cumsums(fname=save_dir / 'cumsums.png', show=show)
+            self.plot_distributions(fname=save_dir / 'distributions.png', show=show)
+            self.plot_correlation_difference(fname=save_dir / 'correlation_difference.png', show=show, **kwargs)
+            self.plot_pca(fname=save_dir / 'pca.png', show=show)
 
     def _calculate_label_based_height(self, base_height: int = 6) -> int:
         """
@@ -240,7 +234,7 @@ class VisualizationManager:
         max_len = 0
 
         # Find the maximum label length in categorical columns
-        categorical_data = self.real.select_dtypes(include=["object"])
+        categorical_data = self.real.select_dtypes(include=['object'])
         if not categorical_data.empty:
             lengths = []
             for col in categorical_data.columns:
@@ -251,18 +245,14 @@ class VisualizationManager:
 
         return base_height + (max_len // 30)
 
-    def _plot_numerical_distribution(self, column: str, ax):
+    def _plot_numerical_distribution(self, column: str, ax) -> None:
         """Plot histogram for numerical column."""
-        sns.histplot(
-            data=self.real, x=column, alpha=0.7, label="Real", ax=ax, stat="density"
-        )
-        sns.histplot(
-            data=self.fake, x=column, alpha=0.7, label="Fake", ax=ax, stat="density"
-        )
-        ax.set_title(f"{column} Distribution")
+        sns.histplot(data=self.real, x=column, alpha=0.7, label='Real', ax=ax, stat='density')
+        sns.histplot(data=self.fake, x=column, alpha=0.7, label='Fake', ax=ax, stat='density')
+        ax.set_title(f'{column} Distribution')
         ax.legend()
 
-    def _plot_categorical_distribution(self, column: str, ax):
+    def _plot_categorical_distribution(self, column: str, ax) -> None:
         """Plot bar chart for categorical column."""
         # Get value counts for both datasets
         real_counts = self.real[column].value_counts(normalize=True)
@@ -277,15 +267,11 @@ class VisualizationManager:
         x_pos = range(len(all_categories))
         width = 0.35
 
-        ax.bar(
-            [x - width / 2 for x in x_pos], real_aligned, width, label="Real", alpha=0.7
-        )
-        ax.bar(
-            [x + width / 2 for x in x_pos], fake_aligned, width, label="Fake", alpha=0.7
-        )
+        ax.bar([x - width / 2 for x in x_pos], real_aligned, width, label='Real', alpha=0.7)
+        ax.bar([x + width / 2 for x in x_pos], fake_aligned, width, label='Fake', alpha=0.7)
 
-        ax.set_title(f"{column} Distribution")
+        ax.set_title(f'{column} Distribution')
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(all_categories, rotation=45, ha="right")
+        ax.set_xticklabels(all_categories, rotation=45, ha='right')
         ax.legend()
-        ax.set_ylabel("Frequency")
+        ax.set_ylabel('Frequency')

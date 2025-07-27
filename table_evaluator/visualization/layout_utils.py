@@ -1,11 +1,9 @@
 """Layout utilities for plotting functions."""
 
-from typing import Tuple
-
 import pandas as pd
 
 
-def calculate_subplot_layout(n_items: int, n_cols: int = 3) -> Tuple[int, int]:
+def calculate_subplot_layout(n_items: int, n_cols: int = 3) -> tuple[int, int]:
     """
     Calculate subplot grid dimensions.
 
@@ -35,7 +33,7 @@ def calculate_label_based_height(dataframe: pd.DataFrame, base_height: int = 6) 
     max_len = 0
 
     # Find the maximum label length in categorical columns
-    categorical_data = dataframe.select_dtypes(include=["object"])
+    categorical_data = dataframe.select_dtypes(include=['object'])
     if not categorical_data.empty:
         lengths = []
         for col in categorical_data.columns:
