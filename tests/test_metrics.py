@@ -94,4 +94,4 @@ def test_jensenshannon_distance():
     # check that the result is a dictionary with the correct keys and values
     assert isinstance(result, dict)
     assert result['col_name'] == colname
-    assert result['js_distance'] == 0.2736453208486386  # this is the expected JS distance for these data
+    assert abs(result['js_distance'] - 0.2736453208486386) < 1e-15  # this is the expected JS distance for these data

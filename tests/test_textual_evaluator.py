@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from table_evaluator.advanced_metrics.textual import (
+from table_evaluator.evaluators.textual_evaluator import TextualEvaluator
+from table_evaluator.metrics.textual import (
     SENTENCE_TRANSFORMERS_AVAILABLE,
     comprehensive_textual_analysis,
     semantic_similarity_embeddings,
@@ -14,7 +15,6 @@ from table_evaluator.advanced_metrics.textual import (
     tfidf_corpus_similarity,
     vocabulary_overlap_analysis,
 )
-from table_evaluator.evaluators.textual_evaluator import TextualEvaluator
 
 
 # Test data fixtures
@@ -74,24 +74,22 @@ class TestTextLengthDistributionSimilarity:
         real_texts, fake_texts = sample_texts
         result = text_length_distribution_similarity(real_texts, fake_texts, unit='word')
 
-        assert isinstance(result, dict)
-        assert 'ks_statistic' in result
-        assert 'ks_pvalue' in result
-        assert 'similarity_score' in result
-        assert 'unit' in result
-        assert result['unit'] == 'word'
-        assert 0 <= result['ks_statistic'] <= 1
-        assert 0 <= result['similarity_score'] <= 1
+        assert hasattr(result, 'ks_statistic')
+        assert hasattr(result, 'ks_p_value')
+        assert hasattr(result, 'similarity_score')
+        assert 0 <= result.ks_statistic <= 1
+        assert 0 <= result.similarity_score <= 1
 
     def test_char_length_similarity(self, sample_texts):
         """Test character length distribution similarity."""
         real_texts, fake_texts = sample_texts
         result = text_length_distribution_similarity(real_texts, fake_texts, unit='char')
 
-        assert isinstance(result, dict)
-        assert result['unit'] == 'char'
-        assert 'mean_diff' in result
-        assert 'std_diff' in result
+        assert hasattr(result, 'ks_statistic')
+        assert hasattr(result, 'ks_p_value')
+        assert hasattr(result, 'similarity_score')
+        assert 0 <= result.ks_statistic <= 1
+        assert 0 <= result.similarity_score <= 1
 
     def test_invalid_unit(self, sample_texts):
         """Test invalid unit parameter."""
@@ -112,8 +110,8 @@ class TestTextLengthDistributionSimilarity:
         real_texts, fake_texts = empty_texts
         result = text_length_distribution_similarity(real_texts, fake_texts)
 
-        assert result['ks_statistic'] == 1.0
-        assert result['ks_pvalue'] == 0.0
+        assert result.ks_statistic == 1.0
+        assert result.ks_p_value == 0.0
 
     def test_with_nan_values(self, texts_with_nan):
         """Test with NaN values in text data."""
@@ -121,8 +119,8 @@ class TestTextLengthDistributionSimilarity:
         result = text_length_distribution_similarity(real_texts, fake_texts)
 
         # Should handle NaN values gracefully
-        assert isinstance(result, dict)
-        assert 'similarity_score' in result
+        assert hasattr(result, 'similarity_score')
+        assert hasattr(result, 'ks_statistic')
 
 
 class TestVocabularyOverlapAnalysis:
@@ -264,7 +262,7 @@ class TestSemanticSimilarityEmbeddings:
 class TestSemanticSimilarityWithoutDependency:
     """Test semantic similarity when dependencies are not available."""
 
-    @patch('table_evaluator.advanced_metrics.textual.SENTENCE_TRANSFORMERS_AVAILABLE', False)
+    @patch('table_evaluator.metrics.textual.SENTENCE_TRANSFORMERS_AVAILABLE', False)
     def test_missing_dependency(self, sample_texts):
         """Test behavior when sentence-transformers is not available."""
         real_texts, fake_texts = sample_texts

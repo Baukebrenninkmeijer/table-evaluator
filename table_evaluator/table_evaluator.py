@@ -122,6 +122,7 @@ class TableEvaluator:
         self.statistical_evaluator = StatisticalEvaluator(comparison_metric=comparison_metric, verbose=verbose)
         self.ml_evaluator = MLEvaluator(comparison_metric=comparison_metric, random_seed=seed, verbose=verbose)
         self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
+        self.textual_evaluator = TextualEvaluator(verbose=verbose)
 
         # Initialize visualization manager
         self.visualization_manager = VisualizationManager(
@@ -239,20 +240,6 @@ class TableEvaluator:
             verbose=verbose,
             unique_thresh=unique_thresh,
             n_samples=self.n_samples,
-        )
-
-        # Initialize evaluator components
-        self.statistical_evaluator = StatisticalEvaluator(comparison_metric=self.comparison_metric, verbose=verbose)
-        self.ml_evaluator = MLEvaluator(comparison_metric=self.comparison_metric, random_seed=seed, verbose=verbose)
-        self.privacy_evaluator = PrivacyEvaluator(verbose=verbose)
-
-        self.textual_evaluator = TextualEvaluator(verbose=verbose)
-
-        self.visualization_manager = VisualizationManager(
-            real=self.real,
-            fake=self.fake,
-            categorical_columns=self.categorical_columns,
-            numerical_columns=self.numerical_columns,
         )
 
     def plot_mean_std(self, fname: PathLike | None = None, *, show: bool = True) -> None:
@@ -738,7 +725,10 @@ class TableEvaluator:
                 *privacy_tab,
                 *statistical_tab,
             ]
-            return {x.name: x.content.to_dict(orient='index') for x in all_results}
+            return {
+                x.name: x.content.to_dict(orient='index') if hasattr(x.content, 'to_dict') else x.content
+                for x in all_results
+            }
 
         if notebook:
             visualize_notebook(

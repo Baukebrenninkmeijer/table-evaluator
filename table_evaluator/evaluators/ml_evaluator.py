@@ -14,14 +14,14 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 from table_evaluator.constants import RANDOM_SEED
-from table_evaluator.evaluators.models.ml_models import (
+from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
+from table_evaluator.models.ml_models import (
     ClassificationResults,
     MLEvaluationResults,
     MLSummary,
     RegressionResults,
     TargetEvaluationResult,
 )
-from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
 
 logger = logging.getLogger(__name__)
 

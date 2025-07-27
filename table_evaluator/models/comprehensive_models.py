@@ -2,10 +2,10 @@
 
 from pydantic import BaseModel, Field
 
-from table_evaluator.evaluators.models.ml_models import MLEvaluationResults
-from table_evaluator.evaluators.models.statistical_models import StatisticalEvaluationResults
-from table_evaluator.evaluators.models.textual_models import TextualEvaluationResults
+from table_evaluator.models.ml_models import MLEvaluationResults
 from table_evaluator.models.privacy_models import PrivacyEvaluationResults
+from table_evaluator.models.statistical_models import StatisticalEvaluationResults
+from table_evaluator.models.textual_models import ComprehensiveTextualResult
 
 
 class BasicEvaluationResults(BaseModel):
@@ -64,7 +64,7 @@ class ComprehensiveEvaluationResults(BaseModel):
         default=None, description='Advanced privacy evaluation results'
     )
     ml_evaluation: MLEvaluationResults | None = Field(default=None, description='Machine learning evaluation results')
-    textual: TextualEvaluationResults | None = Field(default=None, description='Textual evaluation results')
+    textual: ComprehensiveTextualResult | None = Field(default=None, description='Textual evaluation results')
 
     # Combined analysis
     combined_similarity: CombinedEvaluationSummary | None = Field(

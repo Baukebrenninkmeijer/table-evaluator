@@ -149,7 +149,7 @@ line-length = 120
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT', 'ISC', 'LOG', 'ICN', 'G', 'INP', 'PIE', 'T20', 'PYI', 'PT', 'Q', 'RSE', 'RET', 'SLF', 'SIM', 'TID', 'TC', 'ARG', 'PTH', 'FLY', 'I', 'C90', 'NPY', 'PD', 'PERF', 'DOC', 'UP', 'FURB', 'RUF', 'TRY']
-lint.ignore = ['G001', 'G002', 'Q000', 'TRY003', 'G004', 'T201', 'Q000', 'TRY300', 'TC003']
+lint.ignore = ['G001', 'G002', 'Q000', 'Q003', 'TRY003', 'G004', 'T201', 'TRY300', 'TC003']
 
 # Allow unused variables when underscore-prefixed.
 lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"

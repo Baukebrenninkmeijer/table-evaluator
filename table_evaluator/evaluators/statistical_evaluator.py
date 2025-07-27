@@ -9,13 +9,6 @@ from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_absolute_percentage_error
 
-from table_evaluator.evaluators.models.statistical_models import (
-    BasicStatisticalResults,
-    CombinedStatisticalMetrics,
-    MMDResults,
-    StatisticalEvaluationResults,
-    WassersteinResults,
-)
 from table_evaluator.metrics.statistical import (
     associations,
     earth_movers_distance_summary,
@@ -23,6 +16,13 @@ from table_evaluator.metrics.statistical import (
     mmd_comprehensive_analysis,
     optimal_transport_cost,
     wasserstein_distance_df,
+)
+from table_evaluator.models.statistical_models import (
+    BasicStatisticalResults,
+    CombinedStatisticalMetrics,
+    MMDResults,
+    StatisticalEvaluationResults,
+    WassersteinResults,
 )
 
 logger = logging.getLogger(__name__)

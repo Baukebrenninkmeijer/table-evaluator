@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from table_evaluator.advanced_metrics.textual import (
+from table_evaluator.metrics.textual import (
     SENTENCE_TRANSFORMERS_AVAILABLE,
     semantic_similarity_embeddings,
     text_length_distribution_similarity,
@@ -18,11 +18,14 @@ from table_evaluator.models.textual_models import (
     CorpusStatistics,
     LexicalDiversityResult,
     LexicalDiversitySummary,
+    MetricWeights,
     QualityRatings,
     QuickTextualResult,
+    SemanticConfigModel,
     SemanticSimilarityResult,
     SemanticSimilaritySummary,
     TextualEvaluationSummary,
+    TfidfConfigModel,
     TfidfSimilarityResult,
     TfidfSimilaritySummary,
 )
@@ -31,7 +34,7 @@ from table_evaluator.models.textual_models import (
 class TextualEvaluator:
     """Advanced textual evaluation for comparing real and synthetic text data."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False) -> None:
         """
         Initialize the textual evaluator.
 
@@ -165,9 +168,9 @@ class TextualEvaluator:
             )
 
             # Enhanced analysis
-            similarity_score = semantic_results.get('semantic_similarity', 0)
-            embedding_distance = semantic_results.get('embedding_distance', 1.0)
-            samples_used = semantic_results.get('samples_used', 0)
+            similarity_score = semantic_results.semantic_similarity
+            embedding_distance = semantic_results.embedding_distance
+            samples_used = semantic_results.samples_used
 
             summary = SemanticSimilaritySummary(
                 semantic_similarity_score=float(similarity_score),
@@ -220,11 +223,11 @@ class TextualEvaluator:
             )
 
             # Enhanced analysis
-            similarity_score = tfidf_results.get('cosine_similarity', 0)
-            tfidf_distance = tfidf_results.get('tfidf_distance', 1.0)
-            vocabulary_size = tfidf_results.get('vocabulary_size', 0)
-            real_corpus_norm = tfidf_results.get('real_corpus_norm', 0.0)
-            fake_corpus_norm = tfidf_results.get('fake_corpus_norm', 0.0)
+            similarity_score = tfidf_results.cosine_similarity
+            tfidf_distance = tfidf_results.tfidf_distance
+            vocabulary_size = tfidf_results.vocabulary_size
+            real_corpus_norm = tfidf_results.real_corpus_norm
+            fake_corpus_norm = tfidf_results.fake_corpus_norm
 
             summary = TfidfSimilaritySummary(
                 tfidf_cosine_similarity=float(similarity_score),
@@ -272,8 +275,8 @@ class TextualEvaluator:
         include_semantic: bool = True,
         enable_sampling: bool = False,
         max_samples: int = 1000,
-        tfidf_config: dict | None = None,
-        semantic_config: dict | None = None,
+        tfidf_config: TfidfConfigModel | None = None,
+        semantic_config: SemanticConfigModel | None = None,
     ) -> ComprehensiveTextualResult:
         """
         Run comprehensive textual evaluation combining all available metrics.
@@ -291,14 +294,13 @@ class TextualEvaluator:
             Dictionary with complete textual analysis
         """
         if tfidf_config is None:
-            tfidf_config = {'max_features': 10000, 'ngram_range': (1, 2)}
+            tfidf_config = TfidfConfigModel()
 
         if semantic_config is None:
-            semantic_config = {
-                'model_name': 'all-MiniLM-L6-v2',
-                'enable_sampling': enable_sampling,
-                'max_samples': max_samples,
-            }
+            semantic_config = SemanticConfigModel(
+                enable_sampling=enable_sampling,
+                max_samples=max_samples,
+            )
 
         if self.verbose:
             print('Running comprehensive textual evaluation...')
@@ -348,7 +350,9 @@ class TextualEvaluator:
 
         # TF-IDF similarity analysis
         try:
-            tfidf_similarity = self.tfidf_similarity_evaluation(real_texts, fake_texts, **tfidf_config)
+            tfidf_similarity = self.tfidf_similarity_evaluation(
+                real_texts, fake_texts, max_features=tfidf_config.max_features, ngram_range=tfidf_config.ngram_range
+            )
         except Exception as e:
             logger.error(f'TF-IDF similarity evaluation failed: {e}')
             # Create default result with error
@@ -357,8 +361,8 @@ class TextualEvaluator:
                 tfidf_distance=1.0,
                 vocabulary_size=0,
                 quality_rating='Error',
-                features_used=tfidf_config.get('max_features', 10000),
-                ngram_range=tfidf_config.get('ngram_range', (1, 2)),
+                features_used=tfidf_config.max_features,
+                ngram_range=tfidf_config.ngram_range,
             )
             tfidf_similarity = TfidfSimilarityResult(
                 cosine_similarity=0.0,
@@ -373,7 +377,13 @@ class TextualEvaluator:
         # Semantic similarity analysis (if enabled and available)
         if include_semantic:
             try:
-                semantic_similarity = self.semantic_similarity_evaluation(real_texts, fake_texts, **semantic_config)
+                semantic_similarity = self.semantic_similarity_evaluation(
+                    real_texts,
+                    fake_texts,
+                    model_name=semantic_config.model_name,
+                    enable_sampling=semantic_config.enable_sampling,
+                    max_samples=semantic_config.max_samples,
+                )
             except Exception as e:
                 logger.error(f'Semantic similarity evaluation failed: {e}')
                 semantic_similarity = SemanticSimilarityResult(available=True, error=str(e))
@@ -395,7 +405,7 @@ class TextualEvaluator:
             # Create default combined metrics
             combined_metrics = CombinedMetrics(
                 overall_similarity=0.0,
-                weights_used={'lexical': 0.5, 'tfidf': 0.5, 'semantic': 0.0},
+                weights_used=MetricWeights(lexical=0.5, tfidf=0.5, semantic=0.0),
                 quality_ratings=QualityRatings(lexical='Error', tfidf='Error', semantic='Error', overall='Error'),
                 consistency_metrics=ConsistencyMetrics(score_std=0.0, score_range=0.0, consistency_rating='Unknown'),
                 corpus_statistics=CorpusStatistics(),
@@ -533,11 +543,11 @@ class TextualEvaluator:
         if include_semantic and semantic_score is not None:
             # Equal weighting: lexical, TF-IDF, semantic
             overall_similarity = (lexical_score + tfidf_score + semantic_score) / 3
-            weights_used = {'lexical': 1 / 3, 'tfidf': 1 / 3, 'semantic': 1 / 3}
+            weights_used = MetricWeights(lexical=1 / 3, tfidf=1 / 3, semantic=1 / 3)
         else:
             # Without semantic: lexical and TF-IDF
             overall_similarity = (lexical_score + tfidf_score) / 2
-            weights_used = {'lexical': 0.5, 'tfidf': 0.5, 'semantic': 0.0}
+            weights_used = MetricWeights(lexical=0.5, tfidf=0.5, semantic=0.0)
 
         # Quality ratings
         lexical_rating = (

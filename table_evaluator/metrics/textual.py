@@ -9,6 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from table_evaluator.models.textual_models import (
     LengthDistributionResult,
+    SemanticRawResult,
+    TfidfRawResult,
     VocabularyOverlapResult,
 )
 
@@ -258,7 +260,7 @@ def tfidf_corpus_similarity(
     ngram_range: tuple[int, int] = (1, 2),
     min_df: int = 2,
     max_df: float = 0.95,
-) -> dict[str, float | int]:
+) -> TfidfRawResult:
     """
     Calculate TF-IDF based corpus-level similarity using cosine distance.
 
@@ -288,7 +290,13 @@ def tfidf_corpus_similarity(
 
     if len(real_clean) == 0 or len(fake_clean) == 0:
         logger.warning('Empty text data detected, returning default similarity')
-        return {'cosine_similarity': 0.0, 'tfidf_distance': 1.0}
+        return TfidfRawResult(
+            cosine_similarity=0.0,
+            tfidf_distance=1.0,
+            vocabulary_size=0,
+            real_corpus_norm=0.0,
+            fake_corpus_norm=0.0,
+        )
 
     # Combine corpora for consistent vocabulary
     all_texts = real_clean + fake_clean
@@ -324,17 +332,24 @@ def tfidf_corpus_similarity(
         real_corpus_norm = float(np.linalg.norm(real_corpus_vec))
         fake_corpus_norm = float(np.linalg.norm(fake_corpus_vec))
 
-        return {
-            'cosine_similarity': float(cos_sim),
-            'tfidf_distance': float(tfidf_distance),
-            'vocabulary_size': len(vectorizer.vocabulary_),
-            'real_corpus_norm': real_corpus_norm,
-            'fake_corpus_norm': fake_corpus_norm,
-        }
+        return TfidfRawResult(
+            cosine_similarity=float(cos_sim),
+            tfidf_distance=float(tfidf_distance),
+            vocabulary_size=len(vectorizer.vocabulary_),
+            real_corpus_norm=real_corpus_norm,
+            fake_corpus_norm=fake_corpus_norm,
+        )
 
     except Exception as e:
         logger.error(f'TF-IDF similarity calculation failed: {e!s}')
-        return {'cosine_similarity': 0.0, 'tfidf_distance': 1.0, 'error': str(e)}
+        return TfidfRawResult(
+            cosine_similarity=0.0,
+            tfidf_distance=1.0,
+            vocabulary_size=0,
+            real_corpus_norm=0.0,
+            fake_corpus_norm=0.0,
+            error=str(e),
+        )
 
 
 def semantic_similarity_embeddings(
@@ -344,7 +359,7 @@ def semantic_similarity_embeddings(
     batch_size: int = 32,
     enable_sampling: bool = False,
     max_samples: int = 1000,
-) -> dict[str, float | str | int]:
+) -> SemanticRawResult:
     """
     Calculate semantic similarity using sentence transformer embeddings.
 
@@ -385,7 +400,12 @@ def semantic_similarity_embeddings(
 
     if len(real_clean) == 0 or len(fake_clean) == 0:
         logger.warning('Empty text data detected, returning default similarity')
-        return {'semantic_similarity': 0.0, 'embedding_distance': 1.0}
+        return SemanticRawResult(
+            semantic_similarity=0.0,
+            embedding_distance=1.0,
+            model_name=model_name,
+            samples_used=0,
+        )
 
     # Sample data if enabled and datasets are large
     if enable_sampling and len(real_clean) > max_samples:
@@ -412,16 +432,22 @@ def semantic_similarity_embeddings(
         cos_sim = cosine_similarity(real_corpus_embedding, fake_corpus_embedding)[0, 0]
         embedding_distance = 1.0 - cos_sim
 
-        return {
-            'semantic_similarity': float(cos_sim),
-            'embedding_distance': float(embedding_distance),
-            'model_name': model_name,
-            'samples_used': len(real_clean) + len(fake_clean),
-        }
+        return SemanticRawResult(
+            semantic_similarity=float(cos_sim),
+            embedding_distance=float(embedding_distance),
+            model_name=model_name,
+            samples_used=len(real_clean) + len(fake_clean),
+        )
 
     except Exception as e:
         logger.error(f'Semantic similarity calculation failed: {e!s}')
-        return {'semantic_similarity': 0.0, 'embedding_distance': 1.0, 'error': str(e)}
+        return SemanticRawResult(
+            semantic_similarity=0.0,
+            embedding_distance=1.0,
+            model_name=model_name,
+            samples_used=0,
+            error=str(e),
+        )
 
 
 def comprehensive_textual_analysis(

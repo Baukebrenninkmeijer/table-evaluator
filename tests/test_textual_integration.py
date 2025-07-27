@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from table_evaluator import TableEvaluator
-from table_evaluator.advanced_metrics.textual import SENTENCE_TRANSFORMERS_AVAILABLE
+from table_evaluator.metrics.textual import SENTENCE_TRANSFORMERS_AVAILABLE
 
 
 # Test data fixtures
