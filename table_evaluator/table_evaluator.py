@@ -651,6 +651,46 @@ class TableEvaluator:
         if not isinstance(n_samples_distance, int) or n_samples_distance <= 0:
             raise ValueError('n_samples_distance must be a positive integer')
 
+    def _validate_comprehensive_evaluation_inputs(
+        self,
+        target_col: str | None,
+        target_type: str | None,
+        *,
+        include_basic: bool,
+        include_advanced_statistical: bool,
+        include_advanced_privacy: bool,
+    ) -> None:
+        """Validate inputs for comprehensive evaluation."""
+        if target_col is not None and target_type is not None:
+            self._validate_target_and_type(target_col, target_type)
+        
+        # Validate boolean parameters
+        for param_name, param_value in [
+            ('include_basic', include_basic),
+            ('include_advanced_statistical', include_advanced_statistical),
+            ('include_advanced_privacy', include_advanced_privacy),
+        ]:
+            if not isinstance(param_value, bool):
+                raise ValueError(f'{param_name} must be a boolean')
+
+    def _warn_large_dataset_performance(self) -> None:
+        """Warn about performance on large datasets."""
+        # Get dataset size
+        if hasattr(self, 'real') and hasattr(self, 'fake'):
+            real_size = len(self.real) if self.real is not None else 0
+            fake_size = len(self.fake) if self.fake is not None else 0
+            max_size = max(real_size, fake_size)
+            
+            # Warn if dataset is large
+            if max_size > 10000:
+                warnings.warn(
+                    f'Large dataset detected ({max_size} rows). '
+                    'Comprehensive evaluation may take significant time. '
+                    'Consider using sampling for faster results.',
+                    UserWarning,
+                    stacklevel=3
+                )
+
     def _setup_evaluation_parameters(self, target_type: str, *, verbose: bool | None, metric: str | None) -> None:
         """Set up evaluation parameters on the instance."""
         self.target_type = target_type
@@ -937,7 +977,12 @@ class TableEvaluator:
 
         # Run requested evaluations
         if include_basic:
-            results['basic'] = self._run_basic_evaluation(target_col, target_type, **kwargs)
+            # Use the main evaluate method for basic evaluation
+            if target_col is not None and target_type is not None:
+                basic_result = self.evaluate(target_col, target_type, **kwargs)
+                results['basic'] = basic_result
+            else:
+                results['basic'] = {'error': 'target_col and target_type required for basic evaluation'}
 
         # Note: Advanced statistical and privacy evaluators removed in master
         # These features are now integrated into the basic evaluators

@@ -141,9 +141,9 @@ class TestTextualEvaluationMethods:
 
         # Check column-specific results
         col_result = result['text_col']
-        assert 'lexical_diversity' in col_result
-        assert 'tfidf_similarity' in col_result
-        assert 'combined_metrics' in col_result
+        assert hasattr(col_result, 'lexical_diversity')
+        assert hasattr(col_result, 'tfidf_similarity')
+        assert hasattr(col_result, 'combined_metrics')
 
     def test_textual_evaluation_with_semantic(self, sample_dataframes_with_text):
         """Test textual evaluation with semantic analysis."""
@@ -157,10 +157,10 @@ class TestTextualEvaluationMethods:
         col_result = result['text_col']
 
         if SENTENCE_TRANSFORMERS_AVAILABLE:
-            assert 'semantic_similarity' in col_result
+            assert hasattr(col_result, 'semantic_similarity')
         else:
             # Should handle gracefully when not available
-            assert isinstance(col_result.get('semantic_similarity', {}), dict)
+            assert hasattr(col_result, 'semantic_similarity')
 
     def test_textual_evaluation_multiple_columns(self, sample_dataframes_multiple_text):
         """Test textual evaluation with multiple text columns."""
@@ -213,8 +213,8 @@ class TestTextualEvaluationMethods:
 
         # Check that it's a quick evaluation
         col_result = result['text_col']
-        assert 'evaluation_type' in col_result
-        assert col_result['evaluation_type'] == 'quick'
+        assert hasattr(col_result, 'evaluation_type')
+        assert col_result.evaluation_type == 'quick'
 
     def test_basic_textual_evaluation_no_text_cols(self, sample_dataframes_with_text):
         """Test basic textual evaluation when no text columns specified."""

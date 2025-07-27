@@ -171,7 +171,7 @@ This achievement demonstrates successful dependency reduction while maintaining 
 
 ### Overview
 You can offload individual tasks to the Gemini CLI, which you can call with the `gemini` command.
-Always use YOLO mode (`-y`) for trusted development environments to streamline the workflow.
+Always use YOLO mode (`-y`) for trusted development environments to streamline the workflow. Make sure to use a timeout of at least 10-15 minutes, based on the expected duration of the task. 
 
 ### Command Reference
 ```bash

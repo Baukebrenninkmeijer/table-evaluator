@@ -15,6 +15,17 @@ from table_evaluator.metrics.textual import (
     tfidf_corpus_similarity,
     vocabulary_overlap_analysis,
 )
+from table_evaluator.models.textual_models import (
+    VocabularyOverlapResult,
+    LengthDistributionResult,
+    TfidfRawResult,
+    TfidfSimilarityResult,
+    SemanticRawResult,
+    SemanticSimilarityResult,
+    LexicalDiversityResult,
+    QuickTextualResult,
+    ComprehensiveTextualResult,
+)
 
 
 # Test data fixtures
@@ -131,36 +142,36 @@ class TestVocabularyOverlapAnalysis:
         real_texts, fake_texts = sample_texts
         result = vocabulary_overlap_analysis(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'jaccard_similarity' in result
-        assert 'coverage_real_to_fake' in result
-        assert 'coverage_fake_to_real' in result
-        assert 'real_vocab_size' in result
-        assert 'fake_vocab_size' in result
-        assert 'shared_vocab_size' in result
+        assert isinstance(result, VocabularyOverlapResult)
+        assert hasattr(result, 'jaccard_similarity')
+        assert hasattr(result, 'vocab_diversity_ratio')
+        assert hasattr(result, 'real_vocab_size')
+        assert hasattr(result, 'fake_vocab_size')
+        assert hasattr(result, 'shared_vocab_size')
 
-        assert 0 <= result['jaccard_similarity'] <= 1
-        assert 0 <= result['coverage_real_to_fake'] <= 1
-        assert 0 <= result['coverage_fake_to_real'] <= 1
+        assert 0 <= result.jaccard_similarity <= 1
+        assert result.vocab_diversity_ratio > 0
+        assert result.real_vocab_size >= 0
+        assert result.fake_vocab_size >= 0
+        assert result.shared_vocab_size >= 0
 
     def test_minimum_frequency_filter(self, sample_texts):
         """Test minimum frequency filtering."""
         real_texts, fake_texts = sample_texts
         result = vocabulary_overlap_analysis(real_texts, fake_texts, min_frequency=2)
 
-        assert isinstance(result, dict)
+        assert isinstance(result, VocabularyOverlapResult)
         # With higher frequency threshold, vocabulary sizes should be smaller or equal
         result_default = vocabulary_overlap_analysis(real_texts, fake_texts, min_frequency=1)
-        assert result['real_vocab_size'] <= result_default['real_vocab_size']
+        assert result.real_vocab_size <= result_default.real_vocab_size
 
     def test_identical_texts(self):
         """Test with identical text corpora."""
         texts = pd.Series(['hello world', 'test message'])
         result = vocabulary_overlap_analysis(texts, texts)
 
-        assert result['jaccard_similarity'] == 1.0
-        assert result['coverage_real_to_fake'] == 1.0
-        assert result['coverage_fake_to_real'] == 1.0
+        assert result.jaccard_similarity == 1.0
+        assert result.vocab_diversity_ratio == 1.0
 
     def test_no_overlap(self):
         """Test with texts that have no vocabulary overlap."""
@@ -168,9 +179,8 @@ class TestVocabularyOverlapAnalysis:
         fake_texts = pd.Series(['bird fish'])
         result = vocabulary_overlap_analysis(real_texts, fake_texts)
 
-        assert result['jaccard_similarity'] == 0.0
-        assert result['coverage_real_to_fake'] == 0.0
-        assert result['coverage_fake_to_real'] == 0.0
+        assert result.jaccard_similarity == 0.0
+        assert result.shared_vocab_size == 0
 
     def test_invalid_min_frequency(self, sample_texts):
         """Test invalid minimum frequency parameter."""
@@ -187,15 +197,14 @@ class TestTfidfCorpusSimilarity:
         real_texts, fake_texts = sample_texts
         result = tfidf_corpus_similarity(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'cosine_similarity' in result
-        assert 'tfidf_distance' in result
-        assert 'vocabulary_size' in result
-        assert 'similarity_score' in result
+        assert isinstance(result, TfidfRawResult)
+        assert hasattr(result, 'cosine_similarity')
+        assert hasattr(result, 'tfidf_distance')
+        assert hasattr(result, 'vocabulary_size')
 
-        assert -1 <= result['cosine_similarity'] <= 1
-        assert 0 <= result['tfidf_distance'] <= 2
-        assert result['vocabulary_size'] >= 0
+        assert 0 <= result.cosine_similarity <= 1
+        assert result.tfidf_distance >= 0
+        assert result.vocabulary_size >= 0
 
     def test_tfidf_parameters(self, sample_texts):
         """Test TF-IDF with different parameters."""
@@ -204,8 +213,8 @@ class TestTfidfCorpusSimilarity:
             real_texts, fake_texts, max_features=5, ngram_range=(1, 1), min_df=1, max_df=1.0
         )
 
-        assert isinstance(result, dict)
-        assert result['vocabulary_size'] <= 5
+        assert isinstance(result, TfidfRawResult)
+        assert result.vocabulary_size <= 5
 
     def test_identical_corpora(self):
         """Test with identical text corpora."""
@@ -213,15 +222,15 @@ class TestTfidfCorpusSimilarity:
         result = tfidf_corpus_similarity(texts, texts)
 
         # Identical corpora should have perfect similarity
-        assert abs(result['cosine_similarity'] - 1.0) < 1e-6
+        assert abs(result.cosine_similarity - 1.0) < 1e-6
 
     def test_empty_texts(self, empty_texts):
         """Test with empty text data."""
         real_texts, fake_texts = empty_texts
         result = tfidf_corpus_similarity(real_texts, fake_texts)
 
-        assert result['cosine_similarity'] == 0.0
-        assert result['tfidf_distance'] == 1.0
+        assert result.cosine_similarity == 0.0
+        assert result.tfidf_distance == 1.0
 
 
 @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason='sentence-transformers not available')
@@ -233,22 +242,21 @@ class TestSemanticSimilarityEmbeddings:
         real_texts, fake_texts = sample_texts
         result = semantic_similarity_embeddings(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'semantic_similarity' in result
-        assert 'embedding_distance' in result
-        assert 'model_used' in result
-        assert 'similarity_score' in result
+        assert isinstance(result, SemanticRawResult)
+        assert hasattr(result, 'semantic_similarity')
+        assert hasattr(result, 'embedding_distance')
+        assert hasattr(result, 'model_name')
 
-        assert -1 <= result['semantic_similarity'] <= 1
-        assert 0 <= result['embedding_distance'] <= 2
+        assert 0 <= result.semantic_similarity <= 1
+        assert result.embedding_distance >= 0
 
     def test_with_sampling(self, sample_texts):
         """Test semantic similarity with sampling enabled."""
         real_texts, fake_texts = sample_texts
         result = semantic_similarity_embeddings(real_texts, fake_texts, enable_sampling=True, max_samples=3)
 
-        assert isinstance(result, dict)
-        assert 'semantic_similarity' in result
+        assert isinstance(result, SemanticRawResult)
+        assert hasattr(result, 'semantic_similarity')
 
     def test_custom_model(self, sample_texts):
         """Test with custom model name."""
@@ -256,7 +264,7 @@ class TestSemanticSimilarityEmbeddings:
         model_name = 'all-MiniLM-L6-v2'
         result = semantic_similarity_embeddings(real_texts, fake_texts, model_name=model_name)
 
-        assert result['model_used'] == model_name
+        assert result.model_name == model_name
 
 
 class TestSemanticSimilarityWithoutDependency:
@@ -284,7 +292,7 @@ class TestComprehensiveTextualAnalysis:
         assert 'char_length_dist' in result
         assert 'vocabulary_overlap' in result
         assert 'tfidf_similarity' in result
-        assert 'overall' in result
+        assert hasattr(result, 'overall')
 
     @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason='sentence-transformers not available')
     def test_analysis_with_semantic(self, sample_texts):
@@ -330,11 +338,11 @@ class TestTextualEvaluator:
         evaluator = TextualEvaluator()
         result = evaluator.lexical_diversity_evaluation(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'word_length_distribution' in result
-        assert 'char_length_distribution' in result
-        assert 'vocabulary_overlap' in result
-        assert 'summary' in result
+        assert isinstance(result, LexicalDiversityResult)
+        assert hasattr(result, 'word_length_distribution')
+        assert hasattr(result, 'char_length_distribution')
+        assert hasattr(result, 'vocabulary_overlap')
+        assert hasattr(result, 'summary')
 
     def test_tfidf_similarity_evaluation(self, sample_texts):
         """Test TF-IDF similarity evaluation."""
@@ -342,9 +350,9 @@ class TestTextualEvaluator:
         evaluator = TextualEvaluator()
         result = evaluator.tfidf_similarity_evaluation(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'summary' in result
-        assert 'tfidf_cosine_similarity' in result['summary']
+        assert isinstance(result, TfidfSimilarityResult)
+        assert hasattr(result, 'summary')
+        assert hasattr(result.summary, 'tfidf_cosine_similarity')
 
     @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason='sentence-transformers not available')
     def test_semantic_similarity_evaluation(self, sample_texts):
@@ -364,8 +372,8 @@ class TestTextualEvaluator:
             evaluator = TextualEvaluator()
             result = evaluator.semantic_similarity_evaluation(real_texts, fake_texts)
 
-            assert result['available'] is False
-            assert 'error' in result
+            assert result.available is False
+            assert result.error is not None
 
     def test_comprehensive_evaluation(self, sample_texts):
         """Test comprehensive evaluation."""
@@ -373,11 +381,10 @@ class TestTextualEvaluator:
         evaluator = TextualEvaluator()
         result = evaluator.comprehensive_evaluation(real_texts, fake_texts, include_semantic=False)
 
-        assert isinstance(result, dict)
-        assert 'lexical_diversity' in result
-        assert 'tfidf_similarity' in result
-        assert 'combined_metrics' in result
-        assert 'recommendations' in result
+        assert isinstance(result, ComprehensiveTextualResult)
+        assert hasattr(result, 'lexical_diversity')
+        assert hasattr(result, 'tfidf_similarity')
+        assert hasattr(result, 'recommendations')
 
     def test_quick_evaluation(self, sample_texts):
         """Test quick evaluation."""
@@ -385,12 +392,10 @@ class TestTextualEvaluator:
         evaluator = TextualEvaluator()
         result = evaluator.quick_evaluation(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert 'lexical_similarity' in result
-        assert 'tfidf_similarity' in result
-        assert 'overall_similarity' in result
-        assert 'evaluation_type' in result
-        assert result['evaluation_type'] == 'quick'
+        assert isinstance(result, QuickTextualResult)
+        assert hasattr(result, 'overall_similarity')
+        assert hasattr(result, 'evaluation_type')
+        assert result.evaluation_type == 'quick'
 
     def test_get_summary_for_integration(self, sample_texts):
         """Test summary extraction for TableEvaluator integration."""

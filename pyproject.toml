@@ -89,7 +89,7 @@ include = ["table_evaluator*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
+addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
 norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
 asyncio_default_fixture_loop_scope = "function"
