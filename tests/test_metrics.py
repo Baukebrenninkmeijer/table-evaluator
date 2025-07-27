@@ -91,7 +91,10 @@ def test_jensenshannon_distance():
     # call the function and get the result
     result = te_metrics.jensenshannon_distance(colname, real_col, fake_col)
 
-    # check that the result is a dictionary with the correct keys and values
-    assert isinstance(result, dict)
-    assert result['col_name'] == colname
-    assert abs(result['js_distance'] - 0.2736453208486386) < 1e-15  # this is the expected JS distance for these data
+    # check that the result is a JensenShannonResult object with the correct values
+    assert hasattr(result, 'col_name')
+    assert hasattr(result, 'js_distance')
+    assert hasattr(result, 'success')
+    assert result.col_name == colname
+    assert abs(result.js_distance - 0.2736453208486386) < 1e-15  # this is the expected JS distance for these data
+    assert result.success is True

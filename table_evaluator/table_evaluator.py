@@ -1247,11 +1247,7 @@ class TableEvaluator:
             results['textual'] = {'error': 'No text columns specified. Use text_cols parameter in constructor.'}
 
         return ComprehensiveEvaluationWithTextResults(
-            basic=results.get('basic'),
-            advanced_statistical=results.get('advanced_statistical'),
-            advanced_privacy=results.get('advanced_privacy'),
-            textual=results.get('textual'),
-            combined_similarity=results.get('combined_similarity'),
+            **results,
             success=bool(results.get('basic') or results.get('textual')),
         )
 

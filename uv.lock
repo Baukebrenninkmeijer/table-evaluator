@@ -2362,6 +2362,9 @@ text = [
 ]
 
 [package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+]
 jupyter = [
     { name = "ipython" },
     { name = "ipywidgets" },
@@ -2414,6 +2417,7 @@ requires-dist = [
 provides-extras = ["dev", "text", "all"]
 
 [package.metadata.requires-dev]
+dev = [{ name = "pre-commit", specifier = ">=3.8.0" }]
 jupyter = [
     { name = "ipython", specifier = ">=8.28.0" },
     { name = "ipywidgets", specifier = ">=8.1.7" },

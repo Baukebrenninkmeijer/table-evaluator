@@ -364,7 +364,9 @@ class TestPerformanceAndEdgeCases:
             warnings.simplefilter('ignore')
             result = evaluator.textual_evaluation(include_semantic=False)
 
-        assert isinstance(result, dict)
+        assert hasattr(result, 'column_results')
+        assert hasattr(result, 'success')
+        assert result.success is True
 
     def test_text_with_nan_values(self):
         """Test textual evaluation with NaN values in text columns."""
@@ -376,8 +378,10 @@ class TestPerformanceAndEdgeCases:
         result = evaluator.textual_evaluation(include_semantic=False)
 
         # Should handle NaN values gracefully
-        assert isinstance(result, dict)
-        assert 'text_col' in result
+        assert hasattr(result, 'column_results')
+        assert hasattr(result, 'success')
+        assert result.success is True
+        assert 'text_col' in result.column_results
 
     def test_empty_text_columns(self):
         """Test with empty text columns."""
@@ -389,7 +393,9 @@ class TestPerformanceAndEdgeCases:
         result = evaluator.basic_textual_evaluation()
 
         # Should handle empty text gracefully
-        assert isinstance(result, dict)
+        assert hasattr(result, 'column_results')
+        assert hasattr(result, 'success')
+        assert result.success is True
 
 
 class TestInputValidation:
@@ -441,7 +447,7 @@ class TestCombinedSimilarityCalculation:
             target_col='target', text_weight=0.6, include_textual=True, textual_config={'include_semantic': False}
         )
 
-        combined = result['combined_similarity']
+        combined = result.combined_similarity
 
         if combined.get('success', False):
             assert 'overall_similarity' in combined
@@ -460,7 +466,7 @@ class TestCombinedSimilarityCalculation:
         with patch.object(evaluator, 'textual_evaluation', side_effect=Exception('Mock error')):
             result = evaluator.comprehensive_evaluation_with_text(target_col='target', include_textual=True)
 
-        combined = result.get('combined_similarity', {})
+        combined = result.combined_similarity or {}
 
         # Should still calculate similarity based on available data
         assert isinstance(combined, dict)

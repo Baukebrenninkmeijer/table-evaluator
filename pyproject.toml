@@ -162,6 +162,9 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [dependency-groups]
+dev = [
+    "pre-commit>=3.8.0",
+]
 jupyter = [
     "ipython>=8.28.0",
     "ipywidgets>=8.1.7",
