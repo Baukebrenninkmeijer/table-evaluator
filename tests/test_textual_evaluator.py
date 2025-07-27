@@ -16,15 +16,15 @@ from table_evaluator.metrics.textual import (
     vocabulary_overlap_analysis,
 )
 from table_evaluator.models.textual_models import (
-    VocabularyOverlapResult,
+    ComprehensiveTextualResult,
     LengthDistributionResult,
-    TfidfRawResult,
-    TfidfSimilarityResult,
-    SemanticRawResult,
-    SemanticSimilarityResult,
     LexicalDiversityResult,
     QuickTextualResult,
-    ComprehensiveTextualResult,
+    SemanticRawResult,
+    SemanticSimilarityResult,
+    TfidfRawResult,
+    TfidfSimilarityResult,
+    VocabularyOverlapResult,
 )
 
 
@@ -58,7 +58,7 @@ def sample_texts():
 @pytest.fixture
 def empty_texts():
     """Provide empty text data for edge case testing."""
-    return pd.Series([]), pd.Series([])
+    return pd.Series([], dtype=str), pd.Series([], dtype=str)
 
 
 @pytest.fixture
@@ -292,7 +292,7 @@ class TestComprehensiveTextualAnalysis:
         assert 'char_length_dist' in result
         assert 'vocabulary_overlap' in result
         assert 'tfidf_similarity' in result
-        assert hasattr(result, 'overall')
+        assert 'overall_similarity' in result
 
     @pytest.mark.skipif(not SENTENCE_TRANSFORMERS_AVAILABLE, reason='sentence-transformers not available')
     def test_analysis_with_semantic(self, sample_texts):
@@ -312,8 +312,8 @@ class TestComprehensiveTextualAnalysis:
     def test_error_handling_in_analysis(self):
         """Test error handling in comprehensive analysis."""
         # Test with problematic data that might cause errors
-        real_texts = pd.Series(['', '', ''])
-        fake_texts = pd.Series(['', '', ''])
+        real_texts = pd.Series(['', '', ''], dtype=str)
+        fake_texts = pd.Series(['', '', ''], dtype=str)
 
         result = comprehensive_textual_analysis(real_texts, fake_texts)
 
@@ -361,9 +361,9 @@ class TestTextualEvaluator:
         evaluator = TextualEvaluator()
         result = evaluator.semantic_similarity_evaluation(real_texts, fake_texts)
 
-        assert isinstance(result, dict)
-        assert result['available'] is True
-        assert 'summary' in result
+        assert isinstance(result, SemanticSimilarityResult)
+        assert result.available is True
+        assert hasattr(result, 'summary')
 
     def test_semantic_similarity_unavailable(self, sample_texts):
         """Test semantic similarity when unavailable."""
@@ -406,10 +406,12 @@ class TestTextualEvaluator:
         eval_results = evaluator.comprehensive_evaluation(real_texts, fake_texts, include_semantic=False)
         summary = evaluator.get_summary_for_integration(eval_results)
 
-        assert isinstance(summary, dict)
-        assert 'textual_similarity' in summary
-        assert 'quality_rating' in summary
-        assert 'evaluation_type' in summary
+        from table_evaluator.models.textual_models import TextualEvaluationSummary
+
+        assert isinstance(summary, TextualEvaluationSummary)
+        assert hasattr(summary, 'textual_similarity')
+        assert hasattr(summary, 'quality_rating')
+        assert hasattr(summary, 'evaluation_type')
 
     def test_quality_rating_methods(self):
         """Test quality rating methods."""
@@ -422,17 +424,15 @@ class TestTextualEvaluator:
         assert evaluator._rate_lexical_quality(0.5) == 'Poor'
         assert evaluator._rate_lexical_quality(0.2) == 'Very Poor'
 
-    def test_error_handling_in_evaluations(self):
+    def test_error_handling_in_evaluations(self, empty_texts):
         """Test error handling in various evaluation methods."""
         evaluator = TextualEvaluator()
-
-        # Test with empty series
-        empty_real = pd.Series([])
-        empty_fake = pd.Series([])
+        empty_real, empty_fake = empty_texts
 
         result = evaluator.quick_evaluation(empty_real, empty_fake)
         # Should handle gracefully, might have error but shouldn't crash
-        assert isinstance(result, dict)
+        assert isinstance(result, QuickTextualResult)
+        assert 'error' in result.model_dump()
 
 
 class TestPerformanceWarnings:
@@ -444,12 +444,10 @@ class TestPerformanceWarnings:
         large_real = pd.Series(['test text'] * 50001)
         large_fake = pd.Series(['sample text'] * 50001)
 
-        # Should trigger warning but not fail
-        with pytest.warns(None) as warning_list:
-            result = text_length_distribution_similarity(large_real, large_fake)
+        # Should not fail with large datasets (warning is logged via loguru, not warnings module)
+        result = text_length_distribution_similarity(large_real, large_fake)
 
-        assert isinstance(result, dict)
-        # Warning might be issued depending on implementation
+        assert isinstance(result, LengthDistributionResult)
 
 
 class TestEdgeCases:
@@ -461,7 +459,7 @@ class TestEdgeCases:
         fake_texts = pd.Series(['Hi! @#$%', 'Sample with émojis 😀', 'Digits 456 and symbols &*()'])
 
         result = vocabulary_overlap_analysis(real_texts, fake_texts)
-        assert isinstance(result, dict)
+        assert isinstance(result, VocabularyOverlapResult)
 
     def test_very_long_texts(self):
         """Test with very long text strings."""
@@ -470,7 +468,7 @@ class TestEdgeCases:
         fake_texts = pd.Series([long_text])
 
         result = tfidf_corpus_similarity(real_texts, fake_texts)
-        assert isinstance(result, dict)
+        assert isinstance(result, TfidfRawResult)
 
     def test_mixed_languages(self):
         """Test with mixed language content."""
@@ -478,7 +476,7 @@ class TestEdgeCases:
         fake_texts = pd.Series(['Hi world', 'Salut monde', 'Hola mundo'])
 
         result = vocabulary_overlap_analysis(real_texts, fake_texts)
-        assert isinstance(result, dict)
+        assert isinstance(result, VocabularyOverlapResult)
 
     def test_numeric_strings(self):
         """Test with numeric string content."""
@@ -486,7 +484,7 @@ class TestEdgeCases:
         fake_texts = pd.Series(['111 222', '333 444', '555 666'])
 
         result = text_length_distribution_similarity(real_texts, fake_texts)
-        assert isinstance(result, dict)
+        assert isinstance(result, LengthDistributionResult)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 """Integration tests for textual evaluation functionality with TableEvaluator."""
 
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -262,7 +263,7 @@ class TestComprehensiveEvaluationWithText:
 
         combined = result['combined_similarity']
         assert combined['text_weight'] == 0.7
-        assert combined['tabular_weight'] == 0.3
+        assert combined['tabular_weight'] == pytest.approx(0.3)
 
     def test_comprehensive_evaluation_without_text(self, sample_dataframes_with_text):
         """Test comprehensive evaluation with textual analysis disabled."""
@@ -347,7 +348,8 @@ class TestPerformanceAndEdgeCases:
         evaluator = TableEvaluator(real=real_data, fake=fake_data, text_cols=['text_col'])
 
         # Should issue a warning but not fail
-        with pytest.warns(None):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
             result = evaluator.textual_evaluation(include_semantic=False)
 
         assert isinstance(result, dict)

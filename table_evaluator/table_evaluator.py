@@ -663,7 +663,7 @@ class TableEvaluator:
         """Validate inputs for comprehensive evaluation."""
         if target_col is not None and target_type is not None:
             self._validate_target_and_type(target_col, target_type)
-        
+
         # Validate boolean parameters
         for param_name, param_value in [
             ('include_basic', include_basic),
@@ -680,7 +680,7 @@ class TableEvaluator:
             real_size = len(self.real) if self.real is not None else 0
             fake_size = len(self.fake) if self.fake is not None else 0
             max_size = max(real_size, fake_size)
-            
+
             # Warn if dataset is large
             if max_size > 10000:
                 warnings.warn(
@@ -688,7 +688,7 @@ class TableEvaluator:
                     'Comprehensive evaluation may take significant time. '
                     'Consider using sampling for faster results.',
                     UserWarning,
-                    stacklevel=3
+                    stacklevel=3,
                 )
 
     def _setup_evaluation_parameters(self, target_type: str, *, verbose: bool | None, metric: str | None) -> None:
@@ -1073,8 +1073,11 @@ class TableEvaluator:
         # Calculate overall textual similarity
         column_similarities = []
         for col_results in results.values():
-            if 'error' not in col_results and 'combined_metrics' in col_results:
-                similarity = col_results['combined_metrics'].get('overall_similarity', 0)
+            if isinstance(col_results, dict) and 'error' not in col_results:
+                # Skip error cases
+                continue
+            if hasattr(col_results, 'combined_metrics') and col_results.combined_metrics is not None:
+                similarity = col_results.combined_metrics.overall_similarity
                 column_similarities.append(similarity)
 
         if column_similarities:

@@ -456,7 +456,7 @@ def comprehensive_textual_analysis(
     include_semantic: bool = True,
     enable_sampling: bool = False,
     max_samples: int = 1000,
-) -> dict[str, dict]:
+) -> dict:
     """
     Perform comprehensive textual analysis combining all available metrics.
 
@@ -517,16 +517,19 @@ def comprehensive_textual_analysis(
 
     # Calculate overall similarity score
     similarity_scores = []
-    for metric_name, metric_results in results.items():
-        if isinstance(metric_results, dict) and 'similarity_score' in metric_results:
-            similarity_scores.append(metric_results['similarity_score'])
+    if 'word_length_dist' in results and hasattr(results['word_length_dist'], 'similarity_score'):
+        similarity_scores.append(results['word_length_dist'].similarity_score)
+    if 'char_length_dist' in results and hasattr(results['char_length_dist'], 'similarity_score'):
+        similarity_scores.append(results['char_length_dist'].similarity_score)
+    if 'vocabulary_overlap' in results and hasattr(results['vocabulary_overlap'], 'jaccard_similarity'):
+        similarity_scores.append(results['vocabulary_overlap'].jaccard_similarity)
+    if 'tfidf_similarity' in results and hasattr(results['tfidf_similarity'], 'cosine_similarity'):
+        similarity_scores.append(results['tfidf_similarity'].cosine_similarity)
+    if 'semantic_similarity' in results and hasattr(results['semantic_similarity'], 'semantic_similarity'):
+        similarity_scores.append(results['semantic_similarity'].semantic_similarity)
 
-    if similarity_scores:
-        results['overall'] = {
-            'mean_similarity': float(np.mean(similarity_scores)),
-            'min_similarity': float(np.min(similarity_scores)),
-            'max_similarity': float(np.max(similarity_scores)),
-            'num_metrics': len(similarity_scores),
-        }
+    overall_similarity = float(np.mean(similarity_scores)) if similarity_scores else 0.0
+    results['overall_similarity'] = overall_similarity
+    results['num_metrics'] = len(similarity_scores)
 
     return results
