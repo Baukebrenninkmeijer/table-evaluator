@@ -182,8 +182,8 @@ class TestTextualEvaluationMethods:
 
         # Check overall metrics
         overall = result.overall_textual_metrics
-        assert 'mean_similarity' in overall
-        assert overall['num_text_columns'] == 2
+        assert hasattr(overall, 'mean_similarity')
+        assert overall.num_text_columns == 2
 
     def test_textual_evaluation_no_text_cols(self, sample_dataframes_with_text):
         """Test textual evaluation when no text columns specified."""

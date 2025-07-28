@@ -439,7 +439,7 @@ def associations(
     nom_nom_assoc: str = 'cramer',
     num_num_assoc: str = 'pearson',
     nom_num_assoc: str = 'correlation_ratio',
-) -> dict[str, pd.DataFrame]:
+) -> pd.DataFrame:
     """
     Calculate the correlation/strength-of-association matrix for mixed data types.
 
@@ -451,7 +451,7 @@ def associations(
         nom_num_assoc: Method for categorical-numerical associations ('correlation_ratio')
 
     Returns:
-        dict: Dictionary containing 'corr' key with correlation DataFrame
+        pd.DataFrame: Correlation/association matrix
     """
     # Determine which columns are nominal/categorical
     nominal_cols = _determine_nominal_columns(dataset, nominal_columns)
@@ -476,7 +476,7 @@ def associations(
                     corr_matrix, dataset, col1, col2, nominal_cols, nom_nom_assoc, assoc_value
                 )
 
-    return {'corr': corr_matrix.astype(float)}
+    return corr_matrix.astype(float)
 
 
 def column_correlations(

@@ -11,6 +11,7 @@ from table_evaluator.metrics.textual import (
     tfidf_corpus_similarity,
     vocabulary_overlap_analysis,
 )
+from table_evaluator.models.error_models import ErrorResult
 from table_evaluator.models.textual_models import (
     CombinedMetrics,
     ComprehensiveTextualResult,
@@ -394,14 +395,17 @@ class TextualEvaluator:
 
         # Combined analysis
         try:
-            # Convert to dict format for backward compatibility with helper methods
-            results_dict = {
-                'lexical_diversity': lexical_diversity,
-                'tfidf_similarity': tfidf_similarity,
-                'semantic_similarity': semantic_similarity,
-            }
-            combined_metrics = self._combine_metrics(results_dict, include_semantic=include_semantic)
-            recommendations = self._generate_recommendations(results_dict)
+            combined_metrics = self._combine_metrics(
+                lexical_result=lexical_diversity,
+                tfidf_result=tfidf_similarity,
+                semantic_result=semantic_similarity,
+                include_semantic=include_semantic,
+            )
+            recommendations = self._generate_recommendations(
+                lexical_result=lexical_diversity,
+                tfidf_result=tfidf_similarity,
+                semantic_result=semantic_similarity,
+            )
         except Exception as e:
             logger.error(f'Combined analysis failed: {e}')
             # Create default combined metrics
@@ -518,25 +522,26 @@ class TextualEvaluator:
             return 'Poor'
         return 'Very Poor'
 
-    def _combine_metrics(self, results: dict, *, include_semantic: bool) -> CombinedMetrics:
+    def _combine_metrics(
+        self,
+        lexical_result: LexicalDiversityResult,
+        tfidf_result: TfidfSimilarityResult,
+        semantic_result: SemanticSimilarityResult | ErrorResult,
+        *,
+        include_semantic: bool,
+    ) -> CombinedMetrics:
         """Combine results from different evaluation methods."""
-        lexical_result = results.get('lexical_diversity')
-        tfidf_result = results.get('tfidf_similarity')
-        semantic_result = results.get('semantic_similarity')
-
         # Extract scores from Pydantic models
         lexical_score = (
             lexical_result.summary.overall_lexical_similarity if lexical_result and not lexical_result.error else 0
         )
         tfidf_score = tfidf_result.summary.tfidf_cosine_similarity if tfidf_result and not tfidf_result.error else 0
         semantic_score = (
-            semantic_result.summary.semantic_similarity_score
+            semantic_result.semantic_similarity
             if (
                 include_semantic
-                and semantic_result
-                and semantic_result.available
-                and semantic_result.summary
-                and not semantic_result.error
+                and not isinstance(semantic_result, ErrorResult)
+                and semantic_result.semantic_similarity is not None
             )
             else None
         )
@@ -560,10 +565,8 @@ class TextualEvaluator:
             semantic_result.summary.quality_rating
             if (
                 include_semantic
-                and semantic_result
-                and semantic_result.available
-                and semantic_result.summary
-                and not semantic_result.error
+                and not isinstance(semantic_result, ErrorResult)
+                and semantic_result.summary is not None
             )
             else 'N/A'
         )
@@ -588,7 +591,7 @@ class TextualEvaluator:
         )
 
         # Text corpus statistics
-        corpus_statistics = self._extract_corpus_stats(results)
+        corpus_statistics = self._extract_corpus_stats(lexical_result=lexical_result, tfidf_result=tfidf_result)
 
         return CombinedMetrics(
             overall_similarity=float(overall_similarity),
@@ -598,10 +601,10 @@ class TextualEvaluator:
             corpus_statistics=corpus_statistics,
         )
 
-    def _extract_corpus_stats(self, results: dict) -> CorpusStatistics:
+    def _extract_corpus_stats(
+        self, lexical_result: LexicalDiversityResult, tfidf_result: TfidfSimilarityResult
+    ) -> CorpusStatistics:
         """Extract corpus-level statistics from evaluation results."""
-        lexical_result = results.get('lexical_diversity')
-        tfidf_result = results.get('tfidf_similarity')
 
         # From vocabulary analysis
         vocabulary_diversity_ratio = None
@@ -629,26 +632,31 @@ class TextualEvaluator:
             tfidf_vocabulary_size=tfidf_vocabulary_size,
         )
 
-    def _generate_recommendations(self, results: dict) -> list[str]:
-        """Generate actionable recommendations based on evaluation results."""
-        recommendations = []
-
-        lexical_result = results.get('lexical_diversity')
-        tfidf_result = results.get('tfidf_similarity')
-        semantic_result = results.get('semantic_similarity')
-
-        # Calculate overall similarity for recommendations
+    def _calculate_overall_similarity(
+        self,
+        lexical_result: LexicalDiversityResult,
+        tfidf_result: TfidfSimilarityResult,
+        semantic_result: SemanticSimilarityResult | ErrorResult,
+    ) -> tuple[float, list[float]]:
+        """Calculate overall similarity score and collect individual scores."""
         scores = []
         if lexical_result and not lexical_result.error:
             scores.append(lexical_result.summary.overall_lexical_similarity)
         if tfidf_result and not tfidf_result.error:
             scores.append(tfidf_result.summary.tfidf_cosine_similarity)
-        if semantic_result and semantic_result.available and semantic_result.summary and not semantic_result.error:
+        if (
+            not isinstance(semantic_result, ErrorResult)
+            and semantic_result.available
+            and semantic_result.summary
+            and not semantic_result.error
+        ):
             scores.append(semantic_result.summary.semantic_similarity_score)
 
         overall_similarity = np.mean(scores) if scores else 0.0
+        return float(overall_similarity), scores
 
-        # Overall similarity recommendations
+    def _add_overall_similarity_recommendations(self, recommendations: list[str], overall_similarity: float) -> None:
+        """Add recommendations based on overall similarity score."""
         if overall_similarity < 0.4:
             recommendations.append(
                 'Low overall textual similarity detected. Consider significantly improving the text generation model.'
@@ -658,50 +666,85 @@ class TextualEvaluator:
         else:
             recommendations.append('Good textual similarity achieved. The synthetic text quality is acceptable.')
 
-        # Specific metric recommendations
-        if lexical_result and not lexical_result.error:
-            vocab_overlap = lexical_result.vocabulary_overlap
-            jaccard_sim = vocab_overlap.jaccard_similarity
+    def _add_lexical_recommendations(self, recommendations: list[str], lexical_result: LexicalDiversityResult) -> None:
+        """Add recommendations based on lexical diversity analysis."""
+        if not lexical_result or lexical_result.error:
+            return
 
-            if jaccard_sim < 0.3:
-                recommendations.append(
-                    'Low vocabulary overlap detected. The synthetic text may not capture '
-                    'the full vocabulary diversity of the real text.'
-                )
+        vocab_overlap = lexical_result.vocabulary_overlap
+        jaccard_sim = vocab_overlap.jaccard_similarity
 
-            vocab_diversity = vocab_overlap.vocab_diversity_ratio
-            if vocab_diversity < 0.5 or vocab_diversity > 2.0:
-                recommendations.append(
-                    'Vocabulary diversity ratio is significantly different from real data. '
-                    "Consider adjusting the text generation model's vocabulary breadth."
-                )
+        if jaccard_sim < 0.3:
+            recommendations.append(
+                'Low vocabulary overlap detected. The synthetic text may not capture '
+                'the full vocabulary diversity of the real text.'
+            )
 
-        # TF-IDF specific recommendations
-        if tfidf_result and not tfidf_result.error:
-            tfidf_sim = tfidf_result.cosine_similarity
-            if tfidf_sim < 0.5:
-                recommendations.append(
-                    'Low TF-IDF similarity suggests differences in word usage patterns. '
-                    "Review the model's ability to capture term frequency distributions."
-                )
+        vocab_diversity = vocab_overlap.vocab_diversity_ratio
+        if vocab_diversity < 0.5 or vocab_diversity > 2.0:
+            recommendations.append(
+                'Vocabulary diversity ratio is significantly different from real data. '
+                "Consider adjusting the text generation model's vocabulary breadth."
+            )
 
-        # Semantic analysis recommendations
-        if semantic_result and semantic_result.available and semantic_result.summary and not semantic_result.error:
-            semantic_sim = semantic_result.summary.semantic_similarity_score
-            if semantic_sim < 0.7:
-                recommendations.append(
-                    'Low semantic similarity indicates the synthetic text may not capture '
-                    'the meaning and context of the real text effectively.'
-                )
+    def _add_tfidf_recommendations(self, recommendations: list[str], tfidf_result: TfidfSimilarityResult) -> None:
+        """Add recommendations based on TF-IDF similarity analysis."""
+        if not tfidf_result or tfidf_result.error:
+            return
 
-        # Consistency recommendations based on score variation
-        if len(scores) > 1:
-            score_std = float(np.std(scores))
-            if score_std > 0.2:  # High variance
-                recommendations.append(
-                    'Inconsistent results across different metrics suggest the synthetic text has mixed quality. '
-                    'Focus on the lowest-scoring metrics for improvement.'
-                )
+        tfidf_sim = tfidf_result.cosine_similarity
+        if tfidf_sim < 0.5:
+            recommendations.append(
+                'Low TF-IDF similarity suggests differences in word usage patterns. '
+                "Review the model's ability to capture term frequency distributions."
+            )
+
+    def _add_semantic_recommendations(
+        self, recommendations: list[str], semantic_result: SemanticSimilarityResult | ErrorResult
+    ) -> None:
+        """Add recommendations based on semantic similarity analysis."""
+        if not isinstance(semantic_result, SemanticSimilarityResult) or semantic_result.error:
+            return
+        if not semantic_result.available or not semantic_result.summary or semantic_result.error:
+            return
+
+        semantic_sim = semantic_result.summary.semantic_similarity_score
+        if semantic_sim < 0.7:
+            recommendations.append(
+                'Low semantic similarity indicates the synthetic text may not capture '
+                'the meaning and context of the real text effectively.'
+            )
+
+    def _add_consistency_recommendations(self, recommendations: list[str], scores: list[float]) -> None:
+        """Add recommendations based on score consistency across metrics."""
+        if len(scores) <= 1:
+            return
+
+        score_std = float(np.std(scores))
+        if score_std > 0.2:  # High variance
+            recommendations.append(
+                'Inconsistent results across different metrics suggest the synthetic text has mixed quality. '
+                'Focus on the lowest-scoring metrics for improvement.'
+            )
+
+    def _generate_recommendations(
+        self,
+        lexical_result: LexicalDiversityResult,
+        tfidf_result: TfidfSimilarityResult,
+        semantic_result: SemanticSimilarityResult | ErrorResult,
+    ) -> list[str]:
+        """Generate actionable recommendations based on evaluation results."""
+        recommendations = []
+
+        # Calculate overall similarity and collect scores
+        overall_similarity, scores = self._calculate_overall_similarity(lexical_result, tfidf_result, semantic_result)
+
+        # Add different types of recommendations
+        self._add_overall_similarity_recommendations(recommendations, overall_similarity)
+        self._add_lexical_recommendations(recommendations, lexical_result)
+        self._add_tfidf_recommendations(recommendations, tfidf_result)
+        self._add_semantic_recommendations(recommendations, semantic_result)
+        self._add_consistency_recommendations(recommendations, scores)
 
         return recommendations
 

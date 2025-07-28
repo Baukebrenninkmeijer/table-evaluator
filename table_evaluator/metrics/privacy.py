@@ -1,5 +1,7 @@
 """Privacy attack simulations and privacy metrics implementation."""
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -10,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from table_evaluator.constants import RANDOM_SEED
+from table_evaluator.models.error_models import ErrorResult, create_error_result
 from table_evaluator.models.privacy_models import (
     AttackModelResult,
     KAnonymityAnalysis,
@@ -68,9 +71,11 @@ def identify_quasi_identifiers(df: pd.DataFrame, max_unique_ratio: float = 0.9, 
     return quasi_identifiers
 
 
-def _calculate_k_anonymity_stats(df: pd.DataFrame, quasi_identifiers: list[str]) -> tuple[int, int, int, float, dict]:
+def _calculate_k_anonymity_stats(
+    df: pd.DataFrame, quasi_identifiers: list[str]
+) -> tuple[int, int, int, float, StatisticalDistribution]:
     """Calculate basic k-anonymity statistics."""
-    grouped = df.groupby(quasi_identifiers).size().reset_index(name='count')
+    grouped = df.groupby(quasi_identifiers).size().reset_index(name='count')  # type: ignore
 
     # Find minimum group size (k-value)
     k_value = grouped['count'].min()
@@ -88,7 +93,7 @@ def _calculate_k_anonymity_stats(df: pd.DataFrame, quasi_identifiers: list[str])
     return k_value, violations, n_equivalence_classes, avg_class_size, class_size_distribution
 
 
-def _determine_anonymity_level(k_value: int) -> str:
+def _determine_anonymity_level(k_value: int) -> Literal['Good', 'Moderate', 'Weak', 'Poor']:
     """Determine anonymity level based on k-value."""
     if k_value >= 5:
         return 'Good'
@@ -458,40 +463,40 @@ def comprehensive_privacy_analysis(
     # K-anonymity analysis
     try:
         k_anonymity_result = calculate_k_anonymity(synthetic_data, quasi_identifiers, sensitive_attributes)
-        results['k_anonymity'] = k_anonymity_result.model_dump()
     except Exception as e:
         logger.error(f'K-anonymity analysis failed: {e}')
-        results['k_anonymity'] = {'error': str(e)}
+        k_anonymity_result = create_error_result(
+            e, 'calculate_k_anonymity', args=(synthetic_data, quasi_identifiers, sensitive_attributes)
+        )
 
     # Membership inference attack simulation
     try:
-        membership_result = simulate_membership_inference_attack(real_data, synthetic_data)
-        results['membership_inference'] = membership_result.model_dump()
+        membership_inference_result = simulate_membership_inference_attack(
+            real_data=real_data, synthetic_data=synthetic_data
+        )
     except Exception as e:
         logger.error(f'Membership inference analysis failed: {e}')
-        results['membership_inference'] = {'error': str(e)}
+        membership_inference_result = create_error_result(
+            e, 'simulate_membership_inference_attack', args=(real_data, synthetic_data)
+        )
 
     # Overall privacy assessment
     try:
         overall_assessment = assess_overall_privacy_risk(results)
     except Exception as e:
         logger.error(f'Overall assessment failed: {e}')
-        from table_evaluator.models.error_models import create_error_result
-
         overall_assessment = create_error_result(e, 'assess_overall_privacy_risk', args=(results,))
 
     # Check success status
-    from table_evaluator.models.error_models import ErrorResult
-
     success = (
         not isinstance(overall_assessment, ErrorResult)
-        and not (isinstance(results['k_anonymity'], dict) and 'error' in results['k_anonymity'])
-        and not (isinstance(results['membership_inference'], dict) and 'error' in results['membership_inference'])
+        and not isinstance(k_anonymity_result, ErrorResult)
+        and not isinstance(membership_inference_result, ErrorResult)
     )
 
     return ComprehensivePrivacyAnalysisResult(
-        k_anonymity=results['k_anonymity'],
-        membership_inference=results['membership_inference'],
+        k_anonymity=k_anonymity_result,
+        membership_inference=membership_inference_result,
         overall_assessment=overall_assessment,
         success=success,
     )

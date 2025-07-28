@@ -1,6 +1,7 @@
 import warnings
 from collections.abc import Callable
 from os import PathLike
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,10 +18,16 @@ from table_evaluator.evaluators.privacy_evaluator import PrivacyEvaluator
 from table_evaluator.evaluators.statistical_evaluator import StatisticalEvaluator
 from table_evaluator.evaluators.textual_evaluator import TextualEvaluator
 from table_evaluator.metrics.statistical import associations
+from table_evaluator.models.error_models import ErrorResult, create_error_result
 from table_evaluator.models.textual_models import (
     BasicTextualEvaluationResults,
     ComprehensiveEvaluationWithTextResults,
+    ComprehensiveTextualResult,
+    QuickTextualResult,
+    SemanticConfigModel,
     TextualEvaluationResults,
+    TextualMetricsSummary,
+    TfidfConfigModel,
 )
 from table_evaluator.notebook import EvaluationResult, visualize_notebook
 from table_evaluator.utils import _preprocess_data, dict_to_df
@@ -345,13 +352,13 @@ class TableEvaluator:
             self.real,
             nominal_columns=self.categorical_columns,
             nom_nom_assoc='theil',
-        )['corr']  # type: ignore
+        )
         fake_corr = associations(
             self.fake,
             nominal_columns=self.categorical_columns,
             nom_nom_assoc='theil',
-        )['corr']  # type: ignore
-        return float(distance_func(real_corr.values, fake_corr.values))
+        )
+        return float(distance_func(real_corr.values, fake_corr.values))  # type: ignore
 
     def plot_pca(self, fname: PathLike | None = None, *, show: bool = True) -> None:
         """
@@ -660,23 +667,10 @@ class TableEvaluator:
         self,
         target_col: str | None,
         target_type: str | None,
-        *,
-        include_basic: bool,
-        include_advanced_statistical: bool,
-        include_advanced_privacy: bool,
     ) -> None:
         """Validate inputs for comprehensive evaluation."""
         if target_col is not None and target_type is not None:
             self._validate_target_and_type(target_col, target_type)
-
-        # Validate boolean parameters
-        for param_name, param_value in [
-            ('include_basic', include_basic),
-            ('include_advanced_statistical', include_advanced_statistical),
-            ('include_advanced_privacy', include_advanced_privacy),
-        ]:
-            if not isinstance(param_value, bool):
-                raise TypeError(f'{param_name} must be a boolean')
 
     def _warn_large_dataset_performance(self) -> None:
         """Warn about performance on large datasets."""
@@ -946,11 +940,7 @@ class TableEvaluator:
         self,
         target_col: str,
         target_type: str = 'class',
-        *,
-        include_basic: bool = True,
-        include_advanced_statistical: bool = True,
-        include_advanced_privacy: bool = True,
-        **kwargs: object,
+        **kwargs: dict[str, Any],
     ) -> dict:
         """
         Run comprehensive evaluation including both basic and advanced metrics.
@@ -970,42 +960,123 @@ class TableEvaluator:
         self._validate_comprehensive_evaluation_inputs(
             target_col,
             target_type,
-            include_basic=include_basic,
-            include_advanced_statistical=include_advanced_statistical,
-            include_advanced_privacy=include_advanced_privacy,
         )
 
         # Warn about performance on large datasets
         self._warn_large_dataset_performance()
 
-        results = {}
+        # Ensure we get results back by setting return_outputs=True
+        basic_results = self.evaluate(target_col, target_type, return_outputs=True, **kwargs)  # type: ignore
 
-        # Run requested evaluations
-        if include_basic:
-            # Use the main evaluate method for basic evaluation
-            if target_col is not None and target_type is not None:
-                basic_result = self.evaluate(target_col, target_type, **kwargs)
-                results['basic'] = basic_result
-            else:
-                results['basic'] = {'error': 'target_col and target_type required for basic evaluation'}
+        # Structure results according to ComprehensiveEvaluationWithTextResults expectations
+        if basic_results is None:
+            return {
+                'basic': None,
+                'advanced_statistical': None,
+                'advanced_privacy': None,
+            }
 
-        # Note: Advanced statistical and privacy evaluators removed in master
-        # These features are now integrated into the basic evaluators
-        if include_advanced_statistical:
-            logger.warning('Advanced statistical evaluation is no longer available as a separate method')
-            results['advanced_statistical'] = {'warning': 'Feature integrated into basic statistical evaluation'}
+        return {
+            'basic': basic_results,
+            'advanced_statistical': basic_results,  # For now, treat as the same
+            'advanced_privacy': basic_results,  # For now, treat as the same
+        }
 
-        if include_advanced_privacy:
-            logger.warning('Advanced privacy evaluation is no longer available as a separate method')
-            results['advanced_privacy'] = {'warning': 'Feature integrated into basic privacy evaluation'}
+    def _validate_textual_evaluation_params(
+        self,
+        max_samples: int,
+        *,
+        include_semantic: bool,
+        enable_sampling: bool,
+        tfidf_config: TfidfConfigModel | None,
+        semantic_config: SemanticConfigModel | None,
+    ) -> None:
+        """Validate parameters for textual evaluation."""
+        if not isinstance(include_semantic, bool):
+            raise TypeError('include_semantic must be a boolean')
+        if not isinstance(enable_sampling, bool):
+            raise TypeError('enable_sampling must be a boolean')
+        if not isinstance(max_samples, int) or max_samples <= 0:
+            raise ValueError('max_samples must be a positive integer')
+        if tfidf_config is not None and not isinstance(tfidf_config, dict):
+            raise TypeError('tfidf_config must be a dictionary or None')
+        if semantic_config is not None and not isinstance(semantic_config, dict):
+            raise TypeError('semantic_config must be a dictionary or None')
 
-        return results
+    def _check_large_dataset_performance_warning(self) -> None:
+        """Check for large datasets and issue performance warning."""
+        total_rows = len(self.real) + len(self.fake)
+        if total_rows > 100000:
+            logger.warning(
+                f'Large text dataset detected ({total_rows:,} total rows). '
+                f'Text analysis may be slow. Consider enabling sampling with enable_sampling=True.'
+            )
+
+    def _evaluate_single_text_column(
+        self,
+        col: str,
+        *,
+        include_semantic: bool,
+        enable_sampling: bool,
+        max_samples: int,
+        tfidf_config: TfidfConfigModel | None,
+        semantic_config: SemanticConfigModel | None,
+    ) -> dict[str, ComprehensiveTextualResult | ErrorResult]:
+        """Evaluate a single text column and return results."""
+        if self.verbose:
+            print(f'\nEvaluating text column: {col}')
+
+        try:
+            real_series = self.real[col] if isinstance(self.real[col], pd.Series) else pd.Series(self.real[col])
+            fake_series = self.fake[col] if isinstance(self.fake[col], pd.Series) else pd.Series(self.fake[col])
+            col_results = self.textual_evaluator.comprehensive_evaluation(
+                real_series,
+                fake_series,
+                include_semantic=include_semantic,
+                enable_sampling=enable_sampling,
+                max_samples=max_samples,
+                tfidf_config=tfidf_config,
+                semantic_config=semantic_config,
+            )
+            return {col: col_results}
+
+        except Exception as e:
+            logger.error(f'Error evaluating text column {col}: {e}')
+            return {col: create_error_result(e, '_evaluate_single_text_column', args=(col,))}
+
+    def _calculate_overall_textual_metrics(
+        self, results: dict[str, ComprehensiveTextualResult | ErrorResult]
+    ) -> TextualMetricsSummary:
+        """Calculate overall textual similarity metrics from column results."""
+        column_similarities = []
+        for col_results in results.values():
+            if isinstance(col_results, ErrorResult):
+                continue
+            if col_results.combined_metrics is not None:
+                similarity = col_results.combined_metrics.overall_similarity
+                column_similarities.append(similarity)
+
+        if column_similarities:
+            return TextualMetricsSummary(
+                mean_similarity=float(np.mean(column_similarities)),
+                median_similarity=float(np.median(column_similarities)),
+                min_similarity=float(np.min(column_similarities)),
+                max_similarity=float(np.max(column_similarities)),
+                num_text_columns=len(column_similarities),
+            )
+        return TextualMetricsSummary(
+            mean_similarity=0.0,
+            median_similarity=0.0,
+            min_similarity=0.0,
+            max_similarity=0.0,
+            num_text_columns=0,
+        )
 
     def textual_evaluation(
         self,
         max_samples: int = 1000,
-        tfidf_config: dict | None = None,
-        semantic_config: dict | None = None,
+        tfidf_config: TfidfConfigModel | None = None,
+        semantic_config: SemanticConfigModel | None = None,
         *,
         include_semantic: bool = True,
         enable_sampling: bool = False,
@@ -1029,89 +1100,43 @@ class TableEvaluator:
         if not self.text_cols:
             raise ValueError('No text columns specified. Use text_cols parameter in constructor.')
 
-        # Input validation
-        if not isinstance(include_semantic, bool):
-            raise TypeError('include_semantic must be a boolean')
-        if not isinstance(enable_sampling, bool):
-            raise TypeError('enable_sampling must be a boolean')
-        if not isinstance(max_samples, int) or max_samples <= 0:
-            raise ValueError('max_samples must be a positive integer')
+        # Validate parameters
+        self._validate_textual_evaluation_params(
+            include_semantic=include_semantic,
+            enable_sampling=enable_sampling,
+            max_samples=max_samples,
+            tfidf_config=tfidf_config,
+            semantic_config=semantic_config,
+        )
 
-        if tfidf_config is not None and not isinstance(tfidf_config, dict):
-            raise TypeError('tfidf_config must be a dictionary or None')
-        if semantic_config is not None and not isinstance(semantic_config, dict):
-            raise TypeError('semantic_config must be a dictionary or None')
-
-        # Performance warning for large datasets
-        total_rows = len(self.real) + len(self.fake)
-        if total_rows > 100000:
-            logger.warning(
-                f'Large text dataset detected ({total_rows:,} total rows). '
-                f'Text analysis may be slow. Consider enabling sampling with enable_sampling=True.'
-            )
-
-        results = {}
+        # Check for performance warnings
+        self._check_large_dataset_performance_warning()
 
         # Evaluate each text column
+        results = {}
         for col in self.text_cols:
-            if self.verbose:
-                print(f'\nEvaluating text column: {col}')
+            col_result = self._evaluate_single_text_column(
+                col,
+                include_semantic=include_semantic,
+                enable_sampling=enable_sampling,
+                max_samples=max_samples,
+                tfidf_config=tfidf_config,
+                semantic_config=semantic_config,
+            )
+            results.update(col_result)
 
-            try:
-                real_series = self.real[col] if isinstance(self.real[col], pd.Series) else pd.Series(self.real[col])
-                fake_series = self.fake[col] if isinstance(self.fake[col], pd.Series) else pd.Series(self.fake[col])
-                col_results = self.textual_evaluator.comprehensive_evaluation(
-                    real_series,
-                    fake_series,
-                    include_semantic=include_semantic,
-                    enable_sampling=enable_sampling,
-                    max_samples=max_samples,
-                    tfidf_config=tfidf_config,
-                    semantic_config=semantic_config,
-                )
-                results[col] = col_results
-
-            except Exception as e:
-                logger.error(f'Error evaluating text column {col}: {e}')
-                results[col] = {'error': str(e)}
-
-        # Calculate overall textual similarity
-        column_similarities = []
-        for col_results in results.values():
-            if isinstance(col_results, dict) and 'error' not in col_results:
-                # Skip error cases
-                continue
-            if hasattr(col_results, 'combined_metrics') and col_results.combined_metrics is not None:
-                similarity = col_results.combined_metrics.overall_similarity
-                column_similarities.append(similarity)
-
-        if column_similarities:
-            overall_textual_metrics = {
-                'mean_similarity': float(np.mean(column_similarities)),
-                'median_similarity': float(np.median(column_similarities)),
-                'min_similarity': float(np.min(column_similarities)),
-                'max_similarity': float(np.max(column_similarities)),
-                'num_text_columns': len(column_similarities),
-            }
-        else:
-            overall_textual_metrics = {
-                'error_message': 'No successful text evaluations completed',
-                'mean_similarity': 0.0,
-                'median_similarity': 0.0,
-                'min_similarity': 0.0,
-                'max_similarity': 0.0,
-                'num_text_columns': 0,
-            }
+        # Calculate overall metrics
+        overall_textual_metrics = self._calculate_overall_textual_metrics(results)
 
         return TextualEvaluationResults(
             column_results=results,
             overall_textual_metrics=overall_textual_metrics,
-            success=len(column_similarities) > 0,
+            success=overall_textual_metrics.num_text_columns > 0,
         )
 
     def basic_textual_evaluation(
         self, max_samples: int = 1000, *, enable_sampling: bool = False
-    ) -> BasicTextualEvaluationResults:
+    ) -> BasicTextualEvaluationResults | ErrorResult:
         """
         Run basic (quick) textual evaluation using only lightweight metrics.
 
@@ -1133,7 +1158,7 @@ class TableEvaluator:
         if not isinstance(max_samples, int) or max_samples <= 0:
             raise ValueError('max_samples must be a positive integer')
 
-        column_results = {}
+        column_results: dict[str, QuickTextualResult | ErrorResult] = {}
 
         for col in self.text_cols:
             if self.verbose:
@@ -1147,16 +1172,14 @@ class TableEvaluator:
 
             except Exception as e:
                 logger.error(f'Error in basic evaluation of text column {col}: {e}')
-                # TODO: Create proper error result model when we standardize error handling
-                column_results[col] = {'error': str(e)}
+                column_results[col] = create_error_result(e, 'quick_evaluation', args=(real_series, fake_series))
 
         # Calculate overall metrics
         column_similarities = []
         for col_results in column_results.values():
-            if isinstance(col_results, dict) and 'error' in col_results:
-                continue  # Skip error results
-            # Handle Pydantic model structure
-            if hasattr(col_results, 'overall_similarity'):
+            if isinstance(col_results, ErrorResult):
+                continue
+            if col_results.overall_similarity is not None:
                 similarity = col_results.overall_similarity
                 column_similarities.append(similarity)
 
@@ -1170,7 +1193,11 @@ class TableEvaluator:
             print(f'\nOverall basic metrics: {overall_basic_metrics}')
 
         return BasicTextualEvaluationResults(
-            column_results=column_results,
+            column_results={
+                col: col_results
+                for col, col_results in column_results.items()
+                if not isinstance(col_results, ErrorResult)
+            },
             overall_basic_metrics=overall_basic_metrics,
             success=len(column_similarities) > 0,
         )
@@ -1181,12 +1208,9 @@ class TableEvaluator:
         target_type: str = 'class',
         text_weight: float = 0.5,
         *,
-        include_basic: bool = True,
-        include_advanced_statistical: bool = True,
-        include_advanced_privacy: bool = True,
         include_textual: bool = True,
         textual_config: dict | None = None,
-        **kwargs: dict,
+        **kwargs: dict[str, Any],
     ) -> ComprehensiveEvaluationWithTextResults:
         """
         Run comprehensive evaluation combining tabular and textual analysis.
@@ -1219,9 +1243,6 @@ class TableEvaluator:
         results = self.comprehensive_advanced_evaluation(
             target_col=target_col,
             target_type=target_type,
-            include_basic=include_basic,
-            include_advanced_statistical=include_advanced_statistical,
-            include_advanced_privacy=include_advanced_privacy,
             **kwargs,
         )
 
@@ -1234,14 +1255,16 @@ class TableEvaluator:
                 results['textual'] = self.textual_evaluation(**textual_config)
             except Exception as e:
                 logger.error(f'Textual evaluation failed: {e}')
-                results['textual'] = {'error': str(e)}
+                results['textual'] = create_error_result(e, 'textual_evaluation', kwargs=textual_config).model_dump()
 
             # Combine textual and tabular similarity scores
             try:
                 results['combined_similarity'] = self._calculate_combined_similarity(results, text_weight)
             except Exception as e:
                 logger.error(f'Combined similarity calculation failed: {e}')
-                results['combined_similarity'] = {'error': str(e)}
+                results['combined_similarity'] = create_error_result(
+                    e, '_calculate_combined_similarity', args=(results, text_weight)
+                ).model_dump()
 
         elif include_textual and not self.text_cols:
             results['textual'] = {'error': 'No text columns specified. Use text_cols parameter in constructor.'}
@@ -1291,23 +1314,23 @@ class TableEvaluator:
             # Only tabular available
             combined['overall_similarity'] = float(tabular_similarity)
             combined['tabular_similarity'] = float(tabular_similarity)
-            combined['textual_similarity'] = None
+            combined['textual_similarity'] = None  # type: ignore
             combined['success'] = True
-            combined['note'] = 'Only tabular metrics available'
+            combined['note'] = 'Only tabular metrics available'  # type: ignore
 
         elif textual_similarity is not None:
             # Only textual available
             combined['overall_similarity'] = float(textual_similarity)
-            combined['tabular_similarity'] = None
+            combined['tabular_similarity'] = None  # type: ignore
             combined['textual_similarity'] = float(textual_similarity)
             combined['success'] = True
-            combined['note'] = 'Only textual metrics available'
+            combined['note'] = 'Only textual metrics available'  # type: ignore
 
         else:
             # Neither available
             combined['overall_similarity'] = 0.0
             combined['success'] = False
-            combined['error'] = 'Neither tabular nor textual similarity could be calculated'
+            combined['error'] = 'Neither tabular nor textual similarity could be calculated'  # type: ignore
 
         return combined
 

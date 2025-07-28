@@ -47,19 +47,19 @@ def test_associations():
     # Assert equality with saved data
     pd.testing.assert_frame_equal(
         real_assoc,
-        associations(real, nominal_columns=cat_cols)['corr'],
+        associations(real, nominal_columns=cat_cols),
     )
     pd.testing.assert_frame_equal(
         real_assoc_theil,
-        associations(real, nominal_columns=cat_cols, nom_nom_assoc='theil')['corr'],
+        associations(real, nominal_columns=cat_cols, nom_nom_assoc='theil'),
     )
     pd.testing.assert_frame_equal(
         fake_assoc,
-        associations(fake, nominal_columns=cat_cols)['corr'],
+        associations(fake, nominal_columns=cat_cols),
     )
     pd.testing.assert_frame_equal(
         fake_assoc_theil,
-        associations(fake, nominal_columns=cat_cols, nom_nom_assoc='theil')['corr'],
+        associations(fake, nominal_columns=cat_cols, nom_nom_assoc='theil'),
     )
 
 

@@ -227,11 +227,21 @@ class ComprehensiveTextualAnalysisResult(BaseModel):
     success: bool = True
 
 
+class TextualMetricsSummary(BaseModel):
+    """Model for overall textual metrics summary."""
+
+    mean_similarity: float = Field(ge=0, le=1, description='Mean textual similarity across columns')
+    median_similarity: float = Field(ge=0, le=1, description='Median textual similarity across columns')
+    min_similarity: float = Field(ge=0, le=1, description='Minimum textual similarity across columns')
+    max_similarity: float = Field(ge=0, le=1, description='Maximum textual similarity across columns')
+    num_text_columns: int = Field(ge=0, description='Number of text columns evaluated')
+
+
 class TextualEvaluationResults(BaseModel):
     """Model for TableEvaluator textual evaluation results."""
 
     column_results: dict[str, ComprehensiveTextualResult | QuickTextualResult]
-    overall_textual_metrics: dict[str, float] = Field(description='Overall metrics across all text columns')
+    overall_textual_metrics: TextualMetricsSummary = Field(description='Overall metrics across all text columns')
     success: bool = True
 
 

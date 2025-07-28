@@ -15,6 +15,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from table_evaluator.constants import RANDOM_SEED
 from table_evaluator.metrics.statistical import mean_absolute_percentage_error, rmse
+from table_evaluator.models.error_models import create_error_result
 from table_evaluator.models.ml_models import (
     ClassificationResults,
     MLEvaluationResults,
@@ -344,8 +345,10 @@ class MLEvaluator:
                 }, score
 
             except Exception as e:
-                logger.exception('Classification evaluation failed for {target_col}')
-                return {'error': str(e)}, None
+                logger.exception(f'Classification evaluation failed for {target_col}')
+                return create_error_result(
+                    e, '_evaluate_single_classification_target', args=(real_data, synthetic_data, target_col)
+                ).model_dump(), None
 
         classification_results = {}
         classification_scores = []
@@ -379,8 +382,10 @@ class MLEvaluator:
                 }, score
 
             except Exception as e:
-                logger.exception('Regression evaluation failed for {target_col}')
-                return {'error': str(e)}, None
+                logger.exception(f'Regression evaluation failed for {target_col}')
+                return create_error_result(
+                    e, '_evaluate_single_regression_target', args=(real_data, synthetic_data, target_col)
+                ).model_dump(), None
 
         regression_results = {}
         regression_scores = []
@@ -490,7 +495,7 @@ class MLEvaluator:
             print('Running comprehensive ML evaluation...')
 
         # Determine target columns
-        targets_to_evaluate = self._determine_target_columns(
+        classification_cols, regression_cols = self._determine_target_columns(
             real_data,
             target_columns,
             auto_detect=auto_detect_targets,
@@ -500,7 +505,7 @@ class MLEvaluator:
         )
 
         # Handle case when no suitable targets are found
-        if not targets_to_evaluate['classification'] and not targets_to_evaluate['regression']:
+        if not classification_cols and not regression_cols:
             return self._handle_no_suitable_targets(
                 target_columns,
                 auto_detect_targets=auto_detect_targets,
@@ -511,15 +516,17 @@ class MLEvaluator:
         classification_results, classification_scores = self._evaluate_classification_targets(
             real_data,
             synthetic_data,
-            targets_to_evaluate['classification'],
+            classification_cols,
             **kwargs,
         )
         regression_results, regression_scores = self._evaluate_regression_targets(
-            real_data, synthetic_data, targets_to_evaluate['regression'], **kwargs
+            real_data, synthetic_data, regression_cols, **kwargs
         )
 
         # Generate summary and recommendations
-        summary_dict = self._generate_ml_summary(classification_scores, regression_scores, targets_to_evaluate)
+        summary_dict = self._generate_ml_summary(
+            classification_scores, regression_scores, (classification_cols, regression_cols)
+        )
         recommendations = self._generate_ml_recommendations(classification_results, regression_results, summary_dict)
 
         # Build and return final results
@@ -533,19 +540,26 @@ class MLEvaluator:
             max_targets,
         )
 
-    def _process_explicit_target_columns(self, data: pd.DataFrame, target_columns: list[str], max_targets: int) -> dict:
-        """Process explicitly specified target columns."""
-        targets_to_evaluate = {'classification': [], 'regression': []}
+    def _process_explicit_target_columns(
+        self, data: pd.DataFrame, target_columns: list[str], max_targets: int
+    ) -> tuple[list[str], list[str]]:
+        """Process explicitly specified target columns.
+
+        Returns:
+            tuple[list[str], list[str]]: classification_targets, regression_targets
+        """
+        classification_targets = []
+        regression_targets = []
 
         for col in target_columns[:max_targets]:
             if col in data.columns:
                 # Determine task type based on data characteristics
                 if self._is_classification_target(data[col]):
-                    targets_to_evaluate['classification'].append(col)
+                    classification_targets.append(col)
                 else:
-                    targets_to_evaluate['regression'].append(col)
+                    regression_targets.append(col)
 
-        return targets_to_evaluate
+        return classification_targets, regression_targets
 
     def _process_task_specific_targets(
         self,
@@ -553,22 +567,30 @@ class MLEvaluator:
         classification_targets: list[str] | None,
         regression_targets: list[str] | None,
         max_targets: int,
-    ) -> dict:
-        """Process task-specific target columns."""
-        targets_to_evaluate = {'classification': [], 'regression': []}
+    ) -> tuple[list[str], list[str]]:
+        """Process task-specific target columns.
+
+        Returns:
+            tuple[list[str], list[str]]: classification_targets, regression_targets
+        """
+        classification_cols = []
+        regression_cols = []
 
         if classification_targets:
-            targets_to_evaluate['classification'] = [
-                col for col in classification_targets[:max_targets] if col in data.columns
-            ]
+            classification_cols = [col for col in classification_targets[:max_targets] if col in data.columns]
         if regression_targets:
-            targets_to_evaluate['regression'] = [col for col in regression_targets[:max_targets] if col in data.columns]
+            regression_cols = [col for col in regression_targets[:max_targets] if col in data.columns]
 
-        return targets_to_evaluate
+        return classification_cols, regression_cols
 
-    def _auto_detect_suitable_targets(self, data: pd.DataFrame, max_targets: int) -> dict:
-        """Auto-detect suitable target columns based on data characteristics."""
-        targets_to_evaluate = {'classification': [], 'regression': []}
+    def _auto_detect_suitable_targets(self, data: pd.DataFrame, max_targets: int) -> tuple[list[str], list[str]]:
+        """Auto-detect suitable target columns based on data characteristics.
+
+        Returns:
+            tuple[list[str], list[str]]: classification_targets, regression_targets
+        """
+        classification_targets = []
+        regression_targets = []
         potential_targets = []
 
         for col in data.columns:
@@ -590,9 +612,12 @@ class MLEvaluator:
         potential_targets.sort(key=lambda x: x[2])
 
         for col, task_type, _ in potential_targets[:max_targets]:
-            targets_to_evaluate[task_type].append(col)
+            if task_type == 'classification':
+                classification_targets.append(col)
+            else:
+                regression_targets.append(col)
 
-        return targets_to_evaluate
+        return classification_targets, regression_targets
 
     def _determine_target_columns(
         self,
@@ -603,8 +628,12 @@ class MLEvaluator:
         classification_targets: list[str] | None,
         regression_targets: list[str] | None,
         max_targets: int,
-    ) -> dict:
-        """Determine which columns to use as targets for ML evaluation."""
+    ) -> tuple[list[str], list[str]]:
+        """Determine which columns to use as targets for ML evaluation.
+
+        Returns:
+            tuple[list[str], list[str]]: classification_targets, regression_targets
+        """
         # Use explicitly specified targets if provided
         if target_columns:
             return self._process_explicit_target_columns(data, target_columns, max_targets)
@@ -618,7 +647,7 @@ class MLEvaluator:
             return self._auto_detect_suitable_targets(data, max_targets)
 
         # Default empty result
-        return {'classification': [], 'regression': []}
+        return [], []
 
     def _is_classification_target(self, series: pd.Series) -> bool:
         """Determine if a column is suitable for classification."""
@@ -678,14 +707,15 @@ class MLEvaluator:
         self,
         classification_scores: list[float],
         regression_scores: list[float],
-        targets_evaluated: dict,
+        targets_evaluated: tuple[list[str], list[str]],
     ) -> dict:
         """Generate summary statistics for ML evaluation."""
+        classification_targets, regression_targets = targets_evaluated
         summary = {
             'targets_evaluated': {
-                'classification': len(targets_evaluated['classification']),
-                'regression': len(targets_evaluated['regression']),
-                'total': len(targets_evaluated['classification']) + len(targets_evaluated['regression']),
+                'classification': len(classification_targets),
+                'regression': len(regression_targets),
+                'total': len(classification_targets) + len(regression_targets),
             }
         }
 

@@ -17,6 +17,7 @@ from table_evaluator.metrics.statistical import (
     optimal_transport_cost,
     wasserstein_distance_df,
 )
+from table_evaluator.models.error_models import create_error_result
 from table_evaluator.models.statistical_models import (
     BasicStatisticalResults,
     CombinedStatisticalMetrics,
@@ -105,7 +106,7 @@ class StatisticalEvaluator:
                 ds,
                 nominal_columns=categorical_columns,
                 nom_nom_assoc='theil',
-            )['corr']
+            )
 
             values = corr_df.to_numpy()
             # Remove diagonal elements (self-correlations)
@@ -224,7 +225,7 @@ class StatisticalEvaluator:
                     }
                 except Exception as e:
                     logger.warning(f'Failed to compute transport cost for {col}: {e}')
-                    return {'error': str(e)}
+                    return create_error_result(e, '_compute_transport_cost_safe', args=(col,)).model_dump()
 
             column_details = {col: _compute_transport_cost_safe(col) for col in numerical_columns}
 
@@ -333,7 +334,9 @@ class StatisticalEvaluator:
             }
         except Exception as e:
             logger.exception('Basic statistical evaluation failed')
-            return {'error': str(e)}
+            return create_error_result(
+                e, 'basic_statistical_analysis', context={'data_info': 'Basic statistical analysis failed'}
+            ).model_dump()
 
     def _run_wasserstein_evaluation(
         self,
@@ -347,7 +350,9 @@ class StatisticalEvaluator:
             return self.wasserstein_evaluation(real_data, synthetic_data, numerical_columns, **wasserstein_config)
         except Exception as e:
             logger.exception('Wasserstein evaluation failed')
-            return {'error': str(e)}
+            return create_error_result(
+                e, 'wasserstein_evaluation', context={'data_info': 'Wasserstein distance computation failed'}
+            ).model_dump()
 
     def _run_mmd_evaluation(
         self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame, numerical_columns: list[str], mmd_config: dict
@@ -357,7 +362,7 @@ class StatisticalEvaluator:
             return self.mmd_evaluation(real_data, synthetic_data, numerical_columns, **mmd_config)
         except Exception as e:
             logger.exception('MMD evaluation failed')
-            return {'error': str(e)}
+            return create_error_result(e, 'mmd_evaluation', context={'data_info': 'MMD analysis failed'}).model_dump()
 
     def _run_combined_analysis(self, wasserstein_results: dict, mmd_results: dict) -> tuple[dict, list[str]]:
         """Run combined analysis with error handling."""
@@ -374,7 +379,9 @@ class StatisticalEvaluator:
             )
         except Exception as e:
             logger.exception('Combined analysis failed')
-            return {'error': str(e)}, []
+            return create_error_result(
+                e, 'statistical_evaluation', context={'data_info': 'Statistical evaluation failed'}
+            ).model_dump(), []
         else:
             return combined_metrics_dict, recommendations
 

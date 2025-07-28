@@ -296,6 +296,149 @@ class MLEvaluator:
 # =============================================================================
 
 
+def _auto_detect_task_type(target_data: pd.Series) -> str:
+    """Auto-detect ML task type based on target column characteristics."""
+    if target_data.dtype in ['object', 'category'] or target_data.nunique() < 20:
+        return 'classification'
+    return 'regression'
+
+
+def _prepare_ml_data(
+    real_data: pd.DataFrame,
+    synthetic_data: pd.DataFrame,
+    target_column: str,
+    test_size: float,
+    random_state: int,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.DataFrame, pd.Series]:
+    """Prepare and split data for ML evaluation."""
+    from sklearn.model_selection import train_test_split
+
+    # Prepare data
+    X_real = real_data.drop(columns=[target_column])
+    y_real = real_data[target_column]
+    X_synthetic = synthetic_data.drop(columns=[target_column])
+    y_synthetic = synthetic_data[target_column]
+
+    # Split real data for testing
+    X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
+        X_real, y_real, test_size=test_size, random_state=random_state
+    )
+
+    return X_real_train, X_real_test, y_real_train, y_real_test, X_synthetic, y_synthetic
+
+
+def _extract_classification_scores(model_results: dict, models: list[str]) -> tuple[list[float], list[float]]:
+    """Extract accuracy scores from classification model results."""
+    real_scores = []
+    synthetic_scores = []
+
+    for model in models:
+        result = model_results[model]
+        if isinstance(result, SingleModelEvaluationResult):
+            if result.real_accuracy is not None:
+                real_scores.append(result.real_accuracy)
+            if result.synthetic_accuracy is not None:
+                synthetic_scores.append(result.synthetic_accuracy)
+
+    return real_scores, synthetic_scores
+
+
+def _extract_regression_scores(model_results: dict, models: list[str]) -> tuple[list[float], list[float]]:
+    """Extract R2 scores from regression model results."""
+    real_scores = []
+    synthetic_scores = []
+
+    for model in models:
+        result = model_results[model]
+        if isinstance(result, SingleModelEvaluationResult):
+            if result.real_r2 is not None:
+                real_scores.append(result.real_r2)
+            if result.synthetic_r2 is not None:
+                synthetic_scores.append(result.synthetic_r2)
+
+    return real_scores, synthetic_scores
+
+
+def _calculate_classification_summary(
+    real_scores: list[float], synthetic_scores: list[float]
+) -> MLUtilityEvaluationSummary:
+    """Calculate summary statistics for classification task."""
+    if not real_scores or not synthetic_scores:
+        return create_error_result(
+            ValueError('No valid classification results found'),
+            '_calculate_classification_summary',
+            context={'real_scores_count': len(real_scores), 'synthetic_scores_count': len(synthetic_scores)},
+        )
+
+    mean_real = float(np.mean(real_scores))
+    mean_synthetic = float(np.mean(synthetic_scores))
+
+    return MLUtilityEvaluationSummary(
+        mean_real_accuracy=mean_real,
+        mean_synthetic_accuracy=mean_synthetic,
+        utility_score=float(mean_synthetic / mean_real) if mean_real > 0 else 0.0,
+        score_difference=float(mean_real - mean_synthetic),
+    )
+
+
+def _calculate_regression_summary(
+    real_scores: list[float], synthetic_scores: list[float]
+) -> MLUtilityEvaluationSummary:
+    """Calculate summary statistics for regression task."""
+    if not real_scores or not synthetic_scores:
+        return create_error_result(
+            ValueError('No valid regression results found'),
+            '_calculate_regression_summary',
+            context={'real_scores_count': len(real_scores), 'synthetic_scores_count': len(synthetic_scores)},
+        )
+
+    mean_real = float(np.mean(real_scores))
+    mean_synthetic = float(np.mean(synthetic_scores))
+
+    return MLUtilityEvaluationSummary(
+        mean_real_r2_score=mean_real,
+        mean_synthetic_r2_score=mean_synthetic,
+        utility_score=float(mean_synthetic / mean_real) if mean_real > 0 else 0.0,
+        score_difference=float(mean_real - mean_synthetic),
+    )
+
+
+def _evaluate_models(
+    models: list[str],
+    task_type: str,
+    X_real_train: pd.DataFrame,
+    y_real_train: pd.Series,
+    X_real_test: pd.DataFrame,
+    y_real_test: pd.Series,
+    X_synthetic: pd.DataFrame,
+    y_synthetic: pd.Series,
+    random_state: int,
+) -> dict:
+    """Evaluate all models and return results."""
+    model_results = {}
+
+    for model_name in models:
+        try:
+            model_result = _evaluate_single_model(
+                model_name,
+                task_type,
+                X_real_train,
+                y_real_train,
+                X_real_test,
+                y_real_test,
+                X_synthetic,
+                y_synthetic,
+                random_state,
+            )
+            model_results[model_name] = model_result
+        except Exception as e:  # noqa: PERF203
+            model_results[model_name] = create_error_result(
+                e, '_evaluate_single_model', args=(model_name, task_type), context={'model_name': model_name}
+            )
+
+    return model_results
+
+
 def evaluate_ml_utility(
     real_data: pd.DataFrame,
     synthetic_data: pd.DataFrame,
@@ -320,105 +463,31 @@ def evaluate_ml_utility(
     Returns:
         MLUtilityEvaluationResult with ML utility evaluation results
     """
-    from sklearn.model_selection import train_test_split
-
     if models is None:
         models = ['random_forest', 'logistic_regression']
 
-    # Auto-detect task type
+    # Auto-detect task type if needed
     if task_type == 'auto':
-        if real_data[target_column].dtype in ['object', 'category'] or real_data[target_column].nunique() < 20:
-            task_type = 'classification'
-        else:
-            task_type = 'regression'
+        task_type = _auto_detect_task_type(real_data[target_column])
 
-    # Prepare data
-    X_real = real_data.drop(columns=[target_column])
-    y_real = real_data[target_column]
-    X_synthetic = synthetic_data.drop(columns=[target_column])
-    y_synthetic = synthetic_data[target_column]
-
-    # Split real data for testing
-    X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
-        X_real, y_real, test_size=test_size, random_state=random_state
+    # Prepare and split data
+    X_real_train, X_real_test, y_real_train, y_real_test, X_synthetic, y_synthetic = _prepare_ml_data(
+        real_data, synthetic_data, target_column, test_size, random_state
     )
 
-    model_results = {}
-
-    # Train models and evaluate
-    for model_name in models:
-        try:
-            model_result = _evaluate_single_model(
-                model_name,
-                task_type,
-                X_real_train,
-                y_real_train,
-                X_real_test,
-                y_real_test,
-                X_synthetic,
-                y_synthetic,
-                random_state,
-            )
-            model_results[model_name] = model_result
-        except Exception as e:  # noqa: PERF203
-            model_results[model_name] = create_error_result(
-                e, '_evaluate_single_model', args=(model_name, task_type), context={'model_name': model_name}
-            )
+    # Evaluate all models
+    model_results = _evaluate_models(
+        models, task_type, X_real_train, y_real_train, X_real_test, y_real_test, X_synthetic, y_synthetic, random_state
+    )
 
     # Calculate summary statistics
     try:
         if task_type == 'classification':
-            real_scores = []
-            synthetic_scores = []
-            for model in models:
-                result = model_results[model]
-                if isinstance(result, SingleModelEvaluationResult):
-                    if result.real_accuracy is not None:
-                        real_scores.append(result.real_accuracy)
-                    if result.synthetic_accuracy is not None:
-                        synthetic_scores.append(result.synthetic_accuracy)
-
-            if real_scores and synthetic_scores:
-                summary = MLUtilityEvaluationSummary(
-                    mean_real_accuracy=float(np.mean(real_scores)),
-                    mean_synthetic_accuracy=float(np.mean(synthetic_scores)),
-                    utility_score=float(np.mean(synthetic_scores) / np.mean(real_scores))
-                    if np.mean(real_scores) > 0
-                    else 0.0,
-                    score_difference=float(np.mean(real_scores) - np.mean(synthetic_scores)),
-                )
-            else:
-                summary = create_error_result(
-                    ValueError('No valid classification results found'),
-                    'evaluate_ml_utility',
-                    context={'task_type': task_type, 'models': models},
-                )
+            real_scores, synthetic_scores = _extract_classification_scores(model_results, models)
+            summary = _calculate_classification_summary(real_scores, synthetic_scores)
         else:
-            real_scores = []
-            synthetic_scores = []
-            for model in models:
-                result = model_results[model]
-                if isinstance(result, SingleModelEvaluationResult):
-                    if result.real_r2 is not None:
-                        real_scores.append(result.real_r2)
-                    if result.synthetic_r2 is not None:
-                        synthetic_scores.append(result.synthetic_r2)
-
-            if real_scores and synthetic_scores:
-                summary = MLUtilityEvaluationSummary(
-                    mean_real_r2_score=float(np.mean(real_scores)),
-                    mean_synthetic_r2_score=float(np.mean(synthetic_scores)),
-                    utility_score=float(np.mean(synthetic_scores) / np.mean(real_scores))
-                    if np.mean(real_scores) > 0
-                    else 0.0,
-                    score_difference=float(np.mean(real_scores) - np.mean(synthetic_scores)),
-                )
-            else:
-                summary = create_error_result(
-                    ValueError('No valid regression results found'),
-                    'evaluate_ml_utility',
-                    context={'task_type': task_type, 'models': models},
-                )
+            real_scores, synthetic_scores = _extract_regression_scores(model_results, models)
+            summary = _calculate_regression_summary(real_scores, synthetic_scores)
     except Exception as e:
         summary = create_error_result(e, 'evaluate_ml_utility', context={'task_type': task_type, 'models': models})
 
