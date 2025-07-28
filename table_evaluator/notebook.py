@@ -1,7 +1,8 @@
 try:
     import ipywidgets as widgets
     from IPython import get_ipython
-    from IPython.core.display import HTML, Markdown, display
+    from IPython.core.display import HTML, Markdown
+    from IPython.display import display
 except ImportError:
     print('IPython not installed.')
 

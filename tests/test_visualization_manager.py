@@ -171,7 +171,7 @@ def test_calculate_label_based_height(sample_data: tuple[pd.DataFrame, pd.DataFr
     real, fake = sample_data
     manager = VisualizationManager(real, fake, ['B', 'D'], ['A', 'C'])
 
-    height = manager._calculate_label_based_height()  # noqa: SLF001
+    height = manager._calculate_label_based_height()
     assert isinstance(height, int)
     assert height >= 6  # Base height
 
@@ -186,7 +186,7 @@ def test_plot_numerical_distribution(sample_data: tuple[pd.DataFrame, pd.DataFra
 
         ax = MagicMock()
 
-        manager._plot_numerical_distribution('A', ax)  # noqa: SLF001
+        manager._plot_numerical_distribution('A', ax)
 
         assert mock_hist.call_count == 2  # Called for both real and fake data
 
@@ -200,7 +200,7 @@ def test_plot_categorical_distribution(sample_data: tuple[pd.DataFrame, pd.DataF
 
     ax = MagicMock()
 
-    manager._plot_categorical_distribution('B', ax)  # noqa: SLF001
+    manager._plot_categorical_distribution('B', ax)
 
     # Verify that bar plotting methods were called
     assert ax.bar.call_count == 2  # Called for both real and fake data

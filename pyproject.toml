@@ -26,15 +26,11 @@ dependencies = [
     "seaborn==0.13.2",
     "pandas==2.2.2",
     "scipy==1.12.0",
-    "pre-commit==3.8.0",
     "ipython==8.28.0",
     "pytest==8.3.2",
-    "sphinx==7.3.1",
     "pytest-cov==4.0.0",
     "pytest-mock==3.14.0",
-    "m2r2==0.3.3.post2",
     "setuptools",
-    "sphinx-rtd-theme==2.0.0",
     "tomli>=1.2.0;python_version<'3.11'",
     "loguru>=0.7.0",
     "ruff>=0.12.5",
@@ -44,21 +40,6 @@ dependencies = [
 ]
 
 
-[project.optional-dependencies]
-dev = [
-    "build>=1.2.2.post1",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
-    "psutil>=5.9.0",
-    "pytest-benchmark>=4.0.0",
-]
-all = [
-    "build>=1.2.2.post1",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
-    "psutil>=5.9.0",
-    "pytest-benchmark>=4.0.0",
-]
 
 
 [tool.setuptools_scm]
@@ -79,7 +60,7 @@ include = ["table_evaluator*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --strict-markers --cov=table_evaluator --cov-report=term-missing --cov-report=html"
+addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
 norecursedirs = ["benchmarks", ".git", ".tox", "dist", "*.egg"]
 asyncio_default_fixture_loop_scope = "function"
@@ -137,10 +118,8 @@ line-length = 120
 
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
 lint.select = ['E', 'F', 'W', 'ANN', 'ASYNC', 'S', 'FBT', 'B', 'A', 'DTZ', 'INT', 'ISC', 'LOG', 'ICN', 'G', 'INP', 'PIE', 'T20', 'PYI', 'PT', 'Q', 'RSE', 'RET', 'SLF', 'SIM', 'TID', 'TC', 'ARG', 'PTH', 'FLY', 'I', 'C90', 'NPY', 'PD', 'PERF', 'DOC', 'UP', 'FURB', 'RUF', 'TRY']
-lint.ignore = ['G001', 'G002', 'Q000', 'TRY003', 'G004', 'T201', 'Q000', 'TRY300', 'TC003']
-
+lint.ignore = ['G001', 'G002', 'Q000', 'Q003', 'TRY003', 'G004', 'T201', 'TRY300', 'TC003']
 # Allow unused variables when underscore-prefixed.
 lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
@@ -151,19 +130,56 @@ skip-magic-trailing-comma = false
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
 [dependency-groups]
+dev = [
+    "build>=1.2.2.post1",
+    "pre-commit>=3.8.0",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
+]
+docs = [
+    "m2r2==0.3.3.post2",
+    "sphinx==7.3.1",
+    "sphinx-rtd-theme==2.0.0",
+]
 jupyter = [
+    "ipykernel>=6.29.5",
     "ipython>=8.28.0",
     "ipywidgets>=8.1.7",
+]
+text = [
+    "nltk>=3.8.0",
+    "sentence-transformers>=2.2.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+]
+all = [
+    "build>=1.2.2.post1",
+    "ipykernel>=6.29.5",
+    "ipython>=8.28.0",
+    "ipywidgets>=8.1.7",
+    "m2r2==0.3.3.post2",
+    "nltk>=3.8.0",
+    "pre-commit>=3.8.0",
+    "psutil>=5.9.0",
+    "pytest-benchmark>=4.0.0",
+    "sentence-transformers>=2.2.0",
+    "sphinx==7.3.1",
+    "sphinx-rtd-theme==2.0.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
 ]
 
 
 [tool.ruff.lint.per-file-ignores]
 # Tests: Ignore assertions, type annotations, and unused arguments
-"tests/*" = ["S101", "ANN001", "ANN201", "ANN003", "ANN204", "ARG001", "ARG002", "ARG005"]
+"tests/*" = ["S101", "ANN001", "ANN201", "ANN003", "ANN204", "ARG001", "ARG002", "ARG005", "SLF001"]
 
 # Benchmarks: Allow prints and missing annotations for performance testing
-"benchmarks/*" = ["T201", "ANN001", "ANN201", "ANN204", "INP001", "TRY003"]
+"benchmarks/*" = ["T201", "ANN001", "ANN201", "ANN204", "INP001", "TRY300"]
 
 # Documentation: Allow missing __init__.py and datetime without timezone
 "docs/*" = ["INP001", "DTZ005"]

@@ -1,4 +1,5 @@
 import warnings
+from importlib.metadata import PackageNotFoundError, version
 
 from .table_evaluator import TableEvaluator
 from .utils import load_data
@@ -25,16 +26,14 @@ def _get_version() -> str:
         from importlib.metadata import PackageNotFoundError, version
 
         return version('table-evaluator')
-    except ImportError:
+    except (ImportError, PackageNotFoundError):
         try:
             # Fallback for older Python versions
             import pkg_resources
 
             return pkg_resources.get_distribution('table-evaluator').version
-        except (pkg_resources.DistributionNotFound, AttributeError):
+        except Exception:  # Catch any exception from pkg_resources fallback
             return 'unknown'
-    except PackageNotFoundError:
-        return 'unknown'
 
 
 __version__ = _get_version()

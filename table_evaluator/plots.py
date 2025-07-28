@@ -56,7 +56,7 @@ def plot_correlation_difference(
         # annot=annot,
         # ax=ax[0],
         # cmap=cmap,
-    )['corr']
+    )
     fake_corr = associations(
         fake,
         nominal_columns=cat_cols,
@@ -66,7 +66,7 @@ def plot_correlation_difference(
         # annot=annot,
         # ax=ax[1],
         # cmap=cmap,
-    )['corr']
+    )
 
     sns.heatmap(
         real_corr,
@@ -229,7 +229,7 @@ def plot_correlation_comparison(evaluators: Sequence, *, annot: bool = False, sh
         cmap=cmap,
         cbar=False,
         ax=flat_ax[0],
-    )['corr']
+    )
     for i in range(1, nr_plots):
         cbar = i % (nr_plots - 1) == 0
         fake_corr.append(
@@ -243,7 +243,7 @@ def plot_correlation_comparison(evaluators: Sequence, *, annot: bool = False, sh
                 cmap=cmap,
                 cbar=cbar,
                 ax=flat_ax[i],
-            )['corr']
+            )
         )
         if i % (nr_plots - 1) == 0:
             cbar = flat_ax[i].collections[0].colorbar

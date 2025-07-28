@@ -47,19 +47,19 @@ def test_associations():
     # Assert equality with saved data
     pd.testing.assert_frame_equal(
         real_assoc,
-        associations(real, nominal_columns=cat_cols)['corr'],
+        associations(real, nominal_columns=cat_cols),
     )
     pd.testing.assert_frame_equal(
         real_assoc_theil,
-        associations(real, nominal_columns=cat_cols, nom_nom_assoc='theil')['corr'],
+        associations(real, nominal_columns=cat_cols, nom_nom_assoc='theil'),
     )
     pd.testing.assert_frame_equal(
         fake_assoc,
-        associations(fake, nominal_columns=cat_cols)['corr'],
+        associations(fake, nominal_columns=cat_cols),
     )
     pd.testing.assert_frame_equal(
         fake_assoc_theil,
-        associations(fake, nominal_columns=cat_cols, nom_nom_assoc='theil')['corr'],
+        associations(fake, nominal_columns=cat_cols, nom_nom_assoc='theil'),
     )
 
 
@@ -91,7 +91,10 @@ def test_jensenshannon_distance():
     # call the function and get the result
     result = te_metrics.jensenshannon_distance(colname, real_col, fake_col)
 
-    # check that the result is a dictionary with the correct keys and values
-    assert isinstance(result, dict)
-    assert result['col_name'] == colname
-    assert result['js_distance'] == 0.2736453208486386  # this is the expected JS distance for these data
+    # check that the result is a JensenShannonResult object with the correct values
+    assert hasattr(result, 'col_name')
+    assert hasattr(result, 'js_distance')
+    assert hasattr(result, 'success')
+    assert result.col_name == colname
+    assert abs(result.js_distance - 0.2736453208486386) < 1e-15  # this is the expected JS distance for these data
+    assert result.success is True
