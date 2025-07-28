@@ -2331,28 +2331,38 @@ dependencies = [
     { name = "tqdm" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 all = [
     { name = "build" },
     { name = "ipykernel" },
+    { name = "ipython" },
     { name = "ipywidgets" },
+    { name = "m2r2" },
     { name = "nltk" },
+    { name = "pre-commit" },
     { name = "psutil" },
     { name = "pytest-benchmark" },
     { name = "sentence-transformers" },
+    { name = "sphinx" },
+    { name = "sphinx-rtd-theme" },
     { name = "torch" },
     { name = "transformers" },
 ]
 dev = [
     { name = "build" },
-    { name = "ipykernel" },
-    { name = "ipywidgets" },
-    { name = "m2r2" },
     { name = "pre-commit" },
     { name = "psutil" },
     { name = "pytest-benchmark" },
+]
+docs = [
+    { name = "m2r2" },
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
+]
+jupyter = [
+    { name = "ipykernel" },
+    { name = "ipython" },
+    { name = "ipywidgets" },
 ]
 text = [
     { name = "nltk" },
@@ -2361,66 +2371,67 @@ text = [
     { name = "transformers" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pre-commit" },
-]
-jupyter = [
-    { name = "ipython" },
-    { name = "ipywidgets" },
-]
-
 [package.metadata]
 requires-dist = [
-    { name = "build", marker = "extra == 'all'", specifier = ">=1.2.2.post1" },
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2.2.post1" },
-    { name = "ipykernel", marker = "extra == 'all'", specifier = ">=6.29.5" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "ipython", specifier = "==8.28.0" },
-    { name = "ipywidgets", marker = "extra == 'all'", specifier = ">=8.1.7" },
-    { name = "ipywidgets", marker = "extra == 'dev'", specifier = ">=8.1.7" },
     { name = "loguru", specifier = ">=0.7.0" },
-    { name = "m2r2", marker = "extra == 'dev'", specifier = "==0.3.3.post2" },
     { name = "matplotlib", specifier = "==3.9.2" },
-    { name = "nltk", marker = "extra == 'all'", specifier = ">=3.8.0" },
-    { name = "nltk", marker = "extra == 'text'", specifier = ">=3.8.0" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pandas", specifier = "==2.2.2" },
     { name = "pendulum", specifier = ">=3.1.0" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = "==3.8.0" },
-    { name = "psutil", marker = "extra == 'all'", specifier = ">=5.9.0" },
-    { name = "psutil", marker = "extra == 'dev'", specifier = ">=5.9.0" },
     { name = "pyarrow", specifier = "==17.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pytest", specifier = "==8.3.2" },
-    { name = "pytest-benchmark", marker = "extra == 'all'", specifier = ">=4.0.0" },
-    { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "pytest-cov", specifier = "==4.0.0" },
     { name = "pytest-mock", specifier = "==3.14.0" },
     { name = "ruff", specifier = ">=0.12.5" },
     { name = "scikit-learn", specifier = "==1.5.1" },
     { name = "scipy", specifier = "==1.12.0" },
     { name = "seaborn", specifier = "==0.13.2" },
-    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.2.0" },
-    { name = "sentence-transformers", marker = "extra == 'text'", specifier = ">=2.2.0" },
     { name = "setuptools" },
     { name = "setuptools-scm", specifier = ">=8.3.1" },
-    { name = "sphinx", marker = "extra == 'dev'", specifier = "==7.3.1" },
-    { name = "sphinx-rtd-theme", marker = "extra == 'dev'", specifier = "==2.0.0" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=1.2.0" },
-    { name = "torch", marker = "extra == 'all'", specifier = ">=2.0.0" },
-    { name = "torch", marker = "extra == 'text'", specifier = ">=2.0.0" },
     { name = "tqdm", specifier = "==4.66.5" },
-    { name = "transformers", marker = "extra == 'all'", specifier = ">=4.30.0" },
-    { name = "transformers", marker = "extra == 'text'", specifier = ">=4.30.0" },
 ]
-provides-extras = ["dev", "text", "all"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pre-commit", specifier = ">=3.8.0" }]
-jupyter = [
+all = [
+    { name = "build", specifier = ">=1.2.2.post1" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "ipython", specifier = ">=8.28.0" },
     { name = "ipywidgets", specifier = ">=8.1.7" },
+    { name = "m2r2", specifier = "==0.3.3.post2" },
+    { name = "nltk", specifier = ">=3.8.0" },
+    { name = "pre-commit", specifier = ">=3.8.0" },
+    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "pytest-benchmark", specifier = ">=4.0.0" },
+    { name = "sentence-transformers", specifier = ">=2.2.0" },
+    { name = "sphinx", specifier = "==7.3.1" },
+    { name = "sphinx-rtd-theme", specifier = "==2.0.0" },
+    { name = "torch", specifier = ">=2.0.0" },
+    { name = "transformers", specifier = ">=4.30.0" },
+]
+dev = [
+    { name = "build", specifier = ">=1.2.2.post1" },
+    { name = "pre-commit", specifier = ">=3.8.0" },
+    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "pytest-benchmark", specifier = ">=4.0.0" },
+]
+docs = [
+    { name = "m2r2", specifier = "==0.3.3.post2" },
+    { name = "sphinx", specifier = "==7.3.1" },
+    { name = "sphinx-rtd-theme", specifier = "==2.0.0" },
+]
+jupyter = [
+    { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "ipython", specifier = ">=8.28.0" },
+    { name = "ipywidgets", specifier = ">=8.1.7" },
+]
+text = [
+    { name = "nltk", specifier = ">=3.8.0" },
+    { name = "sentence-transformers", specifier = ">=2.2.0" },
+    { name = "torch", specifier = ">=2.0.0" },
+    { name = "transformers", specifier = ">=4.30.0" },
 ]
 
 [[package]]
