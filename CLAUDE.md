@@ -91,6 +91,91 @@ table_evaluator/
 - Verify builds/installations locally to catch CI/CD issues early
 - Use project's Makefile targets for standardized operations
 
+## Conventional Commits
+
+### Overview
+This project uses **Conventional Commits** specification for all commit messages. This standard format enables automated semantic versioning, changelog generation, and better collaboration through clear, structured commit messages.
+
+### Commit Message Format
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Commit Types
+- **feat**: A new feature for the user
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **refactor**: A code change that neither fixes a bug nor adds a feature
+- **perf**: A code change that improves performance
+- **test**: Adding missing tests or correcting existing tests
+- **chore**: Changes to the build process or auxiliary tools and libraries such as documentation generation
+- **ci**: Changes to CI configuration files and scripts
+- **build**: Changes that affect the build system or external dependencies
+
+### Scope (Optional)
+The scope provides additional contextual information and is contained within parentheses:
+- **metrics**: Changes to metric calculation functions
+- **evaluators**: Changes to evaluator classes
+- **models**: Changes to data models
+- **tests**: Changes to test files
+- **docs**: Changes to documentation
+
+### Examples
+```bash
+# Feature additions
+feat(metrics): add advanced privacy metrics for k-anonymity
+feat(evaluators): implement textual similarity evaluator
+
+# Bug fixes
+fix(models): handle edge case in data conversion
+fix(metrics): correct calculation in Wasserstein distance
+
+# Documentation
+docs(readme): update installation instructions
+docs(api): add examples for ML evaluator usage
+
+# Refactoring
+refactor(evaluators): modernize dictionary-based results communication
+refactor(metrics): extract helper functions for better readability
+
+# Performance improvements
+perf(metrics): optimize large dataset processing in TF-IDF analysis
+
+# Tests
+test(evaluators): add comprehensive tests for textual evaluator
+test(integration): add tests for textual-tabular combined evaluation
+
+# Breaking changes (triggers major version bump)
+feat!: change API signature for evaluate() method
+BREAKING CHANGE: The evaluate() method now returns structured objects instead of dictionaries
+```
+
+### Breaking Changes
+For breaking changes, use either:
+1. `!` after the type: `feat!: change API signature`
+2. Footer with `BREAKING CHANGE:`:
+   ```
+   feat(api): restructure evaluation results
+
+   BREAKING CHANGE: The evaluation methods now return Pydantic models instead of dictionaries
+   ```
+
+### Benefits
+- **Automated Versioning**: Commit types determine version bumps (feat → minor, fix → patch, BREAKING CHANGE → major)
+- **Changelog Generation**: Automated release notes from commit history
+- **Better Navigation**: Easier to understand project history and find specific changes
+- **Team Collaboration**: Consistent format makes code review and debugging more efficient
+
+### Tools Integration
+- **setuptools_scm**: Reads commit messages for automatic version calculation
+- **CI/CD Pipeline**: Validates commit message format on pull requests
+- **Release Automation**: Generates changelogs and release notes from conventional commits
+
 ## Automated Semantic Versioning System
 
 ### Overview
@@ -171,7 +256,7 @@ This achievement demonstrates successful dependency reduction while maintaining 
 
 ### Overview
 You can offload individual tasks to the Gemini CLI, which you can call with the `gemini` command.
-Always use YOLO mode (`-y`) for trusted development environments to streamline the workflow. Make sure to use a timeout of at least 10-15 minutes, based on the expected duration of the task. 
+Always use YOLO mode (`-y`) for trusted development environments to streamline the workflow. Make sure to use a timeout of at least 10-15 minutes, based on the expected duration of the task.
 
 ### Command Reference
 ```bash
