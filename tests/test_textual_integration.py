@@ -297,7 +297,8 @@ class TestComprehensiveEvaluationWithText:
         result = evaluator.comprehensive_evaluation_with_text(target_col='target', include_textual=True)
 
         assert result.textual is not None
-        assert isinstance(result.textual, dict) and 'error' in result.textual
+        assert isinstance(result.textual, dict)
+        assert 'error' in result.textual
         assert 'No text columns specified' in result.textual['error']
 
     def test_invalid_text_weight(self, sample_dataframes_with_text):

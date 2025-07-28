@@ -1,6 +1,7 @@
 """Tests for version detection functionality."""
 
 import sys
+from importlib.metadata import PackageNotFoundError
 from unittest.mock import patch
 
 import pytest
@@ -23,37 +24,43 @@ class TestVersionDetection:
 
     def test_version_detection_package_not_found(self):
         """Test version detection when package is not found."""
-        # Test the fallback behavior when both importlib.metadata and pkg_resources fail
+        with (
+            patch('importlib.metadata.version', side_effect=PackageNotFoundError),
+            patch('pkg_resources.get_distribution', side_effect=Exception),
+        ):
+            version = _get_version()
+            assert version == 'unknown'
 
-        # Create a modified version of the _get_version function for testing
-        def test_get_version():
-            try:
-                from importlib.metadata import PackageNotFoundError, version
-
-                raise PackageNotFoundError()
-            except (ImportError, PackageNotFoundError):
-                try:
-                    raise Exception('Mock package not found')
-                except Exception:
-                    return 'unknown'
-
-        version = test_get_version()
-        assert version == 'unknown'
-
-    @pytest.mark.skipif(True, reason='pkg_resources not available in this environment')
     def test_version_detection_importlib_not_available(self):
         """Test fallback to pkg_resources when importlib.metadata is not available."""
-        pytest.skip('pkg_resources fallback tests require pkg_resources to be installed')
+        with (
+            patch('importlib.metadata.version', side_effect=ImportError),
+            patch('pkg_resources.get_distribution') as mock_dist,
+        ):
+            mock_dist.return_value.version = '1.9.0'
 
-    @pytest.mark.skipif(True, reason='pkg_resources not available in this environment')
+            version = _get_version()
+
+            assert version == '1.9.0'
+            mock_dist.assert_called_once_with('table-evaluator')
+
     def test_version_detection_pkg_resources_not_found(self):
         """Test version detection when pkg_resources distribution is not found."""
-        pytest.skip('pkg_resources fallback tests require pkg_resources to be installed')
+        with (
+            patch('importlib.metadata.version', side_effect=ImportError),
+            patch('pkg_resources.get_distribution', side_effect=Exception('Distribution not found')),
+        ):
+            version = _get_version()
+            assert version == 'unknown'
 
-    @pytest.mark.skipif(True, reason='pkg_resources not available in this environment')
     def test_version_detection_pkg_resources_attribute_error(self):
         """Test version detection when pkg_resources has AttributeError."""
-        pytest.skip('pkg_resources fallback tests require pkg_resources to be installed')
+        with (
+            patch('importlib.metadata.version', side_effect=ImportError),
+            patch('pkg_resources.get_distribution', side_effect=AttributeError('No attribute')),
+        ):
+            version = _get_version()
+            assert version == 'unknown'
 
     def test_module_version_attribute_exists(self):
         """Test that __version__ attribute is properly set."""

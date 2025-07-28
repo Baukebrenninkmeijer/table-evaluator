@@ -34,7 +34,7 @@ from table_evaluator.models.textual_models import (
 class TextualEvaluator:
     """Advanced textual evaluation for comparing real and synthetic text data."""
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(self, *, verbose: bool = False) -> None:
         """
         Initialize the textual evaluator.
 
@@ -133,6 +133,7 @@ class TextualEvaluator:
         real_texts: pd.Series,
         fake_texts: pd.Series,
         model_name: str = 'all-MiniLM-L6-v2',
+        *,
         enable_sampling: bool = False,
         max_samples: int = 1000,
     ) -> SemanticSimilarityResult:
@@ -272,6 +273,7 @@ class TextualEvaluator:
         self,
         real_texts: pd.Series,
         fake_texts: pd.Series,
+        *,
         include_semantic: bool = True,
         enable_sampling: bool = False,
         max_samples: int = 1000,
@@ -398,7 +400,7 @@ class TextualEvaluator:
                 'tfidf_similarity': tfidf_similarity,
                 'semantic_similarity': semantic_similarity,
             }
-            combined_metrics = self._combine_metrics(results_dict, include_semantic)
+            combined_metrics = self._combine_metrics(results_dict, include_semantic=include_semantic)
             recommendations = self._generate_recommendations(results_dict)
         except Exception as e:
             logger.error(f'Combined analysis failed: {e}')
@@ -516,7 +518,7 @@ class TextualEvaluator:
             return 'Poor'
         return 'Very Poor'
 
-    def _combine_metrics(self, results: dict, include_semantic: bool) -> CombinedMetrics:
+    def _combine_metrics(self, results: dict, *, include_semantic: bool) -> CombinedMetrics:
         """Combine results from different evaluation methods."""
         lexical_result = results.get('lexical_diversity')
         tfidf_result = results.get('tfidf_similarity')
@@ -663,7 +665,8 @@ class TextualEvaluator:
 
             if jaccard_sim < 0.3:
                 recommendations.append(
-                    'Low vocabulary overlap detected. The synthetic text may not capture the full vocabulary diversity of the real text.'
+                    'Low vocabulary overlap detected. The synthetic text may not capture '
+                    'the full vocabulary diversity of the real text.'
                 )
 
             vocab_diversity = vocab_overlap.vocab_diversity_ratio
@@ -687,7 +690,8 @@ class TextualEvaluator:
             semantic_sim = semantic_result.summary.semantic_similarity_score
             if semantic_sim < 0.7:
                 recommendations.append(
-                    'Low semantic similarity indicates the synthetic text may not capture the meaning and context of the real text effectively.'
+                    'Low semantic similarity indicates the synthetic text may not capture '
+                    'the meaning and context of the real text effectively.'
                 )
 
         # Consistency recommendations based on score variation

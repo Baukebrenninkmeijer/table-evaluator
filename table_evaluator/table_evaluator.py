@@ -335,7 +335,7 @@ class TableEvaluator:
         elif how == 'cosine':
 
             def custom_cosine(a: np.ndarray, b: np.ndarray) -> float:
-                return cosine(a.reshape(-1), b.reshape(-1))
+                return float(cosine(a.reshape(-1), b.reshape(-1)))
 
             distance_func = custom_cosine
         else:
@@ -676,7 +676,7 @@ class TableEvaluator:
             ('include_advanced_privacy', include_advanced_privacy),
         ]:
             if not isinstance(param_value, bool):
-                raise ValueError(f'{param_name} must be a boolean')
+                raise TypeError(f'{param_name} must be a boolean')
 
     def _warn_large_dataset_performance(self) -> None:
         """Warn about performance on large datasets."""
@@ -1152,7 +1152,7 @@ class TableEvaluator:
 
         # Calculate overall metrics
         column_similarities = []
-        for col, col_results in column_results.items():
+        for col_results in column_results.values():
             if isinstance(col_results, dict) and 'error' in col_results:
                 continue  # Skip error results
             # Handle Pydantic model structure

@@ -25,7 +25,6 @@ except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 try:
-    import nltk
     from nltk.tokenize import word_tokenize
 
     NLTK_AVAILABLE = True
@@ -50,7 +49,7 @@ def _check_large_dataset_warning(real_texts: pd.Series, fake_texts: pd.Series, t
         )
 
 
-def _safe_tokenize(text: str, use_nltk: bool = True) -> list[str]:
+def _safe_tokenize(text: str, *, use_nltk: bool = True) -> list[str]:
     """
     Safely tokenize text with fallback options.
 
@@ -69,9 +68,9 @@ def _safe_tokenize(text: str, use_nltk: bool = True) -> list[str]:
     if use_nltk and NLTK_AVAILABLE:
         try:
             return word_tokenize(text)
-        except Exception:
+        except Exception as e:
             # Fallback to simple split if NLTK fails
-            pass
+            logger.debug(f'NLTK tokenization failed for text "{text[:50]}...": {e}')
 
     # Simple fallback tokenization
     import re
@@ -243,8 +242,8 @@ def vocabulary_overlap_analysis(
     union = real_words.union(fake_words)
 
     jaccard_similarity = len(intersection) / len(union) if len(union) > 0 else 0.0
-    coverage_real_to_fake = len(intersection) / len(real_words) if len(real_words) > 0 else 0.0
-    coverage_fake_to_real = len(intersection) / len(fake_words) if len(fake_words) > 0 else 0.0
+    len(intersection) / len(real_words) if len(real_words) > 0 else 0.0
+    len(intersection) / len(fake_words) if len(fake_words) > 0 else 0.0
 
     return VocabularyOverlapResult(
         jaccard_similarity=float(jaccard_similarity),
@@ -312,7 +311,7 @@ def tfidf_corpus_similarity(
             max_df=max_df,
             stop_words='english',
             lowercase=True,
-            token_pattern=r'\b\w+\b',
+            token_pattern=r'\b\w+\b',  # noqa: S106
         )
 
         # Fit on all texts to ensure consistent vocabulary
@@ -359,6 +358,7 @@ def semantic_similarity_embeddings(
     fake_texts: pd.Series,
     model_name: str = 'all-MiniLM-L6-v2',
     batch_size: int = 32,
+    *,
     enable_sampling: bool = False,
     max_samples: int = 1000,
 ) -> SemanticRawResult:
@@ -411,11 +411,13 @@ def semantic_similarity_embeddings(
 
     # Sample data if enabled and datasets are large
     if enable_sampling and len(real_clean) > max_samples:
-        real_clean = np.random.choice(real_clean, max_samples, replace=False).tolist()
+        rng = np.random.default_rng()
+        real_clean = rng.choice(real_clean, max_samples, replace=False).tolist()
         logger.info(f'Sampled real texts from {len(real_texts)} to {max_samples}')
 
     if enable_sampling and len(fake_clean) > max_samples:
-        fake_clean = np.random.choice(fake_clean, max_samples, replace=False).tolist()
+        rng = np.random.default_rng()
+        fake_clean = rng.choice(fake_clean, max_samples, replace=False).tolist()
         logger.info(f'Sampled fake texts from {len(fake_texts)} to {max_samples}')
 
     try:
@@ -455,6 +457,7 @@ def semantic_similarity_embeddings(
 def comprehensive_textual_analysis(
     real_texts: pd.Series,
     fake_texts: pd.Series,
+    *,
     include_semantic: bool = True,
     enable_sampling: bool = False,
     max_samples: int = 1000,

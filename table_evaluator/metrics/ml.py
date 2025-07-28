@@ -360,7 +360,7 @@ def evaluate_ml_utility(
                 random_state,
             )
             model_results[model_name] = model_result
-        except Exception as e:
+        except Exception as e:  # noqa: PERF203
             model_results[model_name] = create_error_result(
                 e, '_evaluate_single_model', args=(model_name, task_type), context={'model_name': model_name}
             )

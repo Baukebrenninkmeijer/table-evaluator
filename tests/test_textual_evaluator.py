@@ -186,7 +186,7 @@ class TestVocabularyOverlapAnalysis:
     def test_invalid_min_frequency(self, sample_texts):
         """Test invalid minimum frequency parameter."""
         real_texts, fake_texts = sample_texts
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match='min_frequency'):
             vocabulary_overlap_analysis(real_texts, fake_texts, min_frequency=0)
 
 
@@ -271,7 +271,7 @@ class TestSemanticSimilarityEmbeddings:
 class TestSemanticSimilarityWithoutDependency:
     """Test semantic similarity when dependencies are not available."""
 
-    @patch('table_evaluator.metrics.textual.SENTENCE_TRANSFORMERS_AVAILABLE', False)
+    @patch('table_evaluator.metrics.textual.SENTENCE_TRANSFORMERS_AVAILABLE', new=False)
     def test_missing_dependency(self, sample_texts):
         """Test behavior when sentence-transformers is not available."""
         real_texts, fake_texts = sample_texts
@@ -372,7 +372,7 @@ class TestTextualEvaluator:
 
     def test_semantic_similarity_unavailable(self, sample_texts):
         """Test semantic similarity when unavailable."""
-        with patch('table_evaluator.evaluators.textual_evaluator.SENTENCE_TRANSFORMERS_AVAILABLE', False):
+        with patch('table_evaluator.evaluators.textual_evaluator.SENTENCE_TRANSFORMERS_AVAILABLE', new=False):
             real_texts, fake_texts = sample_texts
             evaluator = TextualEvaluator()
             result = evaluator.semantic_similarity_evaluation(real_texts, fake_texts)
