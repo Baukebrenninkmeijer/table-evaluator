@@ -27,7 +27,7 @@ dependencies = [
     "pandas==2.2.2",
     "scipy==1.12.0",
     "ipython==8.28.0",
-    "pytest==8.3.2",
+    "pytest==9.0.3",
     "pytest-cov==4.0.0",
     "pytest-mock==3.14.0",
     "setuptools",
